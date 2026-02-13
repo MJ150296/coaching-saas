@@ -6,6 +6,10 @@ import { FeePlanAssignment } from '../../domain/entities/FeePlanAssignment';
 import { StudentFeeLedgerEntry } from '../../domain/entities/StudentFeeLedgerEntry';
 import { Payment } from '../../domain/entities/Payment';
 import { CreditNote } from '../../domain/entities/CreditNote';
+import type { FeeFrequency } from '../../domain/entities/FeeType';
+import type { FeePlanItem } from '../../domain/entities/FeePlan';
+import type { LedgerStatus } from '../../domain/entities/StudentFeeLedgerEntry';
+import type { PaymentMethod } from '../../domain/entities/Payment';
 import {
   FeeTypeModel,
   FeePlanModel,
@@ -53,7 +57,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
       schoolId: doc.schoolId,
       name: doc.name,
       amount: doc.amount,
-      frequency: doc.frequency as any,
+      frequency: doc.frequency as FeeFrequency,
       isMandatory: doc.isMandatory,
       isTaxable: doc.isTaxable,
     }, doc.createdAt, doc.updatedAt);
@@ -67,7 +71,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
       schoolId: doc.schoolId,
       name: doc.name,
       amount: doc.amount,
-      frequency: doc.frequency as any,
+      frequency: doc.frequency as FeeFrequency,
       isMandatory: doc.isMandatory,
       isTaxable: doc.isTaxable,
     }, doc.createdAt, doc.updatedAt));
@@ -115,7 +119,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
       schoolId: doc.schoolId,
       academicYearId: doc.academicYearId,
       name: doc.name,
-      items: doc.items as any,
+      items: doc.items as FeePlanItem[],
     }, doc.createdAt, doc.updatedAt);
   }
 
@@ -127,7 +131,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
       schoolId: doc.schoolId,
       academicYearId: doc.academicYearId,
       name: doc.name,
-      items: doc.items as any,
+      items: doc.items as FeePlanItem[],
     }, doc.createdAt, doc.updatedAt));
   }
 
@@ -242,7 +246,7 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
       feeTypeId: doc.feeTypeId,
       amount: doc.amount,
       dueDate: doc.dueDate,
-      status: doc.status as any,
+      status: doc.status as LedgerStatus,
     }, doc.createdAt, doc.updatedAt);
   }
 
@@ -258,7 +262,7 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
       feeTypeId: doc.feeTypeId,
       amount: doc.amount,
       dueDate: doc.dueDate,
-      status: doc.status as any,
+      status: doc.status as LedgerStatus,
     }, doc.createdAt, doc.updatedAt));
   }
 
@@ -308,7 +312,7 @@ export class MongoPaymentRepository implements PaymentRepository {
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,
-      method: doc.method as any,
+      method: doc.method as PaymentMethod,
       reference: doc.reference,
       paidAt: doc.paidAt,
     }, doc.createdAt, doc.updatedAt);
@@ -323,7 +327,7 @@ export class MongoPaymentRepository implements PaymentRepository {
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,
-      method: doc.method as any,
+      method: doc.method as PaymentMethod,
       reference: doc.reference,
       paidAt: doc.paidAt,
     }, doc.createdAt, doc.updatedAt));

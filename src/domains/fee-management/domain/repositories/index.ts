@@ -6,9 +6,9 @@ import { StudentFeeLedgerEntry } from '../entities/StudentFeeLedgerEntry';
 import { Payment } from '../entities/Payment';
 import { CreditNote } from '../entities/CreditNote';
 
-export interface FeeTypeRepository extends Repository<FeeType, string> {}
-export interface FeePlanRepository extends Repository<FeePlan, string> {}
-export interface FeePlanAssignmentRepository extends Repository<FeePlanAssignment, string> {}
-export interface StudentFeeLedgerRepository extends Repository<StudentFeeLedgerEntry, string> {}
-export interface PaymentRepository extends Repository<Payment, string> {}
-export interface CreditNoteRepository extends Repository<CreditNote, string> {}
+export type FeeTypeRepository = Repository<FeeType, string>;
+export type FeePlanRepository = Repository<FeePlan, string>;
+export type FeePlanAssignmentRepository = Repository<FeePlanAssignment, string>;
+export type StudentFeeLedgerRepository = Repository<StudentFeeLedgerEntry, string>;
+export type PaymentRepository = Repository<Payment, string>;
+export type CreditNoteRepository = Repository<CreditNote, string>;

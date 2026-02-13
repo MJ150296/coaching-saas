@@ -10,6 +10,15 @@ import { useRouter } from 'next/navigation';
 import { getRoleBasedRedirectPath } from '@/shared/infrastructure/auth-utils';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
+interface SeedUser {
+  email: string;
+  role: string;
+}
+
+interface SeedResponse {
+  users: SeedUser[];
+}
+
 export default function SignIn() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -49,7 +58,7 @@ export default function SignIn() {
           }
         }, 100);
       }
-    } catch (error) {
+    } catch {
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }
@@ -128,7 +137,7 @@ export default function SignIn() {
 
           <div className="text-center">
             <a href="/auth/register" className="text-blue-600 hover:text-blue-500">
-              Don't have an account? Register
+              Don&apos;t have an account? Register
             </a>
           </div>
         </form>
@@ -149,11 +158,11 @@ export default function SignIn() {
                   const response = await fetch('/api/dev/seed-test-user', {
                     method: 'POST',
                   });
-                  const data = await response.json();
+                  const data: SeedResponse = await response.json();
                   alert(
                     'Test users created!\n\n' +
                     data.users
-                      .map((u: any) => `${u.email}: ${u.role}`)
+                      .map((u) => `${u.email}: ${u.role}`)
                       .join('\n') +
                     '\n\nPassword for all: Check console or docs'
                   );

@@ -21,7 +21,7 @@ export interface IOrganizationDocument {
     phone: string;
   };
   status: 'active' | 'inactive';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,7 +52,7 @@ const organizationSchema = new Schema(
 
 export const getOrCreateOrganizationModel = () => {
   if (models.Organization) return models.Organization;
-  return model('Organization', organizationSchema);
+  return model<IOrganizationDocument>('Organization', organizationSchema);
 };
 
 export const OrganizationModel = getOrCreateOrganizationModel();
@@ -78,7 +78,7 @@ export interface ISchoolDocument {
   status: 'active' | 'inactive';
   studentCount: number;
   teacherCount: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,7 +113,7 @@ const schoolSchema = new Schema(
 
 export const getOrCreateSchoolModel = () => {
   if (models.School) return models.School;
-  return model('School', schoolSchema);
+  return model<ISchoolDocument>('School', schoolSchema);
 };
 
 export const SchoolModel = getOrCreateSchoolModel();

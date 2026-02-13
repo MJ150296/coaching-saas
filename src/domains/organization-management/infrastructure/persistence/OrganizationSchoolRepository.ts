@@ -49,51 +49,51 @@ export class MongoOrganizationRepository implements OrganizationRepository {
       updatedAt: organization.getUpdatedAt(),
     };
 
-    await (OrganizationModel as any).findByIdAndUpdate(organization.getId(), data, {
+    await OrganizationModel.findByIdAndUpdate(organization.getId(), data, {
       upsert: true,
     });
   }
 
   async findById(id: string): Promise<Organization | null> {
     await this.ensureConnection();
-    const doc = (await (OrganizationModel as any).findById(id)) as IOrganizationDocument | null;
+    const doc = (await OrganizationModel.findById(id)) as IOrganizationDocument | null;
     if (!doc) return null;
     return this.toDomainEntity(doc);
   }
 
   async findByName(name: string): Promise<Organization | null> {
     await this.ensureConnection();
-    const doc = (await (OrganizationModel as any).findOne({ organizationName: name })) as IOrganizationDocument | null;
+    const doc = (await OrganizationModel.findOne({ organizationName: name })) as IOrganizationDocument | null;
     if (!doc) return null;
     return this.toDomainEntity(doc);
   }
 
   async findByType(type: string): Promise<Organization[]> {
     await this.ensureConnection();
-    const docs = (await (OrganizationModel as any).find({ type })) as IOrganizationDocument[];
+    const docs = (await OrganizationModel.find({ type })) as IOrganizationDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async findActive(): Promise<Organization[]> {
     await this.ensureConnection();
-    const docs = (await (OrganizationModel as any).find({ status: 'active' })) as IOrganizationDocument[];
+    const docs = (await OrganizationModel.find({ status: 'active' })) as IOrganizationDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async findAll(): Promise<Organization[]> {
     await this.ensureConnection();
-    const docs = (await (OrganizationModel as any).find({})) as IOrganizationDocument[];
+    const docs = (await OrganizationModel.find({})) as IOrganizationDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
-    await (OrganizationModel as any).findByIdAndDelete(id);
+    await OrganizationModel.findByIdAndDelete(id);
   }
 
   async exists(id: string): Promise<boolean> {
     await this.ensureConnection();
-    const count = await (OrganizationModel as any).countDocuments({ _id: id });
+    const count = await OrganizationModel.countDocuments({ _id: id });
     return count > 0;
   }
 
@@ -160,38 +160,38 @@ export class MongoSchoolRepository implements SchoolRepository {
       updatedAt: school.getUpdatedAt(),
     };
 
-    await (SchoolModel as any).findByIdAndUpdate(school.getId(), data, { upsert: true });
+    await SchoolModel.findByIdAndUpdate(school.getId(), data, { upsert: true });
   }
 
   async findById(id: string): Promise<School | null> {
     await this.ensureConnection();
-    const doc = (await (SchoolModel as any).findById(id)) as ISchoolDocument | null;
+    const doc = (await SchoolModel.findById(id)) as ISchoolDocument | null;
     if (!doc) return null;
     return this.toDomainEntity(doc);
   }
 
   async findByOrganizationId(organizationId: string): Promise<School[]> {
     await this.ensureConnection();
-    const docs = (await (SchoolModel as any).find({ organizationId })) as ISchoolDocument[];
+    const docs = (await SchoolModel.find({ organizationId })) as ISchoolDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async findByCode(code: string): Promise<School | null> {
     await this.ensureConnection();
-    const doc = (await (SchoolModel as any).findOne({ schoolCode: code.toUpperCase() })) as ISchoolDocument | null;
+    const doc = (await SchoolModel.findOne({ schoolCode: code.toUpperCase() })) as ISchoolDocument | null;
     if (!doc) return null;
     return this.toDomainEntity(doc);
   }
 
   async findActive(): Promise<School[]> {
     await this.ensureConnection();
-    const docs = (await (SchoolModel as any).find({ status: 'active' })) as ISchoolDocument[];
+    const docs = (await SchoolModel.find({ status: 'active' })) as ISchoolDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async findByOrganizationIdAndActive(organizationId: string): Promise<School[]> {
     await this.ensureConnection();
-    const docs = (await (SchoolModel as any).find({
+    const docs = (await SchoolModel.find({
       organizationId,
       status: 'active',
     })) as ISchoolDocument[];
@@ -200,18 +200,18 @@ export class MongoSchoolRepository implements SchoolRepository {
 
   async findAll(): Promise<School[]> {
     await this.ensureConnection();
-    const docs = (await (SchoolModel as any).find({})) as ISchoolDocument[];
+    const docs = (await SchoolModel.find({})) as ISchoolDocument[];
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
-    await (SchoolModel as any).findByIdAndDelete(id);
+    await SchoolModel.findByIdAndDelete(id);
   }
 
   async exists(id: string): Promise<boolean> {
     await this.ensureConnection();
-    const count = await (SchoolModel as any).countDocuments({ _id: id });
+    const count = await SchoolModel.countDocuments({ _id: id });
     return count > 0;
   }
 

@@ -15,7 +15,7 @@ export interface SchoolProps {
   status: 'active' | 'inactive';
   studentCount?: number;
   teacherCount?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class School extends AggregateRoot<string> {
@@ -28,7 +28,7 @@ export class School extends AggregateRoot<string> {
   private status: 'active' | 'inactive';
   private studentCount: number;
   private teacherCount: number;
-  private metadata?: Record<string, any>;
+  private metadata?: Record<string, unknown>;
 
   constructor(
     id: string,
@@ -144,11 +144,11 @@ export class School extends AggregateRoot<string> {
     }
   }
 
-  getMetadata(): Record<string, any> | undefined {
+  getMetadata(): Record<string, unknown> | undefined {
     return this.metadata;
   }
 
-  setMetadata(metadata: Record<string, any>): void {
+  setMetadata(metadata: Record<string, unknown>): void {
     this.metadata = metadata;
     this.setUpdatedAt(new Date());
   }

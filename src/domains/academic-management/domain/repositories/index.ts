@@ -4,7 +4,7 @@ import { ClassMaster } from '../entities/ClassMaster';
 import { Section } from '../entities/Section';
 import { SubjectAllocation } from '../entities/SubjectAllocation';
 
-export interface AcademicYearRepository extends Repository<AcademicYear, string> {}
-export interface ClassMasterRepository extends Repository<ClassMaster, string> {}
-export interface SectionRepository extends Repository<Section, string> {}
-export interface SubjectAllocationRepository extends Repository<SubjectAllocation, string> {}
+export type AcademicYearRepository = Repository<AcademicYear, string>;
+export type ClassMasterRepository = Repository<ClassMaster, string>;
+export type SectionRepository = Repository<Section, string>;
+export type SubjectAllocationRepository = Repository<SubjectAllocation, string>;

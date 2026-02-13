@@ -11,7 +11,7 @@ export interface OrganizationProps {
   address: Address;
   contactInfo: ContactInfo;
   status: 'active' | 'inactive';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class Organization extends AggregateRoot<string> {
@@ -20,7 +20,7 @@ export class Organization extends AggregateRoot<string> {
   private address: Address;
   private contactInfo: ContactInfo;
   private status: 'active' | 'inactive';
-  private metadata?: Record<string, any>;
+  private metadata?: Record<string, unknown>;
 
   constructor(
     id: string,
@@ -83,11 +83,11 @@ export class Organization extends AggregateRoot<string> {
     this.setUpdatedAt(new Date());
   }
 
-  getMetadata(): Record<string, any> | undefined {
+  getMetadata(): Record<string, unknown> | undefined {
     return this.metadata;
   }
 
-  setMetadata(metadata: Record<string, any>): void {
+  setMetadata(metadata: Record<string, unknown>): void {
     this.metadata = metadata;
     this.setUpdatedAt(new Date());
   }

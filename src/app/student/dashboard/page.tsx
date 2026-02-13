@@ -7,7 +7,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
 interface StudentStats {
@@ -34,122 +34,106 @@ interface Assignment {
   grade?: number;
 }
 
+const stats: StudentStats = {
+  totalCourses: 5,
+  completedAssignments: 12,
+  pendingAssignments: 3,
+  averageGrade: 85,
+};
+
+const courses: Course[] = [
+  {
+    id: '1',
+    name: 'Mathematics',
+    teacher: 'Dr. Smith',
+    grade: 'A',
+    progress: 85,
+  },
+  {
+    id: '2',
+    name: 'English Literature',
+    teacher: 'Ms. Johnson',
+    grade: 'B+',
+    progress: 78,
+  },
+  {
+    id: '3',
+    name: 'Physics',
+    teacher: 'Mr. Williams',
+    grade: 'A-',
+    progress: 88,
+  },
+  {
+    id: '4',
+    name: 'History',
+    teacher: 'Dr. Brown',
+    grade: 'B',
+    progress: 72,
+  },
+  {
+    id: '5',
+    name: 'Chemistry',
+    teacher: 'Ms. Davis',
+    grade: 'A',
+    progress: 90,
+  },
+];
+
+const assignments: Assignment[] = [
+  {
+    id: '1',
+    title: 'Calculus Problem Set 5',
+    course: 'Mathematics',
+    dueDate: '2026-02-15',
+    status: 'pending',
+  },
+  {
+    id: '2',
+    title: 'Essay: The Great Gatsby',
+    course: 'English Literature',
+    dueDate: '2026-02-18',
+    status: 'pending',
+  },
+  {
+    id: '3',
+    title: 'Physics Lab Report',
+    course: 'Physics',
+    dueDate: '2026-02-12',
+    status: 'submitted',
+  },
+  {
+    id: '4',
+    title: 'Historical Analysis Essay',
+    course: 'History',
+    dueDate: '2026-02-20',
+    status: 'pending',
+  },
+  {
+    id: '5',
+    title: 'Chemistry Experiment Observations',
+    course: 'Chemistry',
+    dueDate: '2026-02-10',
+    status: 'graded',
+    grade: 95,
+  },
+];
+
 export default function StudentDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [stats, setStats] = useState<StudentStats>({
-    totalCourses: 0,
-    completedAssignments: 0,
-    pendingAssignments: 0,
-    averageGrade: 0,
-  });
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
+  const isLoading = status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STUDENT);
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
-      const userRole = (session?.user as any)?.role;
-      if (userRole && userRole !== UserRole.STUDENT) {
-        router.push('/auth/signin');
-      } else {
-        setIsLoading(false);
-      }
     }
-  }, [status, session, router]);
 
-  // Fetch student data
-  useEffect(() => {
-    if (status === 'authenticated') {
-      // Mock data for now - replace with actual API calls
-      setStats({
-        totalCourses: 5,
-        completedAssignments: 12,
-        pendingAssignments: 3,
-        averageGrade: 85,
-      });
-
-      setCourses([
-        {
-          id: '1',
-          name: 'Mathematics',
-          teacher: 'Dr. Smith',
-          grade: 'A',
-          progress: 85,
-        },
-        {
-          id: '2',
-          name: 'English Literature',
-          teacher: 'Ms. Johnson',
-          grade: 'B+',
-          progress: 78,
-        },
-        {
-          id: '3',
-          name: 'Physics',
-          teacher: 'Mr. Williams',
-          grade: 'A-',
-          progress: 88,
-        },
-        {
-          id: '4',
-          name: 'History',
-          teacher: 'Dr. Brown',
-          grade: 'B',
-          progress: 72,
-        },
-        {
-          id: '5',
-          name: 'Chemistry',
-          teacher: 'Ms. Davis',
-          grade: 'A',
-          progress: 90,
-        },
-      ]);
-
-      setAssignments([
-        {
-          id: '1',
-          title: 'Calculus Problem Set 5',
-          course: 'Mathematics',
-          dueDate: '2026-02-15',
-          status: 'pending',
-        },
-        {
-          id: '2',
-          title: 'Essay: The Great Gatsby',
-          course: 'English Literature',
-          dueDate: '2026-02-18',
-          status: 'pending',
-        },
-        {
-          id: '3',
-          title: 'Physics Lab Report',
-          course: 'Physics',
-          dueDate: '2026-02-12',
-          status: 'submitted',
-        },
-        {
-          id: '4',
-          title: 'Historical Analysis Essay',
-          course: 'History',
-          dueDate: '2026-02-20',
-          status: 'pending',
-        },
-        {
-          id: '5',
-          title: 'Chemistry Experiment Observations',
-          course: 'Chemistry',
-          dueDate: '2026-02-10',
-          status: 'graded',
-          grade: 95,
-        },
-      ]);
+    if (status === 'authenticated' && userRole !== UserRole.STUDENT) {
+      router.push('/auth/signin');
     }
-  }, [status]);
+  }, [router, status, userRole]);
 
   if (isLoading) {
     return (
@@ -169,7 +153,7 @@ export default function StudentDashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Welcome back, {session?.user?.name?.split(' ')[0]}!</h2>
-          <p className="mt-2 text-gray-600">Here's your academic overview</p>
+          <p className="mt-2 text-gray-600">Here&apos;s your academic overview</p>
         </div>
 
         {/* Stats Grid */}

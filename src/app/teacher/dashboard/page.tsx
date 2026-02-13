@@ -7,7 +7,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
 interface TeacherStats {
@@ -34,118 +34,103 @@ interface Assignment {
   totalStudents: number;
 }
 
+const stats: TeacherStats = {
+  totalClasses: 4,
+  totalStudents: 120,
+  pendingAssignments: 5,
+  averageClassTime: 45,
+};
+
+const classes: Class[] = [
+  {
+    id: '1',
+    name: 'Mathematics 101',
+    grade: '10-A',
+    students: 32,
+    schedule: 'Mon, Wed, Fri - 9:00 AM',
+  },
+  {
+    id: '2',
+    name: 'Advanced Calculus',
+    grade: '12-B',
+    students: 28,
+    schedule: 'Tue, Thu - 10:00 AM',
+  },
+  {
+    id: '3',
+    name: 'Algebra Basics',
+    grade: '9-C',
+    students: 30,
+    schedule: 'Mon, Wed, Fri - 2:00 PM',
+  },
+  {
+    id: '4',
+    name: 'Statistics & Probability',
+    grade: '11-A',
+    students: 30,
+    schedule: 'Tue, Thu - 1:00 PM',
+  },
+];
+
+const assignments: Assignment[] = [
+  {
+    id: '1',
+    title: 'Chapter 5 Exercises',
+    class: 'Mathematics 101',
+    dueDate: '2026-02-15',
+    submittedCount: 28,
+    totalStudents: 32,
+  },
+  {
+    id: '2',
+    title: 'Calculus Problem Set',
+    class: 'Advanced Calculus',
+    dueDate: '2026-02-18',
+    submittedCount: 22,
+    totalStudents: 28,
+  },
+  {
+    id: '3',
+    title: 'Algebra Quiz',
+    class: 'Algebra Basics',
+    dueDate: '2026-02-12',
+    submittedCount: 30,
+    totalStudents: 30,
+  },
+  {
+    id: '4',
+    title: 'Statistics Project',
+    class: 'Statistics & Probability',
+    dueDate: '2026-02-20',
+    submittedCount: 15,
+    totalStudents: 30,
+  },
+  {
+    id: '5',
+    title: 'Research Paper',
+    class: 'Advanced Calculus',
+    dueDate: '2026-03-01',
+    submittedCount: 5,
+    totalStudents: 28,
+  },
+];
+
 export default function TeacherDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [stats, setStats] = useState<TeacherStats>({
-    totalClasses: 0,
-    totalStudents: 0,
-    pendingAssignments: 0,
-    averageClassTime: 0,
-  });
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
+  const isLoading = status === 'loading' || (status === 'authenticated' && userRole !== UserRole.TEACHER);
 
   // Redirect if not authenticated or not a teacher
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
-      const userRole = (session?.user as any)?.role;
-      if (userRole && userRole !== UserRole.TEACHER) {
-        router.push('/auth/signin');
-      } else {
-        setIsLoading(false);
-      }
     }
-  }, [status, session, router]);
 
-  // Fetch teacher data
-  useEffect(() => {
-    if (status === 'authenticated') {
-      setStats({
-        totalClasses: 4,
-        totalStudents: 120,
-        pendingAssignments: 5,
-        averageClassTime: 45,
-      });
-
-      setClasses([
-        {
-          id: '1',
-          name: 'Mathematics 101',
-          grade: '10-A',
-          students: 32,
-          schedule: 'Mon, Wed, Fri - 9:00 AM',
-        },
-        {
-          id: '2',
-          name: 'Advanced Calculus',
-          grade: '12-B',
-          students: 28,
-          schedule: 'Tue, Thu - 10:00 AM',
-        },
-        {
-          id: '3',
-          name: 'Algebra Basics',
-          grade: '9-C',
-          students: 30,
-          schedule: 'Mon, Wed, Fri - 2:00 PM',
-        },
-        {
-          id: '4',
-          name: 'Statistics & Probability',
-          grade: '11-A',
-          students: 30,
-          schedule: 'Tue, Thu - 1:00 PM',
-        },
-      ]);
-
-      setAssignments([
-        {
-          id: '1',
-          title: 'Chapter 5 Exercises',
-          class: 'Mathematics 101',
-          dueDate: '2026-02-15',
-          submittedCount: 28,
-          totalStudents: 32,
-        },
-        {
-          id: '2',
-          title: 'Calculus Problem Set',
-          class: 'Advanced Calculus',
-          dueDate: '2026-02-18',
-          submittedCount: 22,
-          totalStudents: 28,
-        },
-        {
-          id: '3',
-          title: 'Algebra Quiz',
-          class: 'Algebra Basics',
-          dueDate: '2026-02-12',
-          submittedCount: 30,
-          totalStudents: 30,
-        },
-        {
-          id: '4',
-          title: 'Statistics Project',
-          class: 'Statistics & Probability',
-          dueDate: '2026-02-20',
-          submittedCount: 15,
-          totalStudents: 30,
-        },
-        {
-          id: '5',
-          title: 'Research Paper',
-          class: 'Advanced Calculus',
-          dueDate: '2026-03-01',
-          submittedCount: 5,
-          totalStudents: 28,
-        },
-      ]);
+    if (status === 'authenticated' && userRole !== UserRole.TEACHER) {
+      router.push('/auth/signin');
     }
-  }, [status]);
+  }, [router, status, userRole]);
 
   if (isLoading) {
     return (

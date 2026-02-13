@@ -5,7 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
@@ -48,7 +48,7 @@ export default function Home() {
 
     // If user is authenticated, redirect based on role
     if (status === 'authenticated' && session?.user) {
-      const userRole = (session.user as any)?.role as UserRole;
+      const userRole = (session.user as { role?: UserRole }).role;
       switch (userRole) {
         case UserRole.SUPER_ADMIN:
           router.push('/admin-roles/superadmin');

@@ -3,14 +3,14 @@
  */
 
 import { Session } from "next-auth";
-import { User, UserRole } from "@/domains/user-management/domain/entities/User";
+import { UserRole } from "@/domains/user-management/domain/entities/User";
 
 /**
  * Get the user's role from the session
  */
 export function getUserRole(session: Session | null): UserRole | null {
   if (!session?.user) return null;
-  return (session.user as any)?.role || null;
+  return session.user.role || null;
 }
 
 /**

@@ -5,7 +5,7 @@
 
 export class Container {
   private static instance: Container;
-  private static readonly dependencies: Map<string, any> = new Map();
+  private static readonly dependencies: Map<string, unknown> = new Map();
 
   private constructor() {}
 
@@ -46,14 +46,17 @@ export class Container {
   /**
    * Resolve a dependency
    */
-  static resolve<T = any>(key: string): T {
+  static resolve<T = unknown>(key: string): T {
     const dep = Container.dependencies.get(key);
 
     if (dep === undefined) {
       throw new Error(`Dependency not found: ${key}`);
     }
 
-    return typeof dep === 'function' ? dep() : dep;
+    if (typeof dep === 'function') {
+      return (dep as () => T)();
+    }
+    return dep as T;
   }
 
   /**
@@ -74,7 +77,7 @@ export class Container {
 /**
  * Service locator for easier access
  */
-export const getService = <T = any>(key: string): T => Container.resolve<T>(key);
+export const getService = <T = unknown>(key: string): T => Container.resolve<T>(key);
 
 /**
  * Register service

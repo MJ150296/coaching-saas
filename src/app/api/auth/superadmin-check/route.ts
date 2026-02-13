@@ -3,13 +3,13 @@
  * GET /api/auth/superadmin-check
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { ServiceKeys } from '@/shared/bootstrap';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const userRepository = await initializeAppAndGetService<MongoUserRepository>(
       ServiceKeys.USER_REPOSITORY

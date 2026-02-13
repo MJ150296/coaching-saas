@@ -30,23 +30,19 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export class Guard {
-  static againstNullOrUndefined(value: any, argName: string): void {
+  static againstNullOrUndefined(value: unknown, argName: string): void {
     if (value === null || value === undefined) {
       throw new Error(`${argName} must not be null or undefined`);
     }
   }
 
-  static againstNullOrUndefinedBulk(args: { name: string; value: any }[]): void {
+  static againstNullOrUndefinedBulk(args: { name: string; value: unknown }[]): void {
     for (const { name, value } of args) {
       this.againstNullOrUndefined(value, name);
     }
   }
 
-  static isOneOf(
-    value: any,
-    validValues: any[],
-    argName: string
-  ): void {
+  static isOneOf<T>(value: T, validValues: readonly T[], argName: string): void {
     if (!validValues.includes(value)) {
       throw new Error(`${argName} must be one of ${validValues.join(', ')}`);
     }

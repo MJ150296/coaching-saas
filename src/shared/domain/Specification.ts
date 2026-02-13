@@ -6,7 +6,7 @@
 export abstract class Specification<T> {
   abstract isSatisfiedBy(candidate: T): boolean;
 
-  abstract toQuery(): any;
+  abstract toQuery(): Record<string, unknown>;
 
   and(other: Specification<T>): Specification<T> {
     return new CompositeSpecification<T>(this, other, 'and');
@@ -37,7 +37,7 @@ class CompositeSpecification<T> extends Specification<T> {
     return this.left.isSatisfiedBy(candidate) || this.right.isSatisfiedBy(candidate);
   }
 
-  toQuery(): any {
+  toQuery(): Record<string, unknown> {
     return {
       [this.operator]: [this.left.toQuery(), this.right.toQuery()],
     };
@@ -53,7 +53,7 @@ class NotSpecification<T> extends Specification<T> {
     return !this.specification.isSatisfiedBy(candidate);
   }
 
-  toQuery(): any {
+  toQuery(): Record<string, unknown> {
     return { not: this.specification.toQuery() };
   }
 }

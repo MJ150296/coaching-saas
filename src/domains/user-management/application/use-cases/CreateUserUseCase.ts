@@ -6,9 +6,8 @@ import { Result } from '@/shared/domain';
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { User, UserRole } from '../../domain/entities/User';
 import { Email, Password, UserName, UserPhone } from '../../domain/value-objects';
-import { CreateUserDTO, UserResponseDTO } from '../dtos';
+import { UserResponseDTO } from '../dtos';
 import { UserMapper } from '../mappers/UserMapper';
-import { ConflictError } from '@/shared/infrastructure/errors';
 import { generateId } from '@/shared/lib/utils';
 import { PasswordEncryption } from '../../infrastructure/external-services/PasswordEncryption';
 

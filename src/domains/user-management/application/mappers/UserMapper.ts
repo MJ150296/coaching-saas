@@ -4,9 +4,26 @@
 
 import { User } from '../../domain/entities/User';
 import { UserResponseDTO } from '../dtos';
+import { Email, Password, UserName, UserPhone } from '../../domain/value-objects';
+
+interface UserPersistence {
+  id: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  role: ReturnType<User['getRole']>;
+  organizationId?: string;
+  schoolId?: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export class UserMapper {
-  static toPersistence(user: User): any {
+  static toPersistence(user: User): UserPersistence {
     return {
       id: user.getId(),
       email: user.getEmail().getValue(),
@@ -24,9 +41,7 @@ export class UserMapper {
     };
   }
 
-  static toDomain(raw: any): User {
-    const { Email, Password, UserName, UserPhone } = require('../../domain/value-objects');
-
+  static toDomain(raw: UserPersistence): User {
     const email = Email.create(raw.email);
     const password = Password.create(raw.password, true); // Assume it's already hashed
     const name = UserName.create(raw.firstName, raw.lastName);

@@ -4,7 +4,6 @@
 
 import { Result } from '@/shared/domain';
 import { UserRepository } from '../../domain/repositories/UserRepository';
-import { NotFoundError } from '@/shared/infrastructure/errors';
 
 export interface VerifyUserEmailUseCaseRequest {
   userId: string;
