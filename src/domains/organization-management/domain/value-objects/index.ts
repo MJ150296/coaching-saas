@@ -65,7 +65,7 @@ export class Address extends ValueObject<AddressProps> {
   }
 
   getCountry(): string {
-    return this.props.country || 'USA';
+    return this.props.country || 'INDIA';
   }
 
   getFullAddress(): string {

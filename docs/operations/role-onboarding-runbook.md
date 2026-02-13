@@ -47,7 +47,7 @@ Example payload:
     "city": "Boston",
     "state": "MA",
     "zipCode": "02110",
-    "country": "USA"
+    "country": "INDIA"
   }
 }
 ```
@@ -69,7 +69,7 @@ Example payload:
     "city": "Boston",
     "state": "MA",
     "zipCode": "02111",
-    "country": "USA"
+    "country": "INDIA"
   }
 }
 ```

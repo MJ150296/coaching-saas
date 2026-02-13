@@ -15,16 +15,44 @@ import { ParentStudentLinkModel } from '@/domains/user-management/infrastructure
 import { connectDB } from '@/shared/infrastructure/database';
 import { getActorUser } from '@/shared/infrastructure/actor';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
-  if (!session || (role !== UserRole.SUPER_ADMIN && role !== UserRole.ORGANIZATION_ADMIN && role !== UserRole.SCHOOL_ADMIN)) {
+  if (
+    !session ||
+    (role !== UserRole.SUPER_ADMIN &&
+      role !== UserRole.ORGANIZATION_ADMIN &&
+      role !== UserRole.SCHOOL_ADMIN &&
+      role !== UserRole.ADMIN)
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const actor = await getActorUser();
+  if (!actor) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const requestedRole = request.nextUrl.searchParams.get('role') || undefined;
+  const requestedOrganizationId =
+    request.nextUrl.searchParams.get('organizationId') || undefined;
+  const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+
+  const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+  if (actor.getRole() !== UserRole.SUPER_ADMIN) {
+    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
   }
 
   const repo = await initializeAppAndGetService<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
   const users = await repo.findAll();
-  return NextResponse.json(users.map(UserMapper.toDTO));
+  const filtered = users.filter((user) => {
+    if (requestedRole && user.getRole() !== requestedRole) return false;
+    if (tenant.organizationId && user.getOrganizationId() !== tenant.organizationId) return false;
+    if (tenant.schoolId && user.getSchoolId() !== tenant.schoolId) return false;
+    return true;
+  });
+
+  return NextResponse.json(filtered.map(UserMapper.toDTO));
 }
 
 export async function POST(request: NextRequest) {

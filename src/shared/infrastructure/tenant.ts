@@ -1,6 +1,12 @@
 import { User } from '@/domains/user-management/domain/entities/User';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
+function normalizeTenantId(value?: string): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export function assertTenantScope(
   actor: User,
   organizationId?: string,
@@ -28,12 +34,15 @@ export function resolveTenantScope(
   organizationId?: string,
   schoolId?: string
 ): { organizationId?: string; schoolId?: string } {
+  const normalizedOrganizationId = normalizeTenantId(organizationId);
+  const normalizedSchoolId = normalizeTenantId(schoolId);
+
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
-    return { organizationId, schoolId };
+    return { organizationId: normalizedOrganizationId, schoolId: normalizedSchoolId };
   }
 
   return {
-    organizationId: organizationId ?? actor.getOrganizationId(),
-    schoolId: schoolId ?? actor.getSchoolId(),
+    organizationId: normalizedOrganizationId ?? actor.getOrganizationId(),
+    schoolId: normalizedSchoolId ?? actor.getSchoolId(),
   };
 }

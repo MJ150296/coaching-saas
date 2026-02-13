@@ -15,6 +15,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: IconName;
+  allowedRoles: UserRole[];
+  section: 'primary' | 'manage';
 }
 
 type IconName =
@@ -36,44 +38,99 @@ const roleLabels: Record<UserRole, string> = {
   [UserRole.STAFF]: 'Staff',
 };
 
-const navByRole: Record<UserRole, NavItem[]> = {
-  [UserRole.SUPER_ADMIN]: [
-    { label: 'Dashboard', href: '/admin-roles/superadmin', icon: 'dashboard' },
-    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
-    { label: 'Organizations', href: '/admin-roles/organizations', icon: 'organization' },
-    { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
-    { label: 'Users', href: '/admin-roles/users', icon: 'users' },
-    { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
-    { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },
-    { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
-  ],
-  [UserRole.ORGANIZATION_ADMIN]: [
-    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
-    { label: 'Organizations', href: '/admin-roles/organizations', icon: 'organization' },
-    { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
-    { label: 'Users', href: '/admin-roles/users', icon: 'users' },
-    { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
-    { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },
-    { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
-  ],
-  [UserRole.SCHOOL_ADMIN]: [
-    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
-    { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
-    { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
-    { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },
-    { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
-  ],
-  [UserRole.ADMIN]: [
-    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
-    { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
-    { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
-    { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },
-  ],
-  [UserRole.TEACHER]: [{ label: 'Dashboard', href: '/teacher/dashboard', icon: 'dashboard' }],
-  [UserRole.STUDENT]: [{ label: 'Dashboard', href: '/student/dashboard', icon: 'dashboard' }],
-  [UserRole.PARENT]: [{ label: 'Dashboard', href: '/parent/dashboard', icon: 'dashboard' }],
-  [UserRole.STAFF]: [{ label: 'Dashboard', href: '/staff/dashboard', icon: 'dashboard' }],
-};
+const navItems: NavItem[] = [
+  {
+    label: 'Dashboard',
+    href: '/admin-roles/superadmin',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.SUPER_ADMIN],
+    section: 'primary',
+  },
+  {
+    label: 'Onboarding Flow',
+    href: '/admin-roles/admin/onboarding',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'primary',
+  },
+  {
+    label: 'Manage Organizations',
+    href: '/admin-roles/organizations',
+    icon: 'organization',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Schools',
+    href: '/admin-roles/schools',
+    icon: 'school',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Users',
+    href: '/admin-roles/users',
+    icon: 'users',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Academic',
+    href: '/admin-roles/academic',
+    icon: 'academic',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Enrollments',
+    href: '/admin-roles/enrollments',
+    icon: 'academic',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Fees',
+    href: '/admin-roles/fees',
+    icon: 'fees',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Admin Workspace',
+    href: '/admin-roles/admin',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/teacher/dashboard',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.TEACHER],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/student/dashboard',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.STUDENT],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/parent/dashboard',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.PARENT],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/staff/dashboard',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.STAFF],
+    section: 'primary',
+  },
+];
 
 function isItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -84,7 +141,12 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const items = useMemo(() => navByRole[role] ?? [], [role]);
+  const items = useMemo(
+    () => navItems.filter((item) => item.allowedRoles.includes(role)),
+    [role]
+  );
+  const primaryItems = useMemo(() => items.filter((item) => item.section === 'primary'), [items]);
+  const manageItems = useMemo(() => items.filter((item) => item.section === 'manage'), [items]);
   const sidebarWidth = isCollapsed ? 80 : 288;
 
   return (
@@ -95,7 +157,8 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
       >
         <SidebarContent
           role={role}
-          items={items}
+          primaryItems={primaryItems}
+          manageItems={manageItems}
           pathname={pathname}
           userName={session?.user?.name ?? 'User'}
           collapsed={isCollapsed}
@@ -118,7 +181,8 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
 
 function SidebarContent({
   role,
-  items,
+  primaryItems,
+  manageItems,
   pathname,
   userName,
   collapsed = false,
@@ -126,7 +190,8 @@ function SidebarContent({
   onNavigate,
 }: {
   role: UserRole;
-  items: NavItem[];
+  primaryItems: NavItem[];
+  manageItems: NavItem[];
   pathname: string;
   userName: string;
   collapsed?: boolean;
@@ -165,28 +230,88 @@ function SidebarContent({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {items.map((item) => {
-          const active = isItemActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              title={collapsed ? item.label : undefined}
-              className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className={`${collapsed ? 'mx-auto' : 'mr-3'} inline-flex`}>
-                <SidebarIcon name={item.icon} active={active} />
-              </span>
-              {!collapsed && item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <ul className="space-y-1">
+          {primaryItems.map((item) => {
+            const active = isItemActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  title={collapsed ? item.label : undefined}
+                  className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className={`${collapsed ? 'mx-auto' : 'mr-3'} inline-flex`}>
+                    <SidebarIcon name={item.icon} active={active} />
+                  </span>
+                  {!collapsed && item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {manageItems.length > 0 && !collapsed && (
+          <div className="px-2">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Manage Setting
+            </p>
+            <ul className="space-y-1">
+              {manageItems.map((item) => {
+                const active = isItemActive(pathname, item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="mr-3 inline-flex">
+                        <SidebarIcon name={item.icon} active={active} />
+                      </span>
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {manageItems.length > 0 && collapsed && (
+          <ul className="space-y-1">
+            {manageItems.map((item) => {
+              const active = isItemActive(pathname, item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    title={item.label}
+                    className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="mx-auto inline-flex">
+                      <SidebarIcon name={item.icon} active={active} />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </nav>
 
       <div className="border-t border-gray-200 p-4">

@@ -13,7 +13,8 @@ export default async function SchoolLayout({
   children: React.ReactNode;
 }) {
   const session = await requireRole([
-    UserRole.SCHOOL_ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.ORGANIZATION_ADMIN,
   ]);
 
   return (

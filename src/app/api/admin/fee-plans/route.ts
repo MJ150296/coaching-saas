@@ -5,8 +5,60 @@ import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/t
 import { ServiceKeys } from '@/shared/bootstrap';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateFeePlanUseCase } from '@/domains/fee-management/application/use-cases';
+import { MongoFeePlanRepository } from '@/domains/fee-management/infrastructure/persistence/MongoFeeRepository';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { getActorUser } from '@/shared/infrastructure/actor';
+import { hasPermission } from '@/shared/infrastructure/rbac';
+
+export async function GET(request: NextRequest) {
+  try {
+    const actor = await getActorUser();
+    if (!actor) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (
+      !hasPermission(actor.getRole(), Permission.CREATE_FEE_PLAN) &&
+      !hasPermission(actor.getRole(), Permission.CREATE_STUDENT_FEE_LEDGER)
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const requestedOrganizationId =
+      request.nextUrl.searchParams.get('organizationId') || undefined;
+    const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+
+    if (actor.getRole() !== UserRole.SUPER_ADMIN) {
+      assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    }
+
+    const repo = await initializeAppAndGetService<MongoFeePlanRepository>(
+      ServiceKeys.FEE_PLAN_REPOSITORY
+    );
+    const feePlans = await repo.findAll();
+    const filtered = feePlans.filter((item) => {
+      if (tenant.organizationId && item.getOrganizationId() !== tenant.organizationId) return false;
+      if (tenant.schoolId && item.getSchoolId() !== tenant.schoolId) return false;
+      return true;
+    });
+
+    return NextResponse.json(
+      filtered.map((item) => ({
+        id: item.getId(),
+        name: item.getName(),
+        organizationId: item.getOrganizationId(),
+        schoolId: item.getSchoolId(),
+        academicYearId: item.getAcademicYearId(),
+      }))
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed';
+    const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,61 +1,133 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
-import { Badge } from '@/shared/components/ui/Badge';
-
-type StepStatus = { type: 'idle' | 'loading' | 'success' | 'error'; message: string };
-type JsonRecord = Record<string, unknown>;
-type OrgOption = { id: string; name: string };
-type SchoolOption = { id: string; name: string; organizationId: string };
+import { StepHeaderCard } from './components/StepHeaderCard';
+import { StepTabsCard } from './components/StepTabsCard';
+import { TenantSelectorsCard } from './components/TenantSelectorsCard';
+import { WizardNavigationCard } from './components/WizardNavigationCard';
+import {
+  AcademicSetupStep,
+  AdminUserStep,
+  BootstrapStep,
+  FeesSetupStep,
+  NoAccessStep,
+  OrganizationStep,
+  ParentHandoverStep,
+  SchoolStep,
+  StudentLedgerStep,
+  StudentParentStep,
+  TeacherClassTeacherStep,
+} from './components/OnboardingSteps';
+import { StepMeta, StepStatus } from './components/types';
+import {
+  AcademicYearOption,
+  CLASS_LEVEL_OPTIONS,
+  ClassLevelOption,
+  ClassOption,
+  extractId,
+  FeePlanOption,
+  FeeTypeOption,
+  fetchAcademicYears,
+  fetchClassMasters,
+  fetchFeePlans,
+  fetchFeeTypes,
+  fetchOrganizations,
+  fetchSchools,
+  fetchStudents,
+  fetchTeachers,
+  inferClassLevelFromName,
+  JsonRecord,
+  OrgOption,
+  SchoolOption,
+  STEP_ALLOWED_ROLES,
+  STEP_META,
+  StudentOption,
+  TeacherOption,
+} from './lib/onboardingData';
+import { clearDraft, loadDraft, saveDraft } from './lib/draftPersistence';
 
 const initialStatus: StepStatus = { type: 'idle', message: '' };
 const DRAFT_KEY = 'onboarding_wizard_draft_v1';
 
-const stepMeta = [
-  { title: 'Bootstrap Check', description: 'Verify superadmin is ready before onboarding.' },
-  { title: 'Create Organization', description: 'Create tenant root organization.' },
-  { title: 'Create School', description: 'Create school under organization.' },
-  { title: 'Create Admin Accounts', description: 'Create org/school/admin operators.' },
-  { title: 'Academic Setup', description: 'Create academic year and class master.' },
-  { title: 'Teacher + Class Teacher', description: 'Create teacher and assign section class teacher.' },
-  { title: 'Fees Setup', description: 'Create fee type/plan and assign plan to class.' },
-  { title: 'Create Student + Parent', description: 'Create student and auto-link parent.' },
-  { title: 'Student Ledger', description: 'Create student fee ledger entry.' },
-  { title: 'Parent Handover', description: 'Share credentials and login instructions.' },
-];
+const stepMeta: StepMeta[] = STEP_META;
+const stepAllowedRoles: UserRole[][] = STEP_ALLOWED_ROLES;
+const classLevelOptions: ClassLevelOption[] = CLASS_LEVEL_OPTIONS;
 
-function StatusBanner({ status }: { status: StepStatus }) {
-  if (status.type === 'idle') return null;
-  const className =
-    status.type === 'success'
-      ? 'bg-green-50 text-green-700 border-green-200'
-      : status.type === 'error'
-      ? 'bg-red-50 text-red-700 border-red-200'
-      : 'bg-blue-50 text-blue-700 border-blue-200';
-
-  return <div className={`mt-3 rounded border px-3 py-2 text-sm ${className}`}>{status.message}</div>;
-}
-
-function extractId(data: JsonRecord): string {
-  if (typeof data.id === 'string') return data.id;
-  if (typeof data._id === 'string') return data._id;
-  if (typeof data.organizationId === 'string') return data.organizationId;
-  if (typeof data.schoolId === 'string') return data.schoolId;
-  if (typeof data.feeTypeId === 'string') return data.feeTypeId;
-  if (typeof data.feePlanId === 'string') return data.feePlanId;
-  if (typeof data.studentId === 'string') return data.studentId;
-  if (typeof data.classMasterId === 'string') return data.classMasterId;
-  if (typeof data.academicYearId === 'string') return data.academicYearId;
-  const user = data.user as { id?: string } | undefined;
-  if (typeof user?.id === 'string') return user.id;
-  return '';
-}
+type OnboardingDraft = {
+  currentStep: number;
+  organizationId: string;
+  schoolId: string;
+  academicYearId: string;
+  classMasterId: string;
+  sectionId: string;
+  teacherId: string;
+  feeTypeId: string;
+  feePlanId: string;
+  studentId: string;
+  skipSubjectAllocation: boolean;
+  skipAssignFeePlan: boolean;
+  orgForm: {
+    organizationName: string;
+    type: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    contactEmail: string;
+    contactPhone: string;
+  };
+  schoolForm: {
+    schoolName: string;
+    schoolCode: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    contactEmail: string;
+    contactPhone: string;
+  };
+  adminForm: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    role: UserRole;
+  };
+  yearForm: { name: string; startDate: string; endDate: string };
+  classForm: { name: string; level: string };
+  teacherForm: { email: string; password: string; firstName: string; lastName: string; phone: string };
+  sectionForm: { name: string; capacity: string; roomNumber: string; shift: string };
+  subjectForm: { subjectName: string; weeklyPeriods: string };
+  feeTypeForm: { name: string; amount: string; frequency: string; isMandatory: boolean; isTaxable: boolean };
+  feePlanForm: { name: string; itemsJson: string };
+  studentForm: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    parentEmail: string;
+    parentPassword: string;
+    parentFirstName: string;
+    parentLastName: string;
+    parentPhone: string;
+  };
+  ledgerForm: { amount: string; dueDate: string };
+};
 
 export default function OnboardingFlowPage() {
+  const { data: session, status } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [statusMap, setStatusMap] = useState<Record<string, StepStatus>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [focusInvalidNonce, setFocusInvalidNonce] = useState(0);
+  const [enforceSequence, setEnforceSequence] = useState(false);
+  const stepContentRef = useRef<HTMLDivElement>(null);
 
   const [organizationId, setOrganizationId] = useState('');
   const [schoolId, setSchoolId] = useState('');
@@ -68,12 +140,44 @@ export default function OnboardingFlowPage() {
   const [studentId, setStudentId] = useState('');
   const [organizations, setOrganizations] = useState<OrgOption[]>([]);
   const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
+  const [classMasters, setClassMasters] = useState<ClassOption[]>([]);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [feeTypes, setFeeTypes] = useState<FeeTypeOption[]>([]);
+  const [feePlans, setFeePlans] = useState<FeePlanOption[]>([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+  const [loadingAcademicYears, setLoadingAcademicYears] = useState(false);
+  const [loadingClassMasters, setLoadingClassMasters] = useState(false);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingFeeTypes, setLoadingFeeTypes] = useState(false);
+  const [loadingFeePlans, setLoadingFeePlans] = useState(false);
   const [organizationSearch, setOrganizationSearch] = useState('');
   const [schoolSearch, setSchoolSearch] = useState('');
+  const [academicYearSearch, setAcademicYearSearch] = useState('');
+  const [classMasterSearch, setClassMasterSearch] = useState('');
+  const [teacherSearch, setTeacherSearch] = useState('');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [feeTypeSearch, setFeeTypeSearch] = useState('');
+  const [feePlanSearch, setFeePlanSearch] = useState('');
+  const [classLevelSearch, setClassLevelSearch] = useState('');
   const [recentOrganizationId, setRecentOrganizationId] = useState('');
   const [recentSchoolId, setRecentSchoolId] = useState('');
   const [adminRoleSearch, setAdminRoleSearch] = useState('');
   const [feeFrequencySearch, setFeeFrequencySearch] = useState('');
+
+  const actorRole = session?.user?.role;
+  const actorOrganizationId = session?.user?.organizationId ?? '';
+  const actorSchoolId = session?.user?.schoolId ?? '';
+  const canSelectOrganization = actorRole === UserRole.SUPER_ADMIN;
+  const canSelectSchool =
+    actorRole === UserRole.SUPER_ADMIN || actorRole === UserRole.ORGANIZATION_ADMIN;
+  const canAccessStep = useCallback(
+    (stepIndex: number) => Boolean(actorRole && stepAllowedRoles[stepIndex]?.includes(actorRole)),
+    [actorRole]
+  );
 
   const [orgForm, setOrgForm] = useState({
     organizationName: '',
@@ -82,7 +186,7 @@ export default function OnboardingFlowPage() {
     city: '',
     state: '',
     zipCode: '',
-    country: 'USA',
+    country: 'INDIA',
     contactEmail: '',
     contactPhone: '',
   });
@@ -93,7 +197,7 @@ export default function OnboardingFlowPage() {
     city: '',
     state: '',
     zipCode: '',
-    country: 'USA',
+    country: 'INDIA',
     contactEmail: '',
     contactPhone: '',
   });
@@ -106,7 +210,7 @@ export default function OnboardingFlowPage() {
     role: UserRole.SCHOOL_ADMIN,
   });
   const [yearForm, setYearForm] = useState({ name: '', startDate: '', endDate: '' });
-  const [classForm, setClassForm] = useState({ name: '', level: 'PRIMARY' });
+  const [classForm, setClassForm] = useState({ name: '', level: 'LOWER_PRIMARY' });
   const [teacherForm, setTeacherForm] = useState({
     email: '',
     password: '',
@@ -198,92 +302,392 @@ export default function OnboardingFlowPage() {
     [filteredSchools, recentSchoolId]
   );
 
-  const maxUnlockedStep = useMemo(() => {
+  const filteredAcademicYears = useMemo(() => {
+    const q = academicYearSearch.trim().toLowerCase();
+    const scoped = academicYears.filter(
+      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+    );
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        (item.startDate ?? '').toLowerCase().includes(q) ||
+        (item.endDate ?? '').toLowerCase().includes(q)
+    );
+  }, [academicYearSearch, academicYears, organizationId, schoolId]);
+
+  const academicYearOptions = useMemo(
+    () =>
+      filteredAcademicYears.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [filteredAcademicYears]
+  );
+
+  const filteredClassMasters = useMemo(() => {
+    const q = classMasterSearch.trim().toLowerCase();
+    const scoped = classMasters.filter(
+      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+    );
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        (item.level ?? '').toLowerCase().includes(q)
+    );
+  }, [classMasters, classMasterSearch, organizationId, schoolId]);
+
+  const filteredTeachers = useMemo(() => {
+    const q = teacherSearch.trim().toLowerCase();
+    const scoped = teachers.filter((item) => {
+      if (organizationId && item.organizationId && item.organizationId !== organizationId) return false;
+      if (schoolId && item.schoolId && item.schoolId !== schoolId) return false;
+      return true;
+    });
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.email.toLowerCase().includes(q)
+    );
+  }, [teachers, teacherSearch, organizationId, schoolId]);
+
+  const classMasterOptions = useMemo(
+    () =>
+      filteredClassMasters.map((item) => ({
+        value: item.id,
+        label: `${item.name}${item.level ? ` [${item.level}]` : ''} (${item.id})`,
+      })),
+    [filteredClassMasters]
+  );
+
+  const teacherOptions = useMemo(
+    () =>
+      filteredTeachers.map((item) => ({
+        value: item.id,
+        label: `${item.name} - ${item.email} (${item.id})`,
+      })),
+    [filteredTeachers]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const q = studentSearch.trim().toLowerCase();
+    const scoped = students.filter((item) => {
+      if (organizationId && item.organizationId && item.organizationId !== organizationId) return false;
+      if (schoolId && item.schoolId && item.schoolId !== schoolId) return false;
+      return true;
+    });
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.email.toLowerCase().includes(q)
+    );
+  }, [organizationId, schoolId, studentSearch, students]);
+
+  const filteredFeeTypes = useMemo(() => {
+    const q = feeTypeSearch.trim().toLowerCase();
+    const scoped = feeTypes.filter(
+      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+    );
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.frequency.toLowerCase().includes(q)
+    );
+  }, [feeTypeSearch, feeTypes, organizationId, schoolId]);
+
+  const filteredFeePlans = useMemo(() => {
+    const q = feePlanSearch.trim().toLowerCase();
+    const scoped = feePlans.filter(
+      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+    );
+    if (!q) return scoped;
+    return scoped.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.academicYearId.toLowerCase().includes(q)
+    );
+  }, [feePlanSearch, feePlans, organizationId, schoolId]);
+
+  const studentOptions = useMemo(
+    () =>
+      filteredStudents.map((item) => ({
+        value: item.id,
+        label: `${item.name} - ${item.email} (${item.id})`,
+      })),
+    [filteredStudents]
+  );
+
+  const feeTypeOptions = useMemo(
+    () =>
+      filteredFeeTypes.map((item) => ({
+        value: item.id,
+        label: `${item.name} [${item.frequency}] (${item.id})`,
+      })),
+    [filteredFeeTypes]
+  );
+
+  const feePlanOptions = useMemo(
+    () =>
+      filteredFeePlans.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [filteredFeePlans]
+  );
+
+  const tenantOrganizationOptions = useMemo(() => {
+    if (!organizationId) return organizationOptions;
+    const exists = organizationOptions.some((opt) => opt.value === organizationId);
+    if (exists) return organizationOptions;
+    return [{ value: organizationId, label: `Current Organization (${organizationId})` }, ...organizationOptions];
+  }, [organizationId, organizationOptions]);
+
+  const tenantSchoolOptions = useMemo(() => {
+    if (!schoolId) return schoolOptions;
+    const exists = schoolOptions.some((opt) => opt.value === schoolId);
+    if (exists) return schoolOptions;
+    return [{ value: schoolId, label: `Current School (${schoolId})` }, ...schoolOptions];
+  }, [schoolId, schoolOptions]);
+
+  const tenantClassMasterOptions = useMemo(() => {
+    if (!classMasterId) return classMasterOptions;
+    const exists = classMasterOptions.some((opt) => opt.value === classMasterId);
+    if (exists) return classMasterOptions;
+    return [{ value: classMasterId, label: `Current Class (${classMasterId})` }, ...classMasterOptions];
+  }, [classMasterId, classMasterOptions]);
+
+  const tenantAcademicYearOptions = useMemo(() => {
+    if (!academicYearId) return academicYearOptions;
+    const exists = academicYearOptions.some((opt) => opt.value === academicYearId);
+    if (exists) return academicYearOptions;
+    return [{ value: academicYearId, label: `Current Academic Year (${academicYearId})` }, ...academicYearOptions];
+  }, [academicYearId, academicYearOptions]);
+
+  const tenantTeacherOptions = useMemo(() => {
+    if (!teacherId) return teacherOptions;
+    const exists = teacherOptions.some((opt) => opt.value === teacherId);
+    if (exists) return teacherOptions;
+    return [{ value: teacherId, label: `Current Teacher (${teacherId})` }, ...teacherOptions];
+  }, [teacherId, teacherOptions]);
+
+  const tenantStudentOptions = useMemo(() => {
+    if (!studentId) return studentOptions;
+    const exists = studentOptions.some((opt) => opt.value === studentId);
+    if (exists) return studentOptions;
+    return [{ value: studentId, label: `Current Student (${studentId})` }, ...studentOptions];
+  }, [studentId, studentOptions]);
+
+  const tenantFeeTypeOptions = useMemo(() => {
+    if (!feeTypeId) return feeTypeOptions;
+    const exists = feeTypeOptions.some((opt) => opt.value === feeTypeId);
+    if (exists) return feeTypeOptions;
+    return [{ value: feeTypeId, label: `Current Fee Type (${feeTypeId})` }, ...feeTypeOptions];
+  }, [feeTypeId, feeTypeOptions]);
+
+  const tenantFeePlanOptions = useMemo(() => {
+    if (!feePlanId) return feePlanOptions;
+    const exists = feePlanOptions.some((opt) => opt.value === feePlanId);
+    if (exists) return feePlanOptions;
+    return [{ value: feePlanId, label: `Current Fee Plan (${feePlanId})` }, ...feePlanOptions];
+  }, [feePlanId, feePlanOptions]);
+
+  const visibleStepIndexes = useMemo(
+    () => stepMeta.map((_, idx) => idx).filter((idx) => canAccessStep(idx)),
+    [canAccessStep]
+  );
+
+  const currentVisibleStepPosition = useMemo(
+    () => visibleStepIndexes.findIndex((idx) => idx === currentStep),
+    [currentStep, visibleStepIndexes]
+  );
+  const visibleCompletionCount = useMemo(
+    () => visibleStepIndexes.reduce((count, stepIndex) => (completion[stepIndex] ? count + 1 : count), 0),
+    [completion, visibleStepIndexes]
+  );
+  const completionPercent = useMemo(() => {
+    if (!visibleStepIndexes.length) return 0;
+    return Math.round((visibleCompletionCount / visibleStepIndexes.length) * 100);
+  }, [visibleCompletionCount, visibleStepIndexes.length]);
+  const dataLoadingForCurrentStep = useMemo(() => {
+    if (currentStep === 4) return loadingAcademicYears || loadingClassMasters;
+    if (currentStep === 5) return loadingAcademicYears || loadingClassMasters || loadingTeachers;
+    if (currentStep === 6) return loadingFeeTypes || loadingFeePlans;
+    if (currentStep === 8) return loadingStudents || loadingFeeTypes || loadingFeePlans;
+    return false;
+  }, [
+    currentStep,
+    loadingAcademicYears,
+    loadingClassMasters,
+    loadingFeePlans,
+    loadingFeeTypes,
+    loadingStudents,
+    loadingTeachers,
+  ]);
+
+  const maxUnlockedVisiblePosition = useMemo(() => {
     let max = 0;
-    for (let i = 0; i < completion.length - 1; i += 1) {
-      if (completion[i]) max = i + 1;
+    for (let i = 0; i < visibleStepIndexes.length - 1; i += 1) {
+      const stepIndex = visibleStepIndexes[i];
+      if (completion[stepIndex]) {
+        max = i + 1;
+      } else {
+        break;
+      }
     }
-    return Math.max(max, currentStep);
-  }, [completion, currentStep]);
+    return Math.max(max, currentVisibleStepPosition, 0);
+  }, [completion, currentVisibleStepPosition, visibleStepIndexes]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) return;
-      const draft = JSON.parse(raw) as JsonRecord;
+    const draft = loadDraft<OnboardingDraft>(DRAFT_KEY);
+    if (!draft) return;
 
-      if (typeof draft.currentStep === 'number') setCurrentStep(Math.max(0, Math.min(stepMeta.length - 1, draft.currentStep)));
-      if (typeof draft.organizationId === 'string') setOrganizationId(draft.organizationId);
-      if (typeof draft.schoolId === 'string') setSchoolId(draft.schoolId);
-      if (typeof draft.academicYearId === 'string') setAcademicYearId(draft.academicYearId);
-      if (typeof draft.classMasterId === 'string') setClassMasterId(draft.classMasterId);
-      if (typeof draft.sectionId === 'string') setSectionId(draft.sectionId);
-      if (typeof draft.teacherId === 'string') setTeacherId(draft.teacherId);
-      if (typeof draft.feeTypeId === 'string') setFeeTypeId(draft.feeTypeId);
-      if (typeof draft.feePlanId === 'string') setFeePlanId(draft.feePlanId);
-      if (typeof draft.studentId === 'string') setStudentId(draft.studentId);
-      if (typeof draft.skipSubjectAllocation === 'boolean') setSkipSubjectAllocation(draft.skipSubjectAllocation);
-      if (typeof draft.skipAssignFeePlan === 'boolean') setSkipAssignFeePlan(draft.skipAssignFeePlan);
+    if (typeof draft.currentStep === 'number') setCurrentStep(Math.max(0, Math.min(stepMeta.length - 1, draft.currentStep)));
+    if (typeof draft.organizationId === 'string') setOrganizationId(draft.organizationId);
+    if (typeof draft.schoolId === 'string') setSchoolId(draft.schoolId);
+    if (typeof draft.academicYearId === 'string') setAcademicYearId(draft.academicYearId);
+    if (typeof draft.classMasterId === 'string') setClassMasterId(draft.classMasterId);
+    if (typeof draft.sectionId === 'string') setSectionId(draft.sectionId);
+    if (typeof draft.teacherId === 'string') setTeacherId(draft.teacherId);
+    if (typeof draft.feeTypeId === 'string') setFeeTypeId(draft.feeTypeId);
+    if (typeof draft.feePlanId === 'string') setFeePlanId(draft.feePlanId);
+    if (typeof draft.studentId === 'string') setStudentId(draft.studentId);
+    if (typeof draft.skipSubjectAllocation === 'boolean') setSkipSubjectAllocation(draft.skipSubjectAllocation);
+    if (typeof draft.skipAssignFeePlan === 'boolean') setSkipAssignFeePlan(draft.skipAssignFeePlan);
 
-      if (draft.orgForm && typeof draft.orgForm === 'object') setOrgForm((prev) => ({ ...prev, ...(draft.orgForm as typeof prev) }));
-      if (draft.schoolForm && typeof draft.schoolForm === 'object') setSchoolForm((prev) => ({ ...prev, ...(draft.schoolForm as typeof prev) }));
-      if (draft.adminForm && typeof draft.adminForm === 'object') setAdminForm((prev) => ({ ...prev, ...(draft.adminForm as typeof prev) }));
-      if (draft.yearForm && typeof draft.yearForm === 'object') setYearForm((prev) => ({ ...prev, ...(draft.yearForm as typeof prev) }));
-      if (draft.classForm && typeof draft.classForm === 'object') setClassForm((prev) => ({ ...prev, ...(draft.classForm as typeof prev) }));
-      if (draft.teacherForm && typeof draft.teacherForm === 'object') setTeacherForm((prev) => ({ ...prev, ...(draft.teacherForm as typeof prev) }));
-      if (draft.sectionForm && typeof draft.sectionForm === 'object') setSectionForm((prev) => ({ ...prev, ...(draft.sectionForm as typeof prev) }));
-      if (draft.subjectForm && typeof draft.subjectForm === 'object') setSubjectForm((prev) => ({ ...prev, ...(draft.subjectForm as typeof prev) }));
-      if (draft.feeTypeForm && typeof draft.feeTypeForm === 'object') setFeeTypeForm((prev) => ({ ...prev, ...(draft.feeTypeForm as typeof prev) }));
-      if (draft.feePlanForm && typeof draft.feePlanForm === 'object') setFeePlanForm((prev) => ({ ...prev, ...(draft.feePlanForm as typeof prev) }));
-      if (draft.studentForm && typeof draft.studentForm === 'object') setStudentForm((prev) => ({ ...prev, ...(draft.studentForm as typeof prev) }));
-      if (draft.ledgerForm && typeof draft.ledgerForm === 'object') setLedgerForm((prev) => ({ ...prev, ...(draft.ledgerForm as typeof prev) }));
-    } catch {
-      // Ignore invalid drafts
-    }
+    if (draft.orgForm && typeof draft.orgForm === 'object') setOrgForm((prev) => ({ ...prev, ...draft.orgForm }));
+    if (draft.schoolForm && typeof draft.schoolForm === 'object') setSchoolForm((prev) => ({ ...prev, ...draft.schoolForm }));
+    if (draft.adminForm && typeof draft.adminForm === 'object') setAdminForm((prev) => ({ ...prev, ...draft.adminForm }));
+    if (draft.yearForm && typeof draft.yearForm === 'object') setYearForm((prev) => ({ ...prev, ...draft.yearForm }));
+    if (draft.classForm && typeof draft.classForm === 'object') setClassForm((prev) => ({ ...prev, ...draft.classForm }));
+    if (draft.teacherForm && typeof draft.teacherForm === 'object') setTeacherForm((prev) => ({ ...prev, ...draft.teacherForm }));
+    if (draft.sectionForm && typeof draft.sectionForm === 'object') setSectionForm((prev) => ({ ...prev, ...draft.sectionForm }));
+    if (draft.subjectForm && typeof draft.subjectForm === 'object') setSubjectForm((prev) => ({ ...prev, ...draft.subjectForm }));
+    if (draft.feeTypeForm && typeof draft.feeTypeForm === 'object') setFeeTypeForm((prev) => ({ ...prev, ...draft.feeTypeForm }));
+    if (draft.feePlanForm && typeof draft.feePlanForm === 'object') setFeePlanForm((prev) => ({ ...prev, ...draft.feePlanForm }));
+    if (draft.studentForm && typeof draft.studentForm === 'object') setStudentForm((prev) => ({ ...prev, ...draft.studentForm }));
+    if (draft.ledgerForm && typeof draft.ledgerForm === 'object') setLedgerForm((prev) => ({ ...prev, ...draft.ledgerForm }));
   }, []);
 
   async function loadOrganizations() {
+    setLoadingOrganizations(true);
     try {
-      const response = await fetch('/api/admin/organizations');
-      const data = (await response.json()) as Array<{ id?: string; name?: string }>;
-      if (!response.ok || !Array.isArray(data)) return;
-      setOrganizations(
-        data
-          .filter((row) => typeof row.id === 'string' && typeof row.name === 'string')
-          .map((row) => ({ id: row.id as string, name: row.name as string }))
-      );
-    } catch {
-      // Ignore dropdown loading errors in UI
+      const data = await fetchOrganizations();
+      setOrganizations(data);
+    } finally {
+      setLoadingOrganizations(false);
     }
   }
 
   async function loadSchools(orgId?: string) {
+    setLoadingSchools(true);
     try {
-      const query = orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';
-      const response = await fetch(`/api/admin/schools${query}`);
-      const data = (await response.json()) as Array<{ id?: string; name?: string; organizationId?: string }>;
-      if (!response.ok || !Array.isArray(data)) return;
-      const mapped = data
-        .filter(
-          (row) =>
-            typeof row.id === 'string' &&
-            typeof row.name === 'string' &&
-            typeof row.organizationId === 'string'
-        )
-        .map((row) => ({
-          id: row.id as string,
-          name: row.name as string,
-          organizationId: row.organizationId as string,
-        }));
-      setSchools(mapped);
-    } catch {
-      // Ignore dropdown loading errors in UI
+      const data = await fetchSchools(orgId);
+      setSchools(data);
+    } finally {
+      setLoadingSchools(false);
+    }
+  }
+
+  async function loadAcademicYears(orgId?: string, schId?: string) {
+    setLoadingAcademicYears(true);
+    try {
+      const data = await fetchAcademicYears(orgId, schId);
+      setAcademicYears(data);
+    } finally {
+      setLoadingAcademicYears(false);
+    }
+  }
+
+  async function loadClassMasters(orgId?: string, schId?: string) {
+    setLoadingClassMasters(true);
+    try {
+      const data = await fetchClassMasters(orgId, schId);
+      setClassMasters(data);
+    } finally {
+      setLoadingClassMasters(false);
+    }
+  }
+
+  async function loadTeachers(orgId?: string, schId?: string) {
+    setLoadingTeachers(true);
+    try {
+      const data = await fetchTeachers(orgId, schId);
+      setTeachers(data);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  }
+
+  async function loadStudents(orgId?: string, schId?: string) {
+    setLoadingStudents(true);
+    try {
+      const data = await fetchStudents(orgId, schId);
+      setStudents(data);
+    } finally {
+      setLoadingStudents(false);
+    }
+  }
+
+  async function loadFeeTypes(orgId?: string, schId?: string) {
+    setLoadingFeeTypes(true);
+    try {
+      const data = await fetchFeeTypes(orgId, schId);
+      setFeeTypes(data);
+    } finally {
+      setLoadingFeeTypes(false);
+    }
+  }
+
+  async function loadFeePlans(orgId?: string, schId?: string) {
+    setLoadingFeePlans(true);
+    try {
+      const data = await fetchFeePlans(orgId, schId);
+      setFeePlans(data);
+    } finally {
+      setLoadingFeePlans(false);
     }
   }
 
   useEffect(() => {
     loadOrganizations();
   }, []);
+
+  useEffect(() => {
+    if (!visibleStepIndexes.length) return;
+    if (!canAccessStep(currentStep)) {
+      setCurrentStep(visibleStepIndexes[0]);
+    }
+  }, [canAccessStep, currentStep, visibleStepIndexes]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !actorRole) return;
+
+    if (actorRole === UserRole.ORGANIZATION_ADMIN && actorOrganizationId) {
+      setOrganizationId(actorOrganizationId);
+    }
+
+    if (
+      actorRole !== UserRole.SUPER_ADMIN &&
+      actorRole !== UserRole.ORGANIZATION_ADMIN
+    ) {
+      if (actorOrganizationId) {
+        setOrganizationId(actorOrganizationId);
+      }
+      if (actorSchoolId) {
+        setSchoolId(actorSchoolId);
+      }
+    }
+  }, [actorOrganizationId, actorRole, actorSchoolId, status]);
 
   useEffect(() => {
     if (organizationId) {
@@ -297,6 +701,25 @@ export default function OnboardingFlowPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId]);
+
+  useEffect(() => {
+    if (!organizationId || !schoolId) {
+      setAcademicYears([]);
+      setClassMasters([]);
+      setTeachers([]);
+      setStudents([]);
+      setFeeTypes([]);
+      setFeePlans([]);
+      return;
+    }
+
+    loadAcademicYears(organizationId, schoolId);
+    loadClassMasters(organizationId, schoolId);
+    loadTeachers(organizationId, schoolId);
+    loadStudents(organizationId, schoolId);
+    loadFeeTypes(organizationId, schoolId);
+    loadFeePlans(organizationId, schoolId);
+  }, [organizationId, schoolId]);
 
   useEffect(() => {
     const draft = {
@@ -325,7 +748,7 @@ export default function OnboardingFlowPage() {
       studentForm,
       ledgerForm,
     };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    saveDraft(DRAFT_KEY, draft);
   }, [
     currentStep,
     organizationId,
@@ -394,257 +817,632 @@ export default function OnboardingFlowPage() {
     }
   }
 
+  const hasText = (value: string) => value.trim().length > 0;
+  const hasTenantContext = () => Boolean(organizationId && schoolId);
+  const setStepError = (key: string, message: string) => {
+    setStatusMap((prev) => ({ ...prev, [key]: { type: 'error', message } }));
+  };
+  const firstError = (errors: Record<string, string>) => Object.values(errors)[0] ?? null;
+
+  const getCurrentStepErrors = useCallback((): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    const tenantSelected = Boolean(organizationId && schoolId);
+    switch (currentStep) {
+      case 1:
+        if (!hasText(orgForm.organizationName)) errors.organizationName = 'Organization name is required.';
+        if (!hasText(orgForm.type)) errors.type = 'Organization type is required.';
+        if (!hasText(orgForm.contactEmail)) errors.contactEmail = 'Organization contact email is required.';
+        break;
+      case 2:
+        if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
+        if (!hasText(schoolForm.schoolName)) errors.schoolName = 'School name is required.';
+        if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'School code is required.';
+        break;
+      case 3:
+        if (!tenantSelected) errors.tenant = 'Please select organization and school from tenant selectors.';
+        if (!hasText(adminForm.email)) errors.email = 'Admin email is required.';
+        if (!hasText(adminForm.password)) errors.password = 'Admin password is required.';
+        if (!hasText(adminForm.firstName)) errors.firstName = 'Admin first name is required.';
+        if (!hasText(adminForm.lastName)) errors.lastName = 'Admin last name is required.';
+        break;
+      case 4:
+        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!hasText(yearForm.name)) errors.yearName = 'Academic year name is required.';
+        if (!hasText(yearForm.startDate)) errors.yearStartDate = 'Start date is required.';
+        if (!hasText(yearForm.endDate)) errors.yearEndDate = 'End date is required.';
+        if (!hasText(classForm.name)) errors.className = 'Class name is required.';
+        if (!hasText(classForm.level)) errors.classLevel = 'Class level is required.';
+        break;
+      case 5:
+        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!hasText(teacherForm.email)) errors.teacherEmail = 'Teacher email is required.';
+        if (!hasText(teacherForm.password)) errors.teacherPassword = 'Teacher password is required.';
+        if (!hasText(teacherForm.firstName)) errors.teacherFirstName = 'Teacher first name is required.';
+        if (!hasText(teacherForm.lastName)) errors.teacherLastName = 'Teacher last name is required.';
+        if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before creating section.';
+        if (!hasText(sectionForm.name)) errors.sectionName = 'Section name is required.';
+        if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required for subject allocation.';
+        if (!hasText(subjectForm.subjectName)) errors.subjectName = 'Subject name is required.';
+        if (Number(subjectForm.weeklyPeriods || '0') <= 0) errors.weeklyPeriods = 'Weekly periods must be greater than 0.';
+        break;
+      case 6:
+        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!hasText(feeTypeForm.name)) errors.feeTypeName = 'Fee type name is required.';
+        if (Number(feeTypeForm.amount || '0') <= 0) errors.feeTypeAmount = 'Fee amount must be greater than 0.';
+        if (!hasText(feeTypeForm.frequency)) errors.feeTypeFrequency = 'Fee frequency is required.';
+        if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required before creating fee plan.';
+        if (!hasText(feePlanForm.name)) errors.feePlanName = 'Fee plan name is required.';
+        try {
+          const parsed = JSON.parse(feePlanForm.itemsJson);
+          if (!Array.isArray(parsed) || parsed.length === 0) errors.feePlanItemsJson = 'Fee plan items JSON must contain at least one item.';
+        } catch {
+          errors.feePlanItemsJson = 'Fee plan items JSON is invalid.';
+        }
+        if (!hasText(feePlanId)) errors.feePlanId = 'Select or create a fee plan first.';
+        break;
+      case 7:
+        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!hasText(studentForm.email)) errors.studentEmail = 'Student email is required.';
+        if (!hasText(studentForm.password)) errors.studentPassword = 'Student password is required.';
+        if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
+        if (!hasText(studentForm.lastName)) errors.studentLastName = 'Student last name is required.';
+        if (!hasText(studentForm.parentEmail)) errors.parentEmail = 'Parent email is required.';
+        if (!hasText(studentForm.parentPassword)) errors.parentPassword = 'Parent password is required.';
+        if (!hasText(studentForm.parentFirstName)) errors.parentFirstName = 'Parent first name is required.';
+        if (!hasText(studentForm.parentLastName)) errors.parentLastName = 'Parent last name is required.';
+        break;
+      case 8:
+        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required.';
+        if (!hasText(studentId)) errors.studentId = 'Student selection is required.';
+        if (Number(ledgerForm.amount || '0') <= 0) errors.ledgerAmount = 'Ledger amount must be greater than 0.';
+        if (!hasText(ledgerForm.dueDate)) errors.ledgerDueDate = 'Ledger due date is required.';
+        break;
+      default:
+        break;
+    }
+    return errors;
+  }, [
+    academicYearId,
+    adminForm.email,
+    adminForm.firstName,
+    adminForm.lastName,
+    adminForm.password,
+    classForm.level,
+    classForm.name,
+    classMasterId,
+    currentStep,
+    feePlanForm.itemsJson,
+    feePlanForm.name,
+    feePlanId,
+    feeTypeForm.amount,
+    feeTypeForm.frequency,
+    feeTypeForm.name,
+    ledgerForm.amount,
+    ledgerForm.dueDate,
+    orgForm.contactEmail,
+    orgForm.organizationName,
+    orgForm.type,
+    organizationId,
+    schoolId,
+    schoolForm.schoolCode,
+    schoolForm.schoolName,
+    sectionForm.name,
+    studentForm.email,
+    studentForm.firstName,
+    studentForm.lastName,
+    studentForm.parentEmail,
+    studentForm.parentFirstName,
+    studentForm.parentLastName,
+    studentForm.parentPassword,
+    studentForm.password,
+    studentId,
+    subjectForm.subjectName,
+    subjectForm.weeklyPeriods,
+    teacherForm.email,
+    teacherForm.firstName,
+    teacherForm.lastName,
+    teacherForm.password,
+    yearForm.endDate,
+    yearForm.name,
+    yearForm.startDate,
+  ]);
+
+  useEffect(() => {
+    if (!Object.keys(fieldErrors).length) return;
+    const nextErrors = getCurrentStepErrors();
+    const current = JSON.stringify(fieldErrors);
+    const next = JSON.stringify(nextErrors);
+    if (current !== next) {
+      setFieldErrors(nextErrors);
+    }
+  }, [fieldErrors, getCurrentStepErrors]);
+
+  useEffect(() => {
+    if (!focusInvalidNonce) return;
+    const container = stepContentRef.current;
+    if (!container) return;
+
+    const focusInvalid = () => {
+      const invalidField = container.querySelector<HTMLElement>(
+        'input.border-rose-300, select.border-rose-300, textarea.border-rose-300'
+      );
+      if (invalidField) {
+        invalidField.focus({ preventScroll: true });
+        invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const firstErrorMessage = container.querySelector<HTMLElement>('p.text-rose-600');
+      if (!firstErrorMessage) return;
+      firstErrorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const nearbyField = firstErrorMessage
+        .closest('div')
+        ?.querySelector<HTMLElement>('input, select, textarea, button');
+      nearbyField?.focus({ preventScroll: true });
+    };
+
+    const frame = window.requestAnimationFrame(focusInvalid);
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusInvalidNonce]);
+
   function stepContent() {
+    if (!canAccessStep(currentStep)) {
+      return <NoAccessStep />;
+    }
+
     switch (currentStep) {
       case 0:
-        return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <button onClick={checkBootstrap} className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Check Bootstrap Status</button>
-            <a href="/auth/superadmin-bootstrap" className="ml-3 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Open Bootstrap Page</a>
-            <StatusBanner status={statusMap.bootstrapCheck ?? initialStatus} />
-          </section>
-        );
+        return <BootstrapStep onCheckBootstrap={checkBootstrap} status={statusMap.bootstrapCheck ?? initialStatus} />;
       case 1:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={orgForm.organizationName} onChange={(e) => setOrgForm({ ...orgForm, organizationName: e.target.value })} placeholder="Organization Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.type} onChange={(e) => setOrgForm({ ...orgForm, type: e.target.value })} placeholder="Type" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.street} onChange={(e) => setOrgForm({ ...orgForm, street: e.target.value })} placeholder="Street" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.city} onChange={(e) => setOrgForm({ ...orgForm, city: e.target.value })} placeholder="City" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.state} onChange={(e) => setOrgForm({ ...orgForm, state: e.target.value })} placeholder="State" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.zipCode} onChange={(e) => setOrgForm({ ...orgForm, zipCode: e.target.value })} placeholder="Zip Code" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.country} onChange={(e) => setOrgForm({ ...orgForm, country: e.target.value })} placeholder="Country" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.contactEmail} onChange={(e) => setOrgForm({ ...orgForm, contactEmail: e.target.value })} placeholder="Contact Email" className="rounded border px-3 py-2 text-sm" />
-              <input value={orgForm.contactPhone} onChange={(e) => setOrgForm({ ...orgForm, contactPhone: e.target.value })} placeholder="Contact Phone" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button
-              onClick={() =>
-                postStep('organization', '/api/admin/organizations', orgForm, async (d) => {
-                  const id = extractId(d);
-                  if (id) {
-                    setOrganizationId(id);
-                    setRecentOrganizationId(id);
-                  }
-                  await loadOrganizations();
-                })
+          <OrganizationStep
+            orgForm={orgForm}
+            setOrgForm={setOrgForm}
+            onCreate={() => {
+              const errors: Record<string, string> = {};
+              if (!hasText(orgForm.organizationName)) errors.organizationName = 'Organization name is required.';
+              if (!hasText(orgForm.type)) errors.type = 'Organization type is required.';
+              if (!hasText(orgForm.contactEmail)) errors.contactEmail = 'Organization contact email is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('organization', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
               }
-              className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Create Organization
-            </button>
-            <StatusBanner status={statusMap.organization ?? initialStatus} />
-          </section>
+              setFieldErrors({});
+              postStep('organization', '/api/admin/organizations', orgForm, async (d) => {
+                const id = extractId(d);
+                if (id) {
+                  setOrganizationId(id);
+                  setRecentOrganizationId(id);
+                }
+                await loadOrganizations();
+              });
+            }}
+            status={statusMap.organization ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 2:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="mb-3 text-sm text-gray-600">organizationId: <span className="font-medium">{organizationId || 'Not set'}</span></div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} placeholder="School Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.schoolCode} onChange={(e) => setSchoolForm({ ...schoolForm, schoolCode: e.target.value })} placeholder="School Code" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.street} onChange={(e) => setSchoolForm({ ...schoolForm, street: e.target.value })} placeholder="Street" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.city} onChange={(e) => setSchoolForm({ ...schoolForm, city: e.target.value })} placeholder="City" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.state} onChange={(e) => setSchoolForm({ ...schoolForm, state: e.target.value })} placeholder="State" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.zipCode} onChange={(e) => setSchoolForm({ ...schoolForm, zipCode: e.target.value })} placeholder="Zip Code" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.country} onChange={(e) => setSchoolForm({ ...schoolForm, country: e.target.value })} placeholder="Country" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.contactEmail} onChange={(e) => setSchoolForm({ ...schoolForm, contactEmail: e.target.value })} placeholder="Contact Email" className="rounded border px-3 py-2 text-sm" />
-              <input value={schoolForm.contactPhone} onChange={(e) => setSchoolForm({ ...schoolForm, contactPhone: e.target.value })} placeholder="Contact Phone" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button
-              onClick={() =>
-                postStep('school', '/api/admin/schools', { ...schoolForm, organizationId }, async (d) => {
-                  const id = extractId(d);
-                  if (id) {
-                    setSchoolId(id);
-                    setRecentSchoolId(id);
-                  }
-                  await loadSchools(organizationId);
-                })
+          <SchoolStep
+            schoolForm={schoolForm}
+            setSchoolForm={setSchoolForm}
+            organizationId={organizationId}
+            onCreate={() => {
+              const errors: Record<string, string> = {};
+              if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
+              if (!hasText(schoolForm.schoolName)) errors.schoolName = 'School name is required.';
+              if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'School code is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('school', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
               }
-              className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Create School
-            </button>
-            <StatusBanner status={statusMap.school ?? initialStatus} />
-          </section>
+              setFieldErrors({});
+              postStep('school', '/api/admin/schools', { ...schoolForm, organizationId }, async (d) => {
+                const id = extractId(d);
+                if (id) {
+                  setSchoolId(id);
+                  setRecentSchoolId(id);
+                }
+                await loadSchools(organizationId);
+              });
+            }}
+            status={statusMap.school ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 3:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} placeholder="Email" className="rounded border px-3 py-2 text-sm" />
-              <input type="password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} placeholder="Password" className="rounded border px-3 py-2 text-sm" />
-              <input value={adminForm.firstName} onChange={(e) => setAdminForm({ ...adminForm, firstName: e.target.value })} placeholder="First Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={adminForm.lastName} onChange={(e) => setAdminForm({ ...adminForm, lastName: e.target.value })} placeholder="Last Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={adminForm.phone} onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })} placeholder="Phone" className="rounded border px-3 py-2 text-sm" />
-              <SearchableDropdown
-                options={[
-                  { value: UserRole.ORGANIZATION_ADMIN, label: 'ORGANIZATION_ADMIN' },
-                  { value: UserRole.SCHOOL_ADMIN, label: 'SCHOOL_ADMIN' },
-                  { value: UserRole.ADMIN, label: 'ADMIN' },
-                ]}
-                value={adminForm.role}
-                onChange={(value) => setAdminForm({ ...adminForm, role: value as UserRole })}
-                search={adminRoleSearch}
-                onSearchChange={setAdminRoleSearch}
-                placeholder="Select admin role"
-                searchPlaceholder="Search role"
-              />
-            </div>
-            <button
-              onClick={() => {
-                if (!organizationId || !schoolId) {
-                  setStatusMap((prev) => ({
-                    ...prev,
-                    adminUser: { type: 'error', message: 'Please select organization and school from tenant selectors.' },
-                  }));
-                  return;
-                }
-                postStep('adminUser', '/api/admin/users', { ...adminForm, organizationId, schoolId });
-              }}
-              className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Create Admin User
-            </button>
-            <StatusBanner status={statusMap.adminUser ?? initialStatus} />
-          </section>
+          <AdminUserStep
+            adminForm={adminForm}
+            setAdminForm={setAdminForm}
+            adminRoleSearch={adminRoleSearch}
+            setAdminRoleSearch={setAdminRoleSearch}
+            onCreate={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Please select organization and school from tenant selectors.';
+              if (!hasText(adminForm.email)) errors.email = 'Admin email is required.';
+              if (!hasText(adminForm.password)) errors.password = 'Admin password is required.';
+              if (!hasText(adminForm.firstName)) errors.firstName = 'Admin first name is required.';
+              if (!hasText(adminForm.lastName)) errors.lastName = 'Admin last name is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('adminUser', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep('adminUser', '/api/admin/users', { ...adminForm, organizationId, schoolId });
+            }}
+            status={statusMap.adminUser ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 4:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <input value={yearForm.name} onChange={(e) => setYearForm({ ...yearForm, name: e.target.value })} placeholder="Academic Year Name" className="rounded border px-3 py-2 text-sm" />
-              <input type="date" value={yearForm.startDate} onChange={(e) => setYearForm({ ...yearForm, startDate: e.target.value })} className="rounded border px-3 py-2 text-sm" />
-              <input type="date" value={yearForm.endDate} onChange={(e) => setYearForm({ ...yearForm, endDate: e.target.value })} className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('academicYear', '/api/admin/academic-years', { organizationId, schoolId, ...yearForm }, (d) => setAcademicYearId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Academic Year</button>
-            <StatusBanner status={statusMap.academicYear ?? initialStatus} />
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={classForm.name} onChange={(e) => setClassForm({ ...classForm, name: e.target.value })} placeholder="Class Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={classForm.level} onChange={(e) => setClassForm({ ...classForm, level: e.target.value })} placeholder="Class Level" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('classMaster', '/api/admin/class-masters', { organizationId, schoolId, ...classForm }, (d) => setClassMasterId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Class Master</button>
-            <StatusBanner status={statusMap.classMaster ?? initialStatus} />
-          </section>
+          <AcademicSetupStep
+            organizationId={organizationId}
+            schoolId={schoolId}
+            academicYearId={academicYearId}
+            classMasterId={classMasterId}
+            setAcademicYearId={setAcademicYearId}
+            setClassMasterId={setClassMasterId}
+            yearForm={yearForm}
+            setYearForm={setYearForm}
+            classForm={classForm}
+            setClassForm={setClassForm}
+            classLevelOptions={classLevelOptions}
+            classLevelSearch={classLevelSearch}
+            setClassLevelSearch={setClassLevelSearch}
+            academicYearSearch={academicYearSearch}
+            setAcademicYearSearch={setAcademicYearSearch}
+            classMasterSearch={classMasterSearch}
+            setClassMasterSearch={setClassMasterSearch}
+            tenantAcademicYearOptions={tenantAcademicYearOptions}
+            tenantClassMasterOptions={tenantClassMasterOptions}
+            onRefreshAcademicYears={() => loadAcademicYears(organizationId, schoolId)}
+            onRefreshClasses={() => loadClassMasters(organizationId, schoolId)}
+            onCreateAcademicYear={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(yearForm.name)) errors.yearName = 'Academic year name is required.';
+              if (!hasText(yearForm.startDate)) errors.yearStartDate = 'Start date is required.';
+              if (!hasText(yearForm.endDate)) errors.yearEndDate = 'End date is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('academicYear', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'academicYear',
+                '/api/admin/academic-years',
+                { organizationId, schoolId, ...yearForm },
+                async (d) => {
+                  setAcademicYearId(extractId(d));
+                  await loadAcademicYears(organizationId, schoolId);
+                }
+              );
+            }}
+            onCreateClassMaster={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(classForm.name)) errors.className = 'Class name is required.';
+              if (!hasText(classForm.level)) errors.classLevel = 'Class level is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('classMaster', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'classMaster',
+                '/api/admin/class-masters',
+                { organizationId, schoolId, ...classForm },
+                async (d) => {
+                  setClassMasterId(extractId(d));
+                  await loadClassMasters(organizationId, schoolId);
+                }
+              );
+            }}
+            statusAcademicYear={statusMap.academicYear ?? initialStatus}
+            statusClassMaster={statusMap.classMaster ?? initialStatus}
+            inferClassLevelFromName={inferClassLevelFromName}
+            errors={fieldErrors}
+          />
         );
       case 5:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={teacherForm.email} onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })} placeholder="Teacher Email" className="rounded border px-3 py-2 text-sm" />
-              <input type="password" value={teacherForm.password} onChange={(e) => setTeacherForm({ ...teacherForm, password: e.target.value })} placeholder="Teacher Password" className="rounded border px-3 py-2 text-sm" />
-              <input value={teacherForm.firstName} onChange={(e) => setTeacherForm({ ...teacherForm, firstName: e.target.value })} placeholder="Teacher First Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={teacherForm.lastName} onChange={(e) => setTeacherForm({ ...teacherForm, lastName: e.target.value })} placeholder="Teacher Last Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={teacherForm.phone} onChange={(e) => setTeacherForm({ ...teacherForm, phone: e.target.value })} placeholder="Teacher Phone" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('teacherUser', '/api/admin/users', { ...teacherForm, role: UserRole.TEACHER, organizationId, schoolId }, (d) => setTeacherId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Teacher</button>
-            <StatusBanner status={statusMap.teacherUser ?? initialStatus} />
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={classMasterId} onChange={(e) => setClassMasterId(e.target.value)} placeholder="classMasterId" className="rounded border px-3 py-2 text-sm" />
-              <input value={sectionForm.name} onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })} placeholder="Section Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={sectionForm.capacity} onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })} type="number" placeholder="Capacity" className="rounded border px-3 py-2 text-sm" />
-              <input value={sectionForm.roomNumber} onChange={(e) => setSectionForm({ ...sectionForm, roomNumber: e.target.value })} placeholder="Room Number" className="rounded border px-3 py-2 text-sm" />
-              <input value={sectionForm.shift} onChange={(e) => setSectionForm({ ...sectionForm, shift: e.target.value })} placeholder="Shift" className="rounded border px-3 py-2 text-sm" />
-              <input value={teacherId} onChange={(e) => setTeacherId(e.target.value)} placeholder="classTeacherId" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('section', '/api/admin/sections', { organizationId, schoolId, classMasterId, name: sectionForm.name, capacity: Number(sectionForm.capacity || '0'), roomNumber: sectionForm.roomNumber || undefined, shift: sectionForm.shift || undefined, classTeacherId: teacherId || undefined }, (d) => setSectionId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Section + Assign Class Teacher</button>
-            <StatusBanner status={statusMap.section ?? initialStatus} />
-            <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={skipSubjectAllocation} onChange={(e) => setSkipSubjectAllocation(e.target.checked)} />
-              Skip subject allocation (optional)
-            </label>
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <input value={subjectForm.subjectName} onChange={(e) => setSubjectForm({ ...subjectForm, subjectName: e.target.value })} placeholder="Subject Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={subjectForm.weeklyPeriods} onChange={(e) => setSubjectForm({ ...subjectForm, weeklyPeriods: e.target.value })} type="number" placeholder="Weekly Periods" className="rounded border px-3 py-2 text-sm" />
-              <input value={academicYearId} onChange={(e) => setAcademicYearId(e.target.value)} placeholder="academicYearId" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button disabled={skipSubjectAllocation} onClick={() => postStep('subjectAllocation', '/api/admin/subject-allocations', { organizationId, schoolId, academicYearId, classMasterId, sectionId: sectionId || undefined, subjectName: subjectForm.subjectName, teacherId: teacherId || undefined, weeklyPeriods: Number(subjectForm.weeklyPeriods || '0') })} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Create Subject Allocation (Optional)</button>
-            <StatusBanner status={statusMap.subjectAllocation ?? initialStatus} />
-          </section>
+          <TeacherClassTeacherStep
+            organizationId={organizationId}
+            schoolId={schoolId}
+            teacherForm={teacherForm}
+            setTeacherForm={setTeacherForm}
+            classMasterId={classMasterId}
+            setClassMasterId={setClassMasterId}
+            classMasterSearch={classMasterSearch}
+            setClassMasterSearch={setClassMasterSearch}
+            sectionForm={sectionForm}
+            setSectionForm={setSectionForm}
+            teacherId={teacherId}
+            setTeacherId={setTeacherId}
+            teacherSearch={teacherSearch}
+            setTeacherSearch={setTeacherSearch}
+            skipSubjectAllocation={skipSubjectAllocation}
+            setSkipSubjectAllocation={setSkipSubjectAllocation}
+            subjectForm={subjectForm}
+            setSubjectForm={setSubjectForm}
+            academicYearId={academicYearId}
+            setAcademicYearId={setAcademicYearId}
+            academicYearSearch={academicYearSearch}
+            setAcademicYearSearch={setAcademicYearSearch}
+            tenantClassMasterOptions={tenantClassMasterOptions}
+            tenantTeacherOptions={tenantTeacherOptions}
+            tenantAcademicYearOptions={tenantAcademicYearOptions}
+            onRefreshClasses={() => loadClassMasters(organizationId, schoolId)}
+            onRefreshTeachers={() => loadTeachers(organizationId, schoolId)}
+            onCreateTeacher={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(teacherForm.email)) errors.teacherEmail = 'Teacher email is required.';
+              if (!hasText(teacherForm.password)) errors.teacherPassword = 'Teacher password is required.';
+              if (!hasText(teacherForm.firstName)) errors.teacherFirstName = 'Teacher first name is required.';
+              if (!hasText(teacherForm.lastName)) errors.teacherLastName = 'Teacher last name is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('teacherUser', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'teacherUser',
+                '/api/admin/users',
+                { ...teacherForm, role: UserRole.TEACHER, organizationId, schoolId },
+                async (d) => {
+                  setTeacherId(extractId(d));
+                  await loadTeachers(organizationId, schoolId);
+                }
+              );
+            }}
+            onCreateSectionAssignTeacher={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before creating section.';
+              if (!hasText(sectionForm.name)) errors.sectionName = 'Section name is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('section', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep('section', '/api/admin/sections', { organizationId, schoolId, classMasterId, name: sectionForm.name, capacity: Number(sectionForm.capacity || '0'), roomNumber: sectionForm.roomNumber || undefined, shift: sectionForm.shift || undefined, classTeacherId: teacherId || undefined }, (d) => setSectionId(extractId(d)));
+            }}
+            onCreateSubjectAllocation={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required for subject allocation.';
+              if (!hasText(classMasterId)) errors.classMasterId = 'Class master is required for subject allocation.';
+              if (!hasText(subjectForm.subjectName)) errors.subjectName = 'Subject name is required.';
+              if (Number(subjectForm.weeklyPeriods || '0') <= 0) errors.weeklyPeriods = 'Weekly periods must be greater than 0.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('subjectAllocation', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep('subjectAllocation', '/api/admin/subject-allocations', { organizationId, schoolId, academicYearId, classMasterId, sectionId: sectionId || undefined, subjectName: subjectForm.subjectName, teacherId: teacherId || undefined, weeklyPeriods: Number(subjectForm.weeklyPeriods || '0') });
+            }}
+            statusTeacherUser={statusMap.teacherUser ?? initialStatus}
+            statusSection={statusMap.section ?? initialStatus}
+            statusSubjectAllocation={statusMap.subjectAllocation ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 6:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <input value={feeTypeForm.name} onChange={(e) => setFeeTypeForm({ ...feeTypeForm, name: e.target.value })} placeholder="Fee Type Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={feeTypeForm.amount} onChange={(e) => setFeeTypeForm({ ...feeTypeForm, amount: e.target.value })} type="number" placeholder="Amount" className="rounded border px-3 py-2 text-sm" />
-              <SearchableDropdown
-                options={[
-                  { value: 'ONE_TIME', label: 'ONE_TIME' },
-                  { value: 'MONTHLY', label: 'MONTHLY' },
-                  { value: 'QUARTERLY', label: 'QUARTERLY' },
-                  { value: 'YEARLY', label: 'YEARLY' },
-                ]}
-                value={feeTypeForm.frequency}
-                onChange={(value) => setFeeTypeForm({ ...feeTypeForm, frequency: value })}
-                search={feeFrequencySearch}
-                onSearchChange={setFeeFrequencySearch}
-                placeholder="Select frequency"
-                searchPlaceholder="Search frequency"
-              />
-            </div>
-            <button onClick={() => postStep('feeType', '/api/admin/fee-types', { organizationId, schoolId, ...feeTypeForm, amount: Number(feeTypeForm.amount || '0') }, (d) => setFeeTypeId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Fee Type</button>
-            <StatusBanner status={statusMap.feeType ?? initialStatus} />
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              <input value={feePlanForm.name} onChange={(e) => setFeePlanForm({ ...feePlanForm, name: e.target.value })} placeholder="Fee Plan Name" className="rounded border px-3 py-2 text-sm" />
-              <textarea value={feePlanForm.itemsJson} onChange={(e) => setFeePlanForm({ ...feePlanForm, itemsJson: e.target.value })} className="h-24 rounded border px-3 py-2 font-mono text-xs" />
-            </div>
-            <button onClick={() => postStep('feePlan', '/api/admin/fee-plans', { organizationId, schoolId, academicYearId, name: feePlanForm.name, items: (() => { try { return JSON.parse(feePlanForm.itemsJson); } catch { return []; } })() }, (d) => setFeePlanId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Fee Plan</button>
-            <StatusBanner status={statusMap.feePlan ?? initialStatus} />
-            <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={skipAssignFeePlan} onChange={(e) => setSkipAssignFeePlan(e.target.checked)} />
-              Skip fee plan assignment (optional)
-            </label>
-            <button disabled={skipAssignFeePlan} onClick={() => postStep('assignFeePlan', '/api/admin/fee-plan-assignments', { organizationId, schoolId, academicYearId, feePlanId, classMasterId, sectionId: sectionId || undefined })} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Assign Fee Plan to Class/Section</button>
-            <StatusBanner status={statusMap.assignFeePlan ?? initialStatus} />
-          </section>
+          <FeesSetupStep
+            feeTypeForm={feeTypeForm}
+            setFeeTypeForm={setFeeTypeForm}
+            feeFrequencySearch={feeFrequencySearch}
+            setFeeFrequencySearch={setFeeFrequencySearch}
+            onCreateFeeType={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(feeTypeForm.name)) errors.feeTypeName = 'Fee type name is required.';
+              if (Number(feeTypeForm.amount || '0') <= 0) errors.feeTypeAmount = 'Fee amount must be greater than 0.';
+              if (!hasText(feeTypeForm.frequency)) errors.feeTypeFrequency = 'Fee frequency is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('feeType', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'feeType',
+                '/api/admin/fee-types',
+                { organizationId, schoolId, ...feeTypeForm, amount: Number(feeTypeForm.amount || '0') },
+                async (d) => {
+                  setFeeTypeId(extractId(d));
+                  await loadFeeTypes(organizationId, schoolId);
+                }
+              );
+            }}
+            statusFeeType={statusMap.feeType ?? initialStatus}
+            feePlanForm={feePlanForm}
+            setFeePlanForm={setFeePlanForm}
+            onCreateFeePlan={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required before creating fee plan.';
+              if (!hasText(feePlanForm.name)) errors.feePlanName = 'Fee plan name is required.';
+              try {
+                const parsed = JSON.parse(feePlanForm.itemsJson);
+                if (!Array.isArray(parsed) || parsed.length === 0) errors.feePlanItemsJson = 'Fee plan items JSON must contain at least one item.';
+              } catch {
+                errors.feePlanItemsJson = 'Fee plan items JSON is invalid.';
+              }
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('feePlan', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'feePlan',
+                '/api/admin/fee-plans',
+                { organizationId, schoolId, academicYearId, name: feePlanForm.name, items: (() => { try { return JSON.parse(feePlanForm.itemsJson); } catch { return []; } })() },
+                async (d) => {
+                  setFeePlanId(extractId(d));
+                  await loadFeePlans(organizationId, schoolId);
+                }
+              );
+            }}
+            statusFeePlan={statusMap.feePlan ?? initialStatus}
+            skipAssignFeePlan={skipAssignFeePlan}
+            setSkipAssignFeePlan={setSkipAssignFeePlan}
+            onAssignFeePlan={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required before assigning fee plan.';
+              if (!hasText(feePlanId)) errors.feePlanId = 'Select or create a fee plan first.';
+              if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before assigning fee plan.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('assignFeePlan', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep('assignFeePlan', '/api/admin/fee-plan-assignments', { organizationId, schoolId, academicYearId, feePlanId, classMasterId, sectionId: sectionId || undefined });
+            }}
+            statusAssignFeePlan={statusMap.assignFeePlan ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 7:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} placeholder="Student Email" className="rounded border px-3 py-2 text-sm" />
-              <input type="password" value={studentForm.password} onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })} placeholder="Student Password" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.firstName} onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })} placeholder="Student First Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.lastName} onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })} placeholder="Student Last Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.phone} onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })} placeholder="Student Phone" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.parentEmail} onChange={(e) => setStudentForm({ ...studentForm, parentEmail: e.target.value })} placeholder="Parent Email" className="rounded border px-3 py-2 text-sm" />
-              <input type="password" value={studentForm.parentPassword} onChange={(e) => setStudentForm({ ...studentForm, parentPassword: e.target.value })} placeholder="Parent Password" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.parentFirstName} onChange={(e) => setStudentForm({ ...studentForm, parentFirstName: e.target.value })} placeholder="Parent First Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.parentLastName} onChange={(e) => setStudentForm({ ...studentForm, parentLastName: e.target.value })} placeholder="Parent Last Name" className="rounded border px-3 py-2 text-sm" />
-              <input value={studentForm.parentPhone} onChange={(e) => setStudentForm({ ...studentForm, parentPhone: e.target.value })} placeholder="Parent Phone" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('studentWithParent', '/api/admin/users', { email: studentForm.email, password: studentForm.password, firstName: studentForm.firstName, lastName: studentForm.lastName, phone: studentForm.phone || undefined, role: UserRole.STUDENT, organizationId, schoolId, parent: { email: studentForm.parentEmail, password: studentForm.parentPassword, firstName: studentForm.parentFirstName, lastName: studentForm.parentLastName, phone: studentForm.parentPhone || undefined } }, (d) => setStudentId(extractId(d)))} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Student + Parent</button>
-            <StatusBanner status={statusMap.studentWithParent ?? initialStatus} />
-          </section>
+          <StudentParentStep
+            studentForm={studentForm}
+            setStudentForm={setStudentForm}
+            onCreate={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(studentForm.email)) errors.studentEmail = 'Student email is required.';
+              if (!hasText(studentForm.password)) errors.studentPassword = 'Student password is required.';
+              if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
+              if (!hasText(studentForm.lastName)) errors.studentLastName = 'Student last name is required.';
+              if (!hasText(studentForm.parentEmail)) errors.parentEmail = 'Parent email is required.';
+              if (!hasText(studentForm.parentPassword)) errors.parentPassword = 'Parent password is required.';
+              if (!hasText(studentForm.parentFirstName)) errors.parentFirstName = 'Parent first name is required.';
+              if (!hasText(studentForm.parentLastName)) errors.parentLastName = 'Parent last name is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('studentWithParent', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep(
+                'studentWithParent',
+                '/api/admin/users',
+                { email: studentForm.email, password: studentForm.password, firstName: studentForm.firstName, lastName: studentForm.lastName, phone: studentForm.phone || undefined, role: UserRole.STUDENT, organizationId, schoolId, parent: { email: studentForm.parentEmail, password: studentForm.parentPassword, firstName: studentForm.parentFirstName, lastName: studentForm.parentLastName, phone: studentForm.parentPhone || undefined } },
+                async (d) => {
+                  setStudentId(extractId(d));
+                  await loadStudents(organizationId, schoolId);
+                }
+              );
+            }}
+            status={statusMap.studentWithParent ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       case 8:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="studentId" className="rounded border px-3 py-2 text-sm" />
-              <input value={feePlanId} onChange={(e) => setFeePlanId(e.target.value)} placeholder="feePlanId" className="rounded border px-3 py-2 text-sm" />
-              <input value={feeTypeId} onChange={(e) => setFeeTypeId(e.target.value)} placeholder="feeTypeId (optional)" className="rounded border px-3 py-2 text-sm" />
-              <input value={ledgerForm.amount} onChange={(e) => setLedgerForm({ ...ledgerForm, amount: e.target.value })} type="number" placeholder="Amount" className="rounded border px-3 py-2 text-sm" />
-              <input value={ledgerForm.dueDate} onChange={(e) => setLedgerForm({ ...ledgerForm, dueDate: e.target.value })} type="date" className="rounded border px-3 py-2 text-sm" />
-            </div>
-            <button onClick={() => postStep('studentLedger', '/api/admin/student-fee-ledger', { organizationId, schoolId, academicYearId, studentId, feePlanId: feePlanId || undefined, feeTypeId: feeTypeId || undefined, amount: Number(ledgerForm.amount || '0'), dueDate: ledgerForm.dueDate })} className="mt-3 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Create Fee Ledger Entry</button>
-            <StatusBanner status={statusMap.studentLedger ?? initialStatus} />
-          </section>
+          <StudentLedgerStep
+            organizationId={organizationId}
+            schoolId={schoolId}
+            tenantStudentOptions={tenantStudentOptions}
+            studentId={studentId}
+            setStudentId={setStudentId}
+            studentSearch={studentSearch}
+            setStudentSearch={setStudentSearch}
+            tenantFeePlanOptions={tenantFeePlanOptions}
+            feePlanId={feePlanId}
+            setFeePlanId={setFeePlanId}
+            feePlanSearch={feePlanSearch}
+            setFeePlanSearch={setFeePlanSearch}
+            tenantFeeTypeOptions={tenantFeeTypeOptions}
+            feeTypeId={feeTypeId}
+            setFeeTypeId={setFeeTypeId}
+            feeTypeSearch={feeTypeSearch}
+            setFeeTypeSearch={setFeeTypeSearch}
+            ledgerForm={ledgerForm}
+            setLedgerForm={setLedgerForm}
+            onRefreshStudents={() => loadStudents(organizationId, schoolId)}
+            onRefreshFeePlans={() => loadFeePlans(organizationId, schoolId)}
+            onRefreshFeeTypes={() => loadFeeTypes(organizationId, schoolId)}
+            onCreateLedger={() => {
+              const errors: Record<string, string> = {};
+              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required.';
+              if (!hasText(studentId)) errors.studentId = 'Student selection is required.';
+              if (Number(ledgerForm.amount || '0') <= 0) errors.ledgerAmount = 'Ledger amount must be greater than 0.';
+              if (!hasText(ledgerForm.dueDate)) errors.ledgerDueDate = 'Ledger due date is required.';
+              const error = firstError(errors);
+              if (error) {
+                setFieldErrors(errors);
+                setStepError('studentLedger', error);
+                setFocusInvalidNonce((value) => value + 1);
+                return;
+              }
+              setFieldErrors({});
+              postStep('studentLedger', '/api/admin/student-fee-ledger', { organizationId, schoolId, academicYearId, studentId, feePlanId: feePlanId || undefined, feeTypeId: feeTypeId || undefined, amount: Number(ledgerForm.amount || '0'), dueDate: ledgerForm.dueDate });
+            }}
+            status={statusMap.studentLedger ?? initialStatus}
+            errors={fieldErrors}
+          />
         );
       default:
         return (
-          <section className="rounded-lg border border-gray-200 bg-white p-5">
-            <p className="text-sm text-gray-700">Parent can login with the credentials entered in Step 8.</p>
-            <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3 text-sm">
-              <p><span className="font-medium">Parent Email:</span> {studentForm.parentEmail || 'N/A'}</p>
-              <p><span className="font-medium">Login URL:</span> /auth/signin</p>
-              <p><span className="font-medium">Parent Dashboard:</span> /parent/dashboard</p>
-            </div>
-            <div className="mt-4 rounded border border-gray-200 bg-white p-3 text-xs">
-              <p className="mb-2 font-semibold text-gray-800">Final Summary</p>
-              <pre className="overflow-x-auto text-gray-700">{JSON.stringify({
+          <ParentHandoverStep
+            summary={{
+              organizationId,
+              schoolId,
+              academicYearId,
+              classMasterId,
+              sectionId,
+              teacherId,
+              feeTypeId,
+              feePlanId,
+              studentId,
+              parentEmail: studentForm.parentEmail,
+            }}
+            parentEmail={studentForm.parentEmail}
+            onExportSummary={() => {
+              const payload = {
                 organizationId,
                 schoolId,
                 academicYearId,
@@ -655,141 +1453,114 @@ export default function OnboardingFlowPage() {
                 feePlanId,
                 studentId,
                 parentEmail: studentForm.parentEmail,
-              }, null, 2)}</pre>
-            </div>
-            <div className="mt-3 flex gap-3">
-              <button
-                onClick={() => {
-                  const payload = {
-                    organizationId,
-                    schoolId,
-                    academicYearId,
-                    classMasterId,
-                    sectionId,
-                    teacherId,
-                    feeTypeId,
-                    feePlanId,
-                    studentId,
-                    parentEmail: studentForm.parentEmail,
-                  };
-                  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'onboarding-summary.json';
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-              >
-                Export Summary JSON
-              </button>
-              <button
-                onClick={() => localStorage.removeItem(DRAFT_KEY)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Clear Saved Draft
-              </button>
-            </div>
-          </section>
+              };
+              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'onboarding-summary.json';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            onClearDraft={() => clearDraft(DRAFT_KEY)}
+          />
         );
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">End-to-End Onboarding Wizard</h1>
-          <p className="mt-2 text-sm text-gray-600">Use Next/Back to complete each step in sequence.</p>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 rounded-lg bg-white p-6 shadow">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Onboarding Workspace</h1>
+              <p className="mt-2 text-sm text-gray-600">
+                <b>Note:</b> Use sequential mode for first-time onboarding and flexible mode for ongoing operations.              </p>
+            </div>
+            <div className="hidden md:grid grid-cols-3 gap-2">
+              <div className="h-10 w-10 rounded-lg bg-blue-100" />
+              <div className="h-10 w-10 rounded-lg bg-green-100" />
+              <div className="h-10 w-10 rounded-lg bg-yellow-100" />
+            </div>
+          </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-gray-900">Tenant Selectors</h2>
-          <p className="mt-1 text-xs text-gray-600">Select organization and school once. IDs are auto-used in all steps.</p>
-          <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <SearchableDropdown
-              options={organizationOptions}
-              value={organizationId}
-              onChange={setOrganizationId}
-              search={organizationSearch}
-              onSearchChange={setOrganizationSearch}
-              placeholder="Select organization"
-              searchPlaceholder="Search organization by name or ID"
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px,1fr]">
+          <aside className="space-y-4 xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] xl:overflow-auto xl:pr-1">
+            <TenantSelectorsCard
+              status={status}
+              actorRole={actorRole}
+              isLoadingOrganizations={loadingOrganizations}
+              isLoadingSchools={loadingSchools}
+              canSelectOrganization={canSelectOrganization}
+              canSelectSchool={canSelectSchool}
+              organizationId={organizationId}
+              schoolId={schoolId}
+              organizationSearch={organizationSearch}
+              schoolSearch={schoolSearch}
+              tenantOrganizationOptions={tenantOrganizationOptions}
+              tenantSchoolOptions={tenantSchoolOptions}
+              recentOrganizationId={recentOrganizationId}
+              recentSchoolId={recentSchoolId}
+              onOrganizationChange={setOrganizationId}
+              onSchoolChange={setSchoolId}
+              onOrganizationSearchChange={setOrganizationSearch}
+              onSchoolSearchChange={setSchoolSearch}
+              onRefreshOrganizations={() => loadOrganizations()}
+              onRefreshSchools={() => loadSchools(organizationId)}
             />
 
-            <SearchableDropdown
-              options={schoolOptions}
-              value={schoolId}
-              onChange={setSchoolId}
-              search={schoolSearch}
-              onSearchChange={setSchoolSearch}
-              placeholder={organizationId ? 'Select school' : 'Select organization first'}
-              searchPlaceholder="Search school by name or ID"
-              disabled={!organizationId}
+            <StepTabsCard
+              enforceSequence={enforceSequence}
+              setEnforceSequence={setEnforceSequence}
+              visibleStepIndexes={visibleStepIndexes}
+              currentStep={currentStep}
+              completion={completion}
+              maxUnlockedVisiblePosition={maxUnlockedVisiblePosition}
+              stepMeta={stepMeta}
+              onSelectStep={setCurrentStep}
             />
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {recentOrganizationId && <Badge variant="green">Recent Org: {recentOrganizationId}</Badge>}
-            {recentSchoolId && <Badge variant="green">Recent School: {recentSchoolId}</Badge>}
-          </div>
-          <div className="mt-3 flex gap-2">
-            <button onClick={() => loadOrganizations()} className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Refresh Organizations</button>
-            <button onClick={() => loadSchools(organizationId)} disabled={!organizationId} className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Refresh Schools</button>
-          </div>
-        </div>
+          </aside>
 
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-            {stepMeta.map((step, idx) => {
-              const active = idx === currentStep;
-              const done = completion[idx];
-              const locked = idx > maxUnlockedStep;
-              return (
-                <button
-                  key={step.title}
-                  disabled={locked}
-                  onClick={() => setCurrentStep(idx)}
-                  className={`rounded border px-2 py-2 text-left text-xs ${
-                    active
-                      ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                      : done
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : locked
-                      ? 'border-gray-200 bg-gray-50 text-gray-400'
-                      : 'border-gray-200 bg-white text-gray-700'
-                  }`}
-                >
-                  <div className="font-semibold">{idx + 1}. {step.title}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          <section className="space-y-4" aria-busy={dataLoadingForCurrentStep}>
+            <StepHeaderCard
+              title={stepMeta[currentStep]?.title ?? 'Onboarding'}
+              description={stepMeta[currentStep]?.description ?? 'Follow the onboarding flow.'}
+              currentPosition={Math.max(currentVisibleStepPosition + 1, 1)}
+              totalSteps={visibleStepIndexes.length}
+              completionPercent={completionPercent}
+            />
 
-        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="text-xl font-semibold text-gray-900">{stepMeta[currentStep].title}</h2>
-          <p className="mt-1 text-sm text-gray-600">{stepMeta[currentStep].description}</p>
-        </div>
+            {dataLoadingForCurrentStep ? (
+              <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Refreshing reference data for this step...
+              </div>
+            ) : null}
 
-        {stepContent()}
+            <div ref={stepContentRef}>{stepContent()}</div>
 
-        <div className="mt-5 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
-          <button
-            onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
-            disabled={currentStep === 0}
-            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
-          >
-            Back
-          </button>
-          <div className="text-xs text-gray-500">Step {currentStep + 1} of {stepMeta.length}</div>
-          <button
-            onClick={() => setCurrentStep((s) => Math.min(stepMeta.length - 1, s + 1))}
-            disabled={currentStep === stepMeta.length - 1 || !completion[currentStep]}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Next
-          </button>
+            <WizardNavigationCard
+              currentVisibleStepPosition={currentVisibleStepPosition}
+              visibleStepCount={visibleStepIndexes.length}
+              onBack={() => {
+                if (currentVisibleStepPosition > 0) {
+                  setCurrentStep(visibleStepIndexes[currentVisibleStepPosition - 1]);
+                }
+              }}
+              onNext={() => {
+                if (currentVisibleStepPosition < visibleStepIndexes.length - 1) {
+                  setCurrentStep(visibleStepIndexes[currentVisibleStepPosition + 1]);
+                }
+              }}
+              canGoBack={currentVisibleStepPosition > 0}
+              canGoNext={
+                currentVisibleStepPosition >= 0 &&
+                currentVisibleStepPosition < visibleStepIndexes.length - 1 &&
+                (!enforceSequence || completion[currentStep])
+              }
+            />
+          </section>
         </div>
       </main>
     </div>

@@ -36,7 +36,7 @@ const organizationSchema = new Schema(
       city: String,
       state: String,
       zipCode: String,
-      country: { type: String, default: 'USA' },
+      country: { type: String, default: 'INDIA' },
     },
     contactInfo: {
       email: { type: String, required: true },
@@ -94,7 +94,7 @@ const schoolSchema = new Schema(
       city: String,
       state: String,
       zipCode: String,
-      country: { type: String, default: 'USA' },
+      country: { type: String, default: 'INDIA' },
     },
     contactInfo: {
       email: { type: String, required: true },

@@ -1,12 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
+
+type OrganizationOption = {
+  id: string;
+  name: string;
+};
+
+type SchoolOption = {
+  id: string;
+  name: string;
+  organizationId: string;
+};
+
+type AcademicYearOption = {
+  id: string;
+  name: string;
+};
+
+type ClassMasterOption = {
+  id: string;
+  name: string;
+  level?: string;
+};
+
+type SectionOption = {
+  id: string;
+  name: string;
+  classMasterId: string;
+};
+
+type StudentOption = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type FeeTypeOption = {
+  id: string;
+  name: string;
+};
+
+type FeePlanOption = {
+  id: string;
+  name: string;
+};
 
 export default function FeeManagementPage() {
   const [organizationId, setOrganizationId] = useState("");
   const [schoolId, setSchoolId] = useState("");
   const [academicYearId, setAcademicYearId] = useState("");
+  const [organizationSearch, setOrganizationSearch] = useState("");
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [academicYearSearch, setAcademicYearSearch] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,16 +68,23 @@ export default function FeeManagementPage() {
   const [feePlanItems, setFeePlanItems] = useState("[]");
 
   const [feePlanId, setFeePlanId] = useState("");
+  const [feePlanSearch, setFeePlanSearch] = useState("");
   const [feePlanClassMasterId, setFeePlanClassMasterId] = useState("");
+  const [feePlanClassMasterSearch, setFeePlanClassMasterSearch] = useState("");
   const [feePlanSectionId, setFeePlanSectionId] = useState("");
+  const [feePlanSectionSearch, setFeePlanSectionSearch] = useState("");
 
   const [ledgerStudentId, setLedgerStudentId] = useState("");
+  const [ledgerStudentSearch, setLedgerStudentSearch] = useState("");
   const [ledgerFeePlanId, setLedgerFeePlanId] = useState("");
+  const [ledgerFeePlanSearch, setLedgerFeePlanSearch] = useState("");
   const [ledgerFeeTypeId, setLedgerFeeTypeId] = useState("");
+  const [ledgerFeeTypeSearch, setLedgerFeeTypeSearch] = useState("");
   const [ledgerAmount, setLedgerAmount] = useState("");
   const [ledgerDueDate, setLedgerDueDate] = useState("");
 
   const [paymentStudentId, setPaymentStudentId] = useState("");
+  const [paymentStudentSearch, setPaymentStudentSearch] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [paymentMethodSearch, setPaymentMethodSearch] = useState("");
@@ -38,9 +92,20 @@ export default function FeeManagementPage() {
   const [paymentPaidAt, setPaymentPaidAt] = useState("");
 
   const [creditStudentId, setCreditStudentId] = useState("");
+  const [creditStudentSearch, setCreditStudentSearch] = useState("");
   const [creditAmount, setCreditAmount] = useState("");
   const [creditReason, setCreditReason] = useState("");
   const [creditCreatedOn, setCreditCreatedOn] = useState("");
+  const [tenantLoading, setTenantLoading] = useState(false);
+  const [optionLoading, setOptionLoading] = useState(false);
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
+  const [classMasters, setClassMasters] = useState<ClassMasterOption[]>([]);
+  const [sections, setSections] = useState<SectionOption[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [feeTypes, setFeeTypes] = useState<FeeTypeOption[]>([]);
+  const [feePlans, setFeePlans] = useState<FeePlanOption[]>([]);
 
   async function postJson(url: string, payload: Record<string, unknown>) {
     setLoading(true);
@@ -95,49 +160,356 @@ export default function FeeManagementPage() {
     { value: "BANK_TRANSFER", label: "BANK_TRANSFER" },
   ];
 
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [organizations]
+  );
+
+  const schoolOptions = useMemo(
+    () =>
+      schools
+        .filter((item) => !organizationId || item.organizationId === organizationId)
+        .map((item) => ({
+          value: item.id,
+          label: `${item.name} (${item.id})`,
+        })),
+    [schools, organizationId]
+  );
+
+  const academicYearOptions = useMemo(
+    () =>
+      academicYears.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [academicYears]
+  );
+
+  const classMasterOptions = useMemo(
+    () =>
+      classMasters.map((item) => ({
+        value: item.id,
+        label: `${item.name}${item.level ? ` - ${item.level}` : ""} (${item.id})`,
+      })),
+    [classMasters]
+  );
+
+  const sectionOptions = useMemo(
+    () =>
+      sections
+        .filter((item) => !feePlanClassMasterId || item.classMasterId === feePlanClassMasterId)
+        .map((item) => ({
+          value: item.id,
+          label: `${item.name} (${item.id})`,
+        })),
+    [sections, feePlanClassMasterId]
+  );
+
+  const studentOptions = useMemo(
+    () =>
+      students.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.email})`,
+      })),
+    [students]
+  );
+
+  const feeTypeOptions = useMemo(
+    () =>
+      feeTypes.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [feeTypes]
+  );
+
+  const feePlanOptions = useMemo(
+    () =>
+      feePlans.map((item) => ({
+        value: item.id,
+        label: `${item.name} (${item.id})`,
+      })),
+    [feePlans]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadOrganizations() {
+      setTenantLoading(true);
+      try {
+        const response = await fetch("/api/admin/organizations");
+        const data = await response.json();
+        if (!response.ok || !active) return;
+        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map(
+          (item) => ({
+            id: item.id,
+            name: item.name,
+          })
+        );
+        if (!active) return;
+        setOrganizations(items);
+        if (items.length === 1) {
+          setOrganizationId((prev) => prev || items[0].id);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore background option loading errors.
+      } finally {
+        if (active) setTenantLoading(false);
+      }
+    }
+
+    loadOrganizations();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!organizationId) {
+      setSchools([]);
+      setSchoolId("");
+      return;
+    }
+
+    let active = true;
+    async function loadSchools() {
+      setTenantLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("organizationId", organizationId);
+        const response = await fetch(`/api/admin/schools?${params.toString()}`);
+        const data = await response.json();
+        if (!response.ok || !active) return;
+        const items = (
+          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
+        ).map((item) => ({
+          id: item.id,
+          name: item.name,
+          organizationId: item.organizationId,
+        }));
+        if (!active) return;
+        setSchools(items);
+        setSchoolId((prev) => {
+          if (items.length === 1) return items[0].id;
+          if (!items.some((item) => item.id === prev)) return "";
+          return prev;
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore background option loading errors.
+      } finally {
+        if (active) setTenantLoading(false);
+      }
+    }
+
+    loadSchools();
+    return () => {
+      active = false;
+    };
+  }, [organizationId]);
+
+  useEffect(() => {
+    const canLoad = Boolean(organizationId && schoolId);
+    if (!canLoad) {
+      setAcademicYears([]);
+      setClassMasters([]);
+      setSections([]);
+      setStudents([]);
+      setFeeTypes([]);
+      setFeePlans([]);
+      setAcademicYearId("");
+      return;
+    }
+
+    let active = true;
+    async function loadOptions() {
+      setOptionLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("organizationId", organizationId);
+        params.set("schoolId", schoolId);
+        const [yearsRes, classesRes, sectionsRes, studentsRes, feeTypesRes, feePlansRes] =
+          await Promise.all([
+            fetch(`/api/admin/academic-years?${params.toString()}`),
+            fetch(`/api/admin/class-masters?${params.toString()}`),
+            fetch(`/api/admin/sections?${params.toString()}`),
+            fetch(`/api/admin/users?role=STUDENT&organizationId=${encodeURIComponent(organizationId)}&schoolId=${encodeURIComponent(schoolId)}`),
+            fetch(`/api/admin/fee-types?${params.toString()}`),
+            fetch(`/api/admin/fee-plans?${params.toString()}`),
+          ]);
+
+        const [
+          yearsData,
+          classesData,
+          sectionsData,
+          studentsData,
+          feeTypesData,
+          feePlansData,
+        ] = await Promise.all([
+          yearsRes.json(),
+          classesRes.json(),
+          sectionsRes.json(),
+          studentsRes.json(),
+          feeTypesRes.json(),
+          feePlansRes.json(),
+        ]);
+
+        if (!active) return;
+
+        if (yearsRes.ok) {
+          setAcademicYears(
+            ((yearsData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+            }))
+          );
+        }
+        if (classesRes.ok) {
+          setClassMasters(
+            ((classesData as Array<{ id: string; name: string; level?: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+              level: item.level,
+            }))
+          );
+        }
+        if (sectionsRes.ok) {
+          setSections(
+            ((sectionsData as Array<{ id: string; name: string; classMasterId: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+              classMasterId: item.classMasterId,
+            }))
+          );
+        }
+        if (studentsRes.ok) {
+          setStudents(
+            ((studentsData as Array<{ id: string; firstName?: string; lastName?: string; email: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || item.email,
+              email: item.email,
+            }))
+          );
+        }
+        if (feeTypesRes.ok) {
+          setFeeTypes(
+            ((feeTypesData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+            }))
+          );
+        }
+        if (feePlansRes.ok) {
+          setFeePlans(
+            ((feePlansData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+            }))
+          );
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore background option loading errors.
+      } finally {
+        if (active) setOptionLoading(false);
+      }
+    }
+
+    loadOptions();
+    return () => {
+      active = false;
+    };
+  }, [organizationId, schoolId]);
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-2xl font-bold mb-2">Fee Management</h2>
-          <p className="text-sm text-gray-600">Create fee structures, plans, ledger entries, payments, and credit notes.</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <a className="text-indigo-600 hover:underline" href="/admin-roles/users">Users</a>
-            <a className="text-indigo-600 hover:underline" href="/admin-roles/academic">Academic</a>
-            <a className="text-indigo-600 hover:underline" href="/admin-roles/schools">Schools</a>
-            <a className="text-indigo-600 hover:underline" href="/admin-roles/organizations">Organizations</a>
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50/40 to-sky-50/50 py-8">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-amber-100 bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 p-6 shadow-lg shadow-orange-200/70">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Fee Management</h2>
+              <p className="mt-2 text-sm text-orange-50">Create fee types, plans, assignments, ledger entries, payments, and credit notes.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Fee Setup</span>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Ledger</span>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Collections</span>
+            </div>
           </div>
-          {message && <div className="mt-3 text-sm text-gray-700">{message}</div>}
+          {message && <div className="mt-4 rounded-lg bg-white/15 px-3 py-2 text-sm text-white">{message}</div>}
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Tenant Scope</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Organization ID</label>
-              <input value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Organization</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={organizationOptions}
+                  value={organizationId}
+                  onChange={(value) => {
+                    setOrganizationId(value);
+                    setSchoolId("");
+                    setSchoolSearch("");
+                  }}
+                  search={organizationSearch}
+                  onSearchChange={setOrganizationSearch}
+                  placeholder="Select organization"
+                  searchPlaceholder="Search organization"
+                  disabled={tenantLoading}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">School ID</label>
-              <input value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">School</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={schoolOptions}
+                  value={schoolId}
+                  onChange={setSchoolId}
+                  search={schoolSearch}
+                  onSearchChange={setSchoolSearch}
+                  placeholder="Select school"
+                  searchPlaceholder="Search school"
+                  disabled={tenantLoading || !organizationId}
+                />
+              </div>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Academic Year ID</label>
-            <input value={academicYearId} onChange={(e) => setAcademicYearId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+            <label className="block text-sm font-medium text-gray-700">Academic Year</label>
+            <div className="mt-1">
+              <SearchableDropdown
+                options={academicYearOptions}
+                value={academicYearId}
+                onChange={setAcademicYearId}
+                search={academicYearSearch}
+                onSearchChange={setAcademicYearSearch}
+                placeholder="Select academic year"
+                searchPlaceholder="Search academic year"
+                disabled={optionLoading || !schoolId}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Create Fee Type</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input value={feeTypeName} onChange={(e) => setFeeTypeName(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={feeTypeName} onChange={(e) => setFeeTypeName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Amount</label>
-              <input value={feeTypeAmount} onChange={(e) => setFeeTypeAmount(e.target.value)} type="number" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={feeTypeAmount} onChange={(e) => setFeeTypeAmount(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Frequency</label>
@@ -166,7 +538,7 @@ export default function FeeManagementPage() {
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/fee-types", {
                 ...tenantPayload(),
@@ -182,19 +554,19 @@ export default function FeeManagementPage() {
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Create Fee Plan</h3>
           <div>
             <label className="block text-sm font-medium text-gray-700">Plan Name</label>
-            <input value={feePlanName} onChange={(e) => setFeePlanName(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+            <input value={feePlanName} onChange={(e) => setFeePlanName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Items (JSON Array)</label>
-            <textarea value={feePlanItems} onChange={(e) => setFeePlanItems(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2 h-28 font-mono text-xs" />
+            <textarea value={feePlanItems} onChange={(e) => setFeePlanItems(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 h-28 font-mono" />
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/fee-plans", {
                 ...tenantPayload(),
@@ -207,25 +579,62 @@ export default function FeeManagementPage() {
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Assign Fee Plan</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Fee Plan ID</label>
-              <input value={feePlanId} onChange={(e) => setFeePlanId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Fee Plan</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={feePlanOptions}
+                  value={feePlanId}
+                  onChange={setFeePlanId}
+                  search={feePlanSearch}
+                  onSearchChange={setFeePlanSearch}
+                  placeholder="Select fee plan"
+                  searchPlaceholder="Search fee plan"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Class Master ID</label>
-              <input value={feePlanClassMasterId} onChange={(e) => setFeePlanClassMasterId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Class Master</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={classMasterOptions}
+                  value={feePlanClassMasterId}
+                  onChange={(value) => {
+                    setFeePlanClassMasterId(value);
+                    setFeePlanSectionId("");
+                    setFeePlanSectionSearch("");
+                  }}
+                  search={feePlanClassMasterSearch}
+                  onSearchChange={setFeePlanClassMasterSearch}
+                  placeholder="Select class master"
+                  searchPlaceholder="Search class master"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Section ID (optional)</label>
-              <input value={feePlanSectionId} onChange={(e) => setFeePlanSectionId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Section (optional)</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={sectionOptions}
+                  value={feePlanSectionId}
+                  onChange={setFeePlanSectionId}
+                  search={feePlanSectionSearch}
+                  onSearchChange={setFeePlanSectionSearch}
+                  placeholder="Select section"
+                  searchPlaceholder="Search section"
+                  disabled={optionLoading || !feePlanClassMasterId}
+                />
+              </div>
             </div>
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/fee-plan-assignments", {
                 ...tenantPayload(),
@@ -239,33 +648,66 @@ export default function FeeManagementPage() {
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Create Student Fee Ledger Entry</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Student ID</label>
-              <input value={ledgerStudentId} onChange={(e) => setLedgerStudentId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Student</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={studentOptions}
+                  value={ledgerStudentId}
+                  onChange={setLedgerStudentId}
+                  search={ledgerStudentSearch}
+                  onSearchChange={setLedgerStudentSearch}
+                  placeholder="Select student"
+                  searchPlaceholder="Search student"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Fee Plan ID (optional)</label>
-              <input value={ledgerFeePlanId} onChange={(e) => setLedgerFeePlanId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Fee Plan (optional)</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={feePlanOptions}
+                  value={ledgerFeePlanId}
+                  onChange={setLedgerFeePlanId}
+                  search={ledgerFeePlanSearch}
+                  onSearchChange={setLedgerFeePlanSearch}
+                  placeholder="Select fee plan"
+                  searchPlaceholder="Search fee plan"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Fee Type ID (optional)</label>
-              <input value={ledgerFeeTypeId} onChange={(e) => setLedgerFeeTypeId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Fee Type (optional)</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={feeTypeOptions}
+                  value={ledgerFeeTypeId}
+                  onChange={setLedgerFeeTypeId}
+                  search={ledgerFeeTypeSearch}
+                  onSearchChange={setLedgerFeeTypeSearch}
+                  placeholder="Select fee type"
+                  searchPlaceholder="Search fee type"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Amount</label>
-              <input value={ledgerAmount} onChange={(e) => setLedgerAmount(e.target.value)} type="number" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={ledgerAmount} onChange={(e) => setLedgerAmount(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Due Date</label>
-              <input value={ledgerDueDate} onChange={(e) => setLedgerDueDate(e.target.value)} type="date" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={ledgerDueDate} onChange={(e) => setLedgerDueDate(e.target.value)} type="date" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/student-fee-ledger", {
                 ...tenantPayload(),
@@ -281,16 +723,27 @@ export default function FeeManagementPage() {
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Record Payment</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Student ID</label>
-              <input value={paymentStudentId} onChange={(e) => setPaymentStudentId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Student</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={studentOptions}
+                  value={paymentStudentId}
+                  onChange={setPaymentStudentId}
+                  search={paymentStudentSearch}
+                  onSearchChange={setPaymentStudentSearch}
+                  placeholder="Select student"
+                  searchPlaceholder="Search student"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Amount</label>
-              <input value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Method</label>
@@ -308,16 +761,16 @@ export default function FeeManagementPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Reference (optional)</label>
-              <input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Paid At</label>
-              <input value={paymentPaidAt} onChange={(e) => setPaymentPaidAt(e.target.value)} type="datetime-local" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={paymentPaidAt} onChange={(e) => setPaymentPaidAt(e.target.value)} type="datetime-local" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/payments", {
                 ...tenantPayload(),
@@ -333,29 +786,40 @@ export default function FeeManagementPage() {
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded shadow space-y-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
           <h3 className="text-lg font-semibold">Issue Credit Note</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Student ID</label>
-              <input value={creditStudentId} onChange={(e) => setCreditStudentId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Student</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={studentOptions}
+                  value={creditStudentId}
+                  onChange={setCreditStudentId}
+                  search={creditStudentSearch}
+                  onSearchChange={setCreditStudentSearch}
+                  placeholder="Select student"
+                  searchPlaceholder="Search student"
+                  disabled={optionLoading || !schoolId}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Amount</label>
-              <input value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} type="number" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Reason</label>
-              <input value={creditReason} onChange={(e) => setCreditReason(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={creditReason} onChange={(e) => setCreditReason(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Created On</label>
-              <input value={creditCreatedOn} onChange={(e) => setCreditCreatedOn(e.target.value)} type="datetime-local" className="mt-1 block w-full rounded border px-3 py-2" />
+              <input value={creditCreatedOn} onChange={(e) => setCreditCreatedOn(e.target.value)} type="datetime-local" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
           </div>
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() =>
               postJson("/api/admin/credit-notes", {
                 ...tenantPayload(),

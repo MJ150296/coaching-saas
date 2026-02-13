@@ -17,6 +17,7 @@ interface SearchableDropdownProps {
   searchPlaceholder?: string;
   disabled?: boolean;
   className?: string;
+  label?: string;
 }
 
 export function SearchableDropdown({
@@ -29,6 +30,7 @@ export function SearchableDropdown({
   searchPlaceholder = 'Search...',
   disabled = false,
   className = '',
+  label,
 }: SearchableDropdownProps) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -40,18 +42,19 @@ export function SearchableDropdown({
 
   return (
     <div className={`space-y-2 ${className}`}>
+      {label ? <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</label> : null}
       <input
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder={searchPlaceholder}
         disabled={disabled}
-        className="w-full rounded border px-3 py-2 text-sm disabled:opacity-50"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
       />
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded border bg-white px-3 py-2 text-sm disabled:opacity-50"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
       >
         <option value="">{placeholder}</option>
         {filtered.map((opt) => (

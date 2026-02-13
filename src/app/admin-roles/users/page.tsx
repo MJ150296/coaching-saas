@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UserRole } from "@/domains/user-management/domain/entities/User";
 import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
+
+type OrganizationOption = {
+  id: string;
+  name: string;
+};
+
+type SchoolOption = {
+  id: string;
+  name: string;
+  organizationId: string;
+};
 
 export default function AdminUsersPage() {
   const [email, setEmail] = useState("");
@@ -14,6 +25,11 @@ export default function AdminUsersPage() {
   const [schoolId, setSchoolId] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TEACHER);
   const [roleSearch, setRoleSearch] = useState("");
+  const [organizationSearch, setOrganizationSearch] = useState("");
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [tenantLoading, setTenantLoading] = useState(false);
   const [parentEmail, setParentEmail] = useState("");
   const [parentPassword, setParentPassword] = useState("");
   const [parentFirstName, setParentFirstName] = useState("");
@@ -25,6 +41,103 @@ export default function AdminUsersPage() {
     value: r,
     label: r.replaceAll("_", " "),
   }));
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name} (${org.id})`,
+      })),
+    [organizations]
+  );
+  const schoolOptions = useMemo(
+    () =>
+      schools
+        .filter((school) => !organizationId || school.organizationId === organizationId)
+        .map((school) => ({
+          value: school.id,
+          label: `${school.name} (${school.id})`,
+        })),
+    [schools, organizationId]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadOrganizations() {
+      setTenantLoading(true);
+      try {
+        const response = await fetch("/api/admin/organizations");
+        const data = await response.json();
+        if (!response.ok || !active) return;
+
+        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map(
+          (item) => ({
+            id: item.id,
+            name: item.name,
+          })
+        );
+        if (!active) return;
+        setOrganizations(items);
+        if (items.length === 1) {
+          setOrganizationId((prev) => prev || items[0].id);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore background option loading errors.
+      } finally {
+        if (active) setTenantLoading(false);
+      }
+    }
+
+    loadOrganizations();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!organizationId) {
+      setSchools([]);
+      setSchoolId("");
+      return;
+    }
+
+    let active = true;
+    async function loadSchools() {
+      setTenantLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("organizationId", organizationId);
+        const response = await fetch(`/api/admin/schools?${params.toString()}`);
+        const data = await response.json();
+        if (!response.ok || !active) return;
+        const items = (
+          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
+        ).map((item) => ({
+          id: item.id,
+          name: item.name,
+          organizationId: item.organizationId,
+        }));
+        if (!active) return;
+        setSchools(items);
+        setSchoolId((prev) => {
+          if (items.length === 1) return items[0].id;
+          if (!items.some((item) => item.id === prev)) return "";
+          return prev;
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore background option loading errors.
+      } finally {
+        if (active) setTenantLoading(false);
+      }
+    }
+
+    loadSchools();
+    return () => {
+      active = false;
+    };
+  }, [organizationId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,8 +178,6 @@ export default function AdminUsersPage() {
         setFirstName('');
         setLastName('');
         setPhone('');
-        setOrganizationId('');
-        setSchoolId('');
         setParentEmail('');
         setParentPassword('');
         setParentFirstName('');
@@ -99,12 +210,38 @@ export default function AdminUsersPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Organization ID</label>
-              <input value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">Organization</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={organizationOptions}
+                  value={organizationId}
+                  onChange={(value) => {
+                    setOrganizationId(value);
+                    setSchoolId("");
+                    setSchoolSearch("");
+                  }}
+                  search={organizationSearch}
+                  onSearchChange={setOrganizationSearch}
+                  placeholder="Select organization"
+                  searchPlaceholder="Search organization"
+                  disabled={tenantLoading}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">School ID</label>
-              <input value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">School</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={schoolOptions}
+                  value={schoolId}
+                  onChange={setSchoolId}
+                  search={schoolSearch}
+                  onSearchChange={setSchoolSearch}
+                  placeholder="Select school"
+                  searchPlaceholder="Search school"
+                  disabled={tenantLoading || !organizationId}
+                />
+              </div>
             </div>
           </div>
 

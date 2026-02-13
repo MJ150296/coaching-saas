@@ -50,6 +50,35 @@ export interface ISubjectAllocationDocument {
   updatedAt: Date;
 }
 
+export interface ITimetableEntryDocument {
+  _id: string;
+  organizationId: string;
+  schoolId: string;
+  academicYearId: string;
+  classMasterId: string;
+  sectionId?: string;
+  dayOfWeek: string;
+  periodNumber: number;
+  subjectName: string;
+  teacherId?: string;
+  sourceAllocationId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IStudentEnrollmentDocument {
+  _id: string;
+  organizationId: string;
+  schoolId: string;
+  academicYearId: string;
+  studentId: string;
+  classMasterId: string;
+  sectionId: string;
+  rollNumber?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const academicYearSchema = new Schema(
   {
     _id: { type: String, required: true },
@@ -104,6 +133,60 @@ const subjectAllocationSchema = new Schema(
   { timestamps: true }
 );
 
+const timetableEntrySchema = new Schema(
+  {
+    _id: { type: String, required: true },
+    organizationId: { type: String, required: true, index: true },
+    schoolId: { type: String, required: true, index: true },
+    academicYearId: { type: String, required: true, index: true },
+    classMasterId: { type: String, required: true, index: true },
+    sectionId: { type: String, index: true },
+    dayOfWeek: { type: String, required: true, index: true },
+    periodNumber: { type: Number, required: true, index: true },
+    subjectName: { type: String, required: true },
+    teacherId: { type: String },
+    sourceAllocationId: { type: String, required: true, index: true },
+  },
+  { timestamps: true }
+);
+
+const studentEnrollmentSchema = new Schema(
+  {
+    _id: { type: String, required: true },
+    organizationId: { type: String, required: true, index: true },
+    schoolId: { type: String, required: true, index: true },
+    academicYearId: { type: String, required: true, index: true },
+    studentId: { type: String, required: true, index: true },
+    classMasterId: { type: String, required: true, index: true },
+    sectionId: { type: String, required: true, index: true },
+    rollNumber: { type: String },
+  },
+  { timestamps: true }
+);
+
+timetableEntrySchema.index(
+  {
+    organizationId: 1,
+    schoolId: 1,
+    academicYearId: 1,
+    classMasterId: 1,
+    sectionId: 1,
+    dayOfWeek: 1,
+    periodNumber: 1,
+  },
+  { unique: true }
+);
+
+studentEnrollmentSchema.index(
+  {
+    organizationId: 1,
+    schoolId: 1,
+    academicYearId: 1,
+    studentId: 1,
+  },
+  { unique: true }
+);
+
 const getOrCreateModel = <T>(name: string, schema: Schema): Model<T> => {
   if (models[name]) return models[name] as Model<T>;
   return model<T>(name, schema);
@@ -113,3 +196,5 @@ export const AcademicYearModel = getOrCreateModel<IAcademicYearDocument>('Academ
 export const ClassMasterModel = getOrCreateModel<IClassMasterDocument>('ClassMaster', classMasterSchema);
 export const SectionModel = getOrCreateModel<ISectionDocument>('Section', sectionSchema);
 export const SubjectAllocationModel = getOrCreateModel<ISubjectAllocationDocument>('SubjectAllocation', subjectAllocationSchema);
+export const TimetableEntryModel = getOrCreateModel<ITimetableEntryDocument>('TimetableEntry', timetableEntrySchema);
+export const StudentEnrollmentModel = getOrCreateModel<IStudentEnrollmentDocument>('StudentEnrollment', studentEnrollmentSchema);

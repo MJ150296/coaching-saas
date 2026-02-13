@@ -51,6 +51,8 @@ export const authOptions: NextAuthOptions = {
             email: user.getEmail().getValue(),
             name: user.getName().getFullName(),
             role: user.getRole(),
+            organizationId: user.getOrganizationId(),
+            schoolId: user.getSchoolId(),
             emailVerified: user.isEmailVerified() ? new Date() : null,
           };
         } catch (error) {
@@ -65,6 +67,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.organizationId = user.organizationId;
+        token.schoolId = user.schoolId;
       }
       return token;
     },
@@ -74,6 +78,8 @@ export const authOptions: NextAuthOptions = {
         if (token.role) {
           session.user.role = token.role;
         }
+        session.user.organizationId = token.organizationId;
+        session.user.schoolId = token.schoolId;
       }
       return session;
     },
