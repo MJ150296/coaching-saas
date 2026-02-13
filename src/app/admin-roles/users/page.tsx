@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UserRole } from "@/domains/user-management/domain/entities/User";
+import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
 
 export default function AdminUsersPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ export default function AdminUsersPage() {
   const [organizationId, setOrganizationId] = useState("");
   const [schoolId, setSchoolId] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TEACHER);
+  const [roleSearch, setRoleSearch] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [parentPassword, setParentPassword] = useState("");
   const [parentFirstName, setParentFirstName] = useState("");
@@ -19,6 +21,10 @@ export default function AdminUsersPage() {
   const [parentPhone, setParentPhone] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const roleOptions = Object.values(UserRole).map((r) => ({
+    value: r,
+    label: r.replaceAll("_", " "),
+  }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -130,11 +136,17 @@ export default function AdminUsersPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className="mt-1 block w-full rounded border px-3 py-2">
-              {Object.values(UserRole).map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <SearchableDropdown
+                options={roleOptions}
+                value={role}
+                onChange={(value) => setRole(value as UserRole)}
+                search={roleSearch}
+                onSearchChange={setRoleSearch}
+                placeholder="Select role"
+                searchPlaceholder="Search role"
+              />
+            </div>
           </div>
 
           {role === UserRole.STUDENT && (

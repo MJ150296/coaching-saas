@@ -39,6 +39,7 @@ const roleLabels: Record<UserRole, string> = {
 const navByRole: Record<UserRole, NavItem[]> = {
   [UserRole.SUPER_ADMIN]: [
     { label: 'Dashboard', href: '/admin-roles/superadmin', icon: 'dashboard' },
+    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
     { label: 'Organizations', href: '/admin-roles/organizations', icon: 'organization' },
     { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
     { label: 'Users', href: '/admin-roles/users', icon: 'users' },
@@ -47,6 +48,7 @@ const navByRole: Record<UserRole, NavItem[]> = {
     { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
   ],
   [UserRole.ORGANIZATION_ADMIN]: [
+    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
     { label: 'Organizations', href: '/admin-roles/organizations', icon: 'organization' },
     { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
     { label: 'Users', href: '/admin-roles/users', icon: 'users' },
@@ -55,12 +57,14 @@ const navByRole: Record<UserRole, NavItem[]> = {
     { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
   ],
   [UserRole.SCHOOL_ADMIN]: [
+    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
     { label: 'Schools', href: '/admin-roles/schools', icon: 'school' },
     { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
     { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },
     { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
   ],
   [UserRole.ADMIN]: [
+    { label: 'Onboarding Flow', href: '/admin-roles/admin/onboarding', icon: 'dashboard' },
     { label: 'Admin Workspace', href: '/admin-roles/admin', icon: 'dashboard' },
     { label: 'Academic', href: '/admin-roles/academic', icon: 'academic' },
     { label: 'Fees', href: '/admin-roles/fees', icon: 'fees' },

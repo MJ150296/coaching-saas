@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { Badge } from '@/shared/components/ui/Badge';
 
 interface Organization {
   id: string;
@@ -28,113 +29,103 @@ interface Stat {
   color: string;
 }
 
+const stats: Stat[] = [
+  {
+    label: 'Total Schools',
+    value: '12',
+    change: '+2 this month',
+    icon: '🏫',
+    color: 'blue',
+  },
+  {
+    label: 'Active Students',
+    value: '4,850',
+    change: '+125 enrolled',
+    icon: '👥',
+    color: 'green',
+  },
+  {
+    label: 'Total Teachers',
+    value: '380',
+    change: '+15 hired',
+    icon: '👨‍🏫',
+    color: 'purple',
+  },
+  {
+    label: 'Operations Cost',
+    value: '$125K',
+    change: '↓ 5% vs last month',
+    icon: '💰',
+    color: 'red',
+  },
+];
+
+const organizations: Organization[] = [
+  {
+    id: '1',
+    name: 'Central High School',
+    type: 'High School',
+    city: 'New York',
+    students: 450,
+    teachers: 35,
+    status: 'active',
+  },
+  {
+    id: '2',
+    name: 'Lincoln Middle School',
+    type: 'Middle School',
+    city: 'Boston',
+    students: 380,
+    teachers: 28,
+    status: 'active',
+  },
+  {
+    id: '3',
+    name: 'Riverside Elementary',
+    type: 'Elementary School',
+    city: 'Chicago',
+    students: 520,
+    teachers: 32,
+    status: 'active',
+  },
+  {
+    id: '4',
+    name: 'Oak Valley Academy',
+    type: 'Private School',
+    city: 'Los Angeles',
+    students: 280,
+    teachers: 22,
+    status: 'active',
+  },
+  {
+    id: '5',
+    name: 'Spring Garden College',
+    type: 'High School',
+    city: 'Houston',
+    students: 650,
+    teachers: 48,
+    status: 'inactive',
+  },
+];
+
 export default function OrganizationAdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<Stat[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
+  const isAuthorized =
+    userRole === UserRole.ORGANIZATION_ADMIN || userRole === UserRole.SCHOOL_ADMIN;
+  const isLoading = status === 'loading' || (status === 'authenticated' && !isAuthorized);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
-      const userRole = (session?.user as any)?.role;
-      if (
-        userRole !== UserRole.ORGANIZATION_ADMIN &&
-        userRole !== UserRole.SCHOOL_ADMIN
-      ) {
-        router.push('/auth/signin');
-      } else {
-        setIsLoading(false);
-      }
     }
-  }, [status, session, router]);
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      setStats([
-        {
-          label: 'Total Schools',
-          value: '12',
-          change: '+2 this month',
-          icon: '🏫',
-          color: 'blue',
-        },
-        {
-          label: 'Active Students',
-          value: '4,850',
-          change: '+125 enrolled',
-          icon: '👥',
-          color: 'green',
-        },
-        {
-          label: 'Total Teachers',
-          value: '380',
-          change: '+15 hired',
-          icon: '👨‍🏫',
-          color: 'purple',
-        },
-        {
-          label: 'Operations Cost',
-          value: '$125K',
-          change: '↓ 5% vs last month',
-          icon: '💰',
-          color: 'red',
-        },
-      ]);
-
-      setOrganizations([
-        {
-          id: '1',
-          name: 'Central High School',
-          type: 'High School',
-          city: 'New York',
-          students: 450,
-          teachers: 35,
-          status: 'active',
-        },
-        {
-          id: '2',
-          name: 'Lincoln Middle School',
-          type: 'Middle School',
-          city: 'Boston',
-          students: 380,
-          teachers: 28,
-          status: 'active',
-        },
-        {
-          id: '3',
-          name: 'Riverside Elementary',
-          type: 'Elementary School',
-          city: 'Chicago',
-          students: 520,
-          teachers: 32,
-          status: 'active',
-        },
-        {
-          id: '4',
-          name: 'Oak Valley Academy',
-          type: 'Private School',
-          city: 'Los Angeles',
-          students: 280,
-          teachers: 22,
-          status: 'active',
-        },
-        {
-          id: '5',
-          name: 'Spring Garden College',
-          type: 'High School',
-          city: 'Houston',
-          students: 650,
-          teachers: 48,
-          status: 'inactive',
-        },
-      ]);
-      setSelectedOrg(null);
+    if (status === 'authenticated' && !isAuthorized) {
+      router.push('/auth/signin');
     }
-  }, [status]);
+  }, [isAuthorized, router, status]);
 
   if (isLoading) {
     return (
@@ -231,16 +222,10 @@ export default function OrganizationAdminDashboard() {
                           {org.teachers}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              org.status === 'active'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
+                          <Badge variant={org.status === 'active' ? 'green' : 'gray'}>
                             {org.status.charAt(0).toUpperCase() +
                               org.status.slice(1)}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button className="text-blue-600 hover:text-blue-700 mr-4">

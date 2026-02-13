@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
 
 export default function FeeManagementPage() {
   const [organizationId, setOrganizationId] = useState("");
@@ -12,6 +13,7 @@ export default function FeeManagementPage() {
   const [feeTypeName, setFeeTypeName] = useState("");
   const [feeTypeAmount, setFeeTypeAmount] = useState("");
   const [feeTypeFrequency, setFeeTypeFrequency] = useState("MONTHLY");
+  const [feeTypeFrequencySearch, setFeeTypeFrequencySearch] = useState("");
   const [feeTypeMandatory, setFeeTypeMandatory] = useState(true);
   const [feeTypeTaxable, setFeeTypeTaxable] = useState(false);
 
@@ -31,6 +33,7 @@ export default function FeeManagementPage() {
   const [paymentStudentId, setPaymentStudentId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [paymentMethodSearch, setPaymentMethodSearch] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentPaidAt, setPaymentPaidAt] = useState("");
 
@@ -78,6 +81,20 @@ export default function FeeManagementPage() {
     }
   }
 
+  const feeFrequencyOptions = [
+    { value: "ONE_TIME", label: "ONE_TIME" },
+    { value: "MONTHLY", label: "MONTHLY" },
+    { value: "QUARTERLY", label: "QUARTERLY" },
+    { value: "YEARLY", label: "YEARLY" },
+  ];
+
+  const paymentMethodOptions = [
+    { value: "CASH", label: "CASH" },
+    { value: "ONLINE", label: "ONLINE" },
+    { value: "UPI", label: "UPI" },
+    { value: "BANK_TRANSFER", label: "BANK_TRANSFER" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -124,12 +141,17 @@ export default function FeeManagementPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Frequency</label>
-              <select value={feeTypeFrequency} onChange={(e) => setFeeTypeFrequency(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2 bg-white">
-                <option value="ONE_TIME">ONE_TIME</option>
-                <option value="MONTHLY">MONTHLY</option>
-                <option value="QUARTERLY">QUARTERLY</option>
-                <option value="YEARLY">YEARLY</option>
-              </select>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={feeFrequencyOptions}
+                  value={feeTypeFrequency}
+                  onChange={setFeeTypeFrequency}
+                  search={feeTypeFrequencySearch}
+                  onSearchChange={setFeeTypeFrequencySearch}
+                  placeholder="Select frequency"
+                  searchPlaceholder="Search frequency"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -272,12 +294,17 @@ export default function FeeManagementPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Method</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full rounded border px-3 py-2 bg-white">
-                <option value="CASH">CASH</option>
-                <option value="ONLINE">ONLINE</option>
-                <option value="UPI">UPI</option>
-                <option value="BANK_TRANSFER">BANK_TRANSFER</option>
-              </select>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={paymentMethodOptions}
+                  value={paymentMethod}
+                  onChange={setPaymentMethod}
+                  search={paymentMethodSearch}
+                  onSearchChange={setPaymentMethodSearch}
+                  placeholder="Select method"
+                  searchPlaceholder="Search payment method"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Reference (optional)</label>

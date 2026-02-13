@@ -7,8 +7,9 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { Badge } from '@/shared/components/ui/Badge';
 
 interface StaffStats {
   totalDocuments: number;
@@ -34,118 +35,103 @@ interface Task {
   status: 'pending' | 'in-progress' | 'completed';
 }
 
+const stats: StaffStats = {
+  totalDocuments: 245,
+  pendingRequests: 8,
+  completedTasks: 34,
+  upcomingMeetings: 3,
+};
+
+const requests: Request[] = [
+  {
+    id: '1',
+    title: 'Student Registration Documents',
+    requester: 'Admin Office',
+    date: '2026-02-10',
+    status: 'pending',
+    priority: 'high',
+  },
+  {
+    id: '2',
+    title: 'Grade Sheets Processing',
+    requester: 'Academic Office',
+    date: '2026-02-09',
+    status: 'in-progress',
+    priority: 'high',
+  },
+  {
+    id: '3',
+    title: 'Certificate Preparation',
+    requester: 'Registrar',
+    date: '2026-02-08',
+    status: 'pending',
+    priority: 'medium',
+  },
+  {
+    id: '4',
+    title: 'Attendance Report',
+    requester: 'Principal Office',
+    date: '2026-02-07',
+    status: 'completed',
+    priority: 'medium',
+  },
+  {
+    id: '5',
+    title: 'Fee Processing',
+    requester: 'Finance Office',
+    date: '2026-02-06',
+    status: 'in-progress',
+    priority: 'high',
+  },
+];
+
+const tasks: Task[] = [
+  {
+    id: '1',
+    title: 'Update Student Database',
+    assignedTo: 'You',
+    dueDate: '2026-02-12',
+    status: 'in-progress',
+  },
+  {
+    id: '2',
+    title: 'Process Transfer Requests',
+    assignedTo: 'You',
+    dueDate: '2026-02-15',
+    status: 'pending',
+  },
+  {
+    id: '3',
+    title: 'Prepare Admission Letters',
+    assignedTo: 'Team',
+    dueDate: '2026-02-18',
+    status: 'pending',
+  },
+  {
+    id: '4',
+    title: 'Archive Old Records',
+    assignedTo: 'You',
+    dueDate: '2026-02-20',
+    status: 'pending',
+  },
+];
+
 export default function StaffDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [stats, setStats] = useState<StaffStats>({
-    totalDocuments: 0,
-    pendingRequests: 0,
-    completedTasks: 0,
-    upcomingMeetings: 0,
-  });
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
+  const isLoading = status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STAFF);
 
   // Redirect if not authenticated or not staff
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
-      const userRole = (session?.user as any)?.role;
-      if (userRole && userRole !== UserRole.STAFF) {
-        router.push('/auth/signin');
-      } else {
-        setIsLoading(false);
-      }
     }
-  }, [status, session, router]);
 
-  // Fetch staff data
-  useEffect(() => {
-    if (status === 'authenticated') {
-      setStats({
-        totalDocuments: 245,
-        pendingRequests: 8,
-        completedTasks: 34,
-        upcomingMeetings: 3,
-      });
-
-      setRequests([
-        {
-          id: '1',
-          title: 'Student Registration Documents',
-          requester: 'Admin Office',
-          date: '2026-02-10',
-          status: 'pending',
-          priority: 'high',
-        },
-        {
-          id: '2',
-          title: 'Grade Sheets Processing',
-          requester: 'Academic Office',
-          date: '2026-02-09',
-          status: 'in-progress',
-          priority: 'high',
-        },
-        {
-          id: '3',
-          title: 'Certificate Preparation',
-          requester: 'Registrar',
-          date: '2026-02-08',
-          status: 'pending',
-          priority: 'medium',
-        },
-        {
-          id: '4',
-          title: 'Attendance Report',
-          requester: 'Principal Office',
-          date: '2026-02-07',
-          status: 'completed',
-          priority: 'medium',
-        },
-        {
-          id: '5',
-          title: 'Fee Processing',
-          requester: 'Finance Office',
-          date: '2026-02-06',
-          status: 'in-progress',
-          priority: 'high',
-        },
-      ]);
-
-      setTasks([
-        {
-          id: '1',
-          title: 'Update Student Database',
-          assignedTo: 'You',
-          dueDate: '2026-02-12',
-          status: 'in-progress',
-        },
-        {
-          id: '2',
-          title: 'Process Transfer Requests',
-          assignedTo: 'You',
-          dueDate: '2026-02-15',
-          status: 'pending',
-        },
-        {
-          id: '3',
-          title: 'Prepare Admission Letters',
-          assignedTo: 'Team',
-          dueDate: '2026-02-18',
-          status: 'pending',
-        },
-        {
-          id: '4',
-          title: 'Archive Old Records',
-          assignedTo: 'You',
-          dueDate: '2026-02-20',
-          status: 'pending',
-        },
-      ]);
+    if (status === 'authenticated' && userRole !== UserRole.STAFF) {
+      router.push('/auth/signin');
     }
-  }, [status]);
+  }, [router, status, userRole]);
 
   if (isLoading) {
     return (
@@ -158,29 +144,29 @@ export default function StaffDashboard() {
     );
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityVariant = (priority: string): 'gray' | 'blue' | 'green' | 'yellow' | 'red' => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800';
+        return 'red';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'yellow';
       case 'low':
-        return 'bg-blue-100 text-blue-800';
+        return 'blue';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'gray';
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'gray' | 'blue' | 'green' | 'yellow' | 'red' => {
     switch (status) {
       case 'pending':
-        return 'bg-gray-100 text-gray-800';
+        return 'gray';
       case 'in-progress':
-        return 'bg-blue-100 text-blue-800';
+        return 'blue';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'green';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'gray';
     }
   };
 
@@ -273,12 +259,12 @@ export default function StaffDashboard() {
                         <p className="text-sm text-gray-600">From: {request.requester}</p>
                       </div>
                       <div className="flex space-x-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(request.priority)}`}>
+                        <Badge variant={getPriorityVariant(request.priority)}>
                           {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                        </Badge>
+                        <Badge variant={getStatusVariant(request.status)}>
                           {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600">
@@ -337,9 +323,9 @@ export default function StaffDashboard() {
                     <td className="px-6 py-4 text-sm text-gray-600">{task.assignedTo}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(task.dueDate).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                      <Badge variant={getStatusVariant(task.status)}>
                         {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button className="text-blue-600 hover:text-blue-900">Edit</button>

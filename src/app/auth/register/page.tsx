@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
 
 export default function Register() {
   const { data: session } = useSession();
@@ -29,6 +30,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [roleSearch, setRoleSearch] = useState('');
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -104,14 +106,14 @@ export default function Register() {
         parentLastName: '',
         parentPhone: '',
       });
-    } catch (error) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }
 
-  const actorRole = (session?.user as any)?.role as UserRole | undefined;
+  const actorRole = (session?.user as { role?: UserRole } | undefined)?.role;
   const canRegister =
     actorRole === UserRole.SUPER_ADMIN ||
     actorRole === UserRole.ORGANIZATION_ADMIN ||
@@ -181,22 +183,21 @@ export default function Register() {
               />
             </div>
 
-            <select
-              name="role"
+            <SearchableDropdown
+              options={Object.values(UserRole).map((role) => ({ value: role, label: role }))}
               value={formData.role}
-              onChange={(e) =>
+              onChange={(value) =>
                 setFormData((prev) => ({
                   ...prev,
-                  role: e.target.value as UserRole,
+                  role: value as UserRole,
                 }))
               }
+              search={roleSearch}
+              onSearchChange={setRoleSearch}
+              placeholder="Select role"
+              searchPlaceholder="Search role"
               disabled={isLoading || !canRegister}
-              className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              {Object.values(UserRole).map((role) => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
+            />
 
             <div className="flex gap-4">
               <input

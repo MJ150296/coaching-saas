@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { Badge } from '@/shared/components/ui/Badge';
 
 interface AdminStats {
   totalUsers: number;
@@ -159,15 +160,9 @@ export default function AdminPage() {
                   <div key={item.id} className="px-6 py-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-gray-900">{item.title}</h4>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          item.status === 'done'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
+                      <Badge variant={item.status === 'done' ? 'green' : 'yellow'} className="px-2">
                         {item.status === 'done' ? 'Done' : 'Pending'}
-                      </span>
+                      </Badge>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{item.detail}</p>
                     <p className="text-xs text-gray-500 mt-2">

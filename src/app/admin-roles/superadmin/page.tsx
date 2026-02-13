@@ -8,6 +8,8 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
+import { Badge } from '@/shared/components/ui/Badge';
 
 interface AdminStats {
   totalAdmins: number;
@@ -37,6 +39,7 @@ export default function AdminDashboard() {
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createAdminRoleSearch, setCreateAdminRoleSearch] = useState('');
 
   // Fetch stats
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function AdminDashboard() {
     }
   }, [status]);
 
-  function handleAdminFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleAdminFormChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     setCreateAdminForm((prev) => ({
       ...prev,
@@ -125,7 +128,7 @@ export default function AdminDashboard() {
         setShowCreateAdminModal(false);
         setSubmitSuccess('');
       }, 2000);
-    } catch (error) {
+    } catch {
       setSubmitError('An error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -301,21 +304,15 @@ export default function AdminDashboard() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Database Connection</span>
-                <span className="px-3 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
-                  Connected
-                </span>
+                <Badge variant="green">Connected</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Email Service</span>
-                <span className="px-3 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
-                  Pending
-                </span>
+                <Badge variant="yellow">Pending</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Backup Status</span>
-                <span className="px-3 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
-                  Active
-                </span>
+                <Badge variant="green">Active</Badge>
               </div>
             </div>
           </div>
@@ -396,15 +393,20 @@ export default function AdminDashboard() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Role *
                 </label>
-                <select
-                  name="role"
+                <SearchableDropdown
+                  options={[
+                    { value: UserRole.ORGANIZATION_ADMIN, label: 'Organization Admin' },
+                    { value: UserRole.SCHOOL_ADMIN, label: 'School Admin' },
+                  ]}
                   value={createAdminForm.role}
-                  onChange={handleAdminFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value={UserRole.ORGANIZATION_ADMIN}>Organization Admin</option>
-                  <option value={UserRole.SCHOOL_ADMIN}>School Admin</option>
-                </select>
+                  onChange={(value) =>
+                    setCreateAdminForm((prev) => ({ ...prev, role: value as UserRole }))
+                  }
+                  search={createAdminRoleSearch}
+                  onSearchChange={setCreateAdminRoleSearch}
+                  placeholder="Select role"
+                  searchPlaceholder="Search role"
+                />
               </div>
 
               <div>
