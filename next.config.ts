@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Only transpile necessary packages
+  transpilePackages: ['next-auth', 'mongoose', 'bcryptjs'],
+  // Optimize package imports to reduce memory
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
 };
 
 export default nextConfig;
