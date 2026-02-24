@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateOrganizationUseCase } from '@/domains/organization-management/application/use-cases';
-import { Organization } from '@/domains/organization-management/domain/entities/Organization';
 import { MongoOrganizationRepository } from '@/domains/organization-management/infrastructure/persistence';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Permission } from '@/shared/infrastructure/rbac';
@@ -10,8 +9,15 @@ import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { OrganizationModel, SchoolModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { getLogger } from '@/shared/infrastructure/logger';
+import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
+
+const ORG_CACHE_TTL_MS = 15_000;
+const ORG_CACHE_PREFIX = 'api:admin:organizations:';
 
 export async function GET() {
+  const logger = getLogger();
+  const start = Date.now();
   try {
     const actor = await getActorUser();
     if (!actor) {
@@ -28,38 +34,120 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const repo = await initializeAppAndGetService<MongoOrganizationRepository>(
-      ServiceKeys.ORGANIZATION_REPOSITORY
-    );
-    let organizations: Organization[] = [];
-    if (role === UserRole.SUPER_ADMIN) {
-      organizations = await repo.findAll();
-    } else if (actor.getOrganizationId()) {
-      const org = await repo.findById(actor.getOrganizationId());
-      organizations = org ? [org] : [];
+    const cacheKey = `${ORG_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getSchoolId() ?? ''}`;
+    const cached = getCachedValue<unknown[]>(cacheKey);
+    if (cached) {
+      logger.debug('GET /api/admin/organizations cache hit', { durationMs: Date.now() - start, role });
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+          'X-Cache': 'HIT',
+        },
+      });
     }
 
-    const data = organizations.map((org) => ({
-      id: org.getId(),
-      name: org.getOrganizationName().getValue(),
-      type: org.getType(),
-      status: org.getStatus(),
+    const repoStart = Date.now();
+    let data: Array<{
+      id: string;
+      name: string;
+      type: string;
+      status: 'active' | 'inactive';
       address: {
-        street: org.getAddress().getStreet(),
-        city: org.getAddress().getCity(),
-        state: org.getAddress().getState(),
-        zipCode: org.getAddress().getZipCode(),
-        country: org.getAddress().getCountry(),
-      },
+        street: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country?: string;
+      };
       contactInfo: {
-        email: org.getContactInfo().getEmail(),
-        phone: org.getContactInfo().getPhone(),
-      },
-    }));
+        email: string;
+        phone: string;
+      };
+    }> = [];
+    if (role === UserRole.SUPER_ADMIN) {
+      const rows = await OrganizationModel.find({})
+        .sort({ createdAt: -1 })
+        .select('_id organizationName type status address contactInfo')
+        .lean<
+          Array<{
+            _id: string;
+            organizationName: string;
+            type: string;
+            status: 'active' | 'inactive';
+            address: {
+              street: string;
+              city: string;
+              state: string;
+              zipCode: string;
+              country?: string;
+            };
+            contactInfo: {
+              email: string;
+              phone: string;
+            };
+          }>
+        >();
+      data = rows.map((row) => ({
+        id: row._id,
+        name: row.organizationName,
+        type: row.type,
+        status: row.status,
+        address: row.address,
+        contactInfo: row.contactInfo,
+      }));
+    } else if (actor.getOrganizationId()) {
+      const row = await OrganizationModel.findById(actor.getOrganizationId())
+        .select('_id organizationName type status address contactInfo')
+        .lean<{
+          _id: string;
+          organizationName: string;
+          type: string;
+          status: 'active' | 'inactive';
+          address: {
+            street: string;
+            city: string;
+            state: string;
+            zipCode: string;
+            country?: string;
+          };
+          contactInfo: {
+            email: string;
+            phone: string;
+          };
+        } | null>();
+      if (row) {
+        data = [{
+          id: row._id,
+          name: row.organizationName,
+          type: row.type,
+          status: row.status,
+          address: row.address,
+          contactInfo: row.contactInfo,
+        }];
+      }
+    }
 
-    return NextResponse.json(data, { status: 200 });
+    setCachedValue(cacheKey, data, ORG_CACHE_TTL_MS);
+    logger.info('GET /api/admin/organizations', {
+      durationMs: Date.now() - start,
+      repoResolveMs: repoStart - start,
+      queryMs: Date.now() - repoStart,
+      count: data.length,
+      role,
+    });
+    return NextResponse.json(data, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+        'X-Cache': 'MISS',
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
+    logger.error('GET /api/admin/organizations failed', error instanceof Error ? error : undefined, {
+      durationMs: Date.now() - start,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -90,6 +178,10 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(ORG_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json(result.getValue(), { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -165,6 +257,10 @@ export async function PUT(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(ORG_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -212,6 +308,10 @@ export async function DELETE(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(ORG_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';

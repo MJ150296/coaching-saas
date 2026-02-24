@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
 import { useToast } from "@/shared/components/ui/ToastProvider";
+import { getAdminOrganizations, getAdminSchools } from "@/shared/lib/client/adminTenantReferenceData";
 
 type OrganizationOption = {
   id: string;
@@ -244,15 +245,7 @@ export default function FeeManagementPage() {
     async function loadOrganizations() {
       setTenantLoading(true);
       try {
-        const response = await fetch("/api/admin/organizations");
-        const data = await response.json();
-        if (!response.ok || !active) return;
-        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map(
-          (item) => ({
-            id: item.id,
-            name: item.name,
-          })
-        );
+        const items = await getAdminOrganizations();
         if (!active) return;
         setOrganizations(items);
         if (items.length === 1) {
@@ -283,18 +276,7 @@ export default function FeeManagementPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const params = new URLSearchParams();
-        params.set("organizationId", organizationId);
-        const response = await fetch(`/api/admin/schools?${params.toString()}`);
-        const data = await response.json();
-        if (!response.ok || !active) return;
-        const items = (
-          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
-        ).map((item) => ({
-          id: item.id,
-          name: item.name,
-          organizationId: item.organizationId,
-        }));
+        const items = await getAdminSchools(organizationId);
         if (!active) return;
         setSchools(items);
         setSchoolId((prev) => {
@@ -336,85 +318,53 @@ export default function FeeManagementPage() {
         const params = new URLSearchParams();
         params.set("organizationId", organizationId);
         params.set("schoolId", schoolId);
-        const [yearsRes, classesRes, sectionsRes, studentsRes, feeTypesRes, feePlansRes] =
-          await Promise.all([
-            fetch(`/api/admin/academic-years?${params.toString()}`),
-            fetch(`/api/admin/class-masters?${params.toString()}`),
-            fetch(`/api/admin/sections?${params.toString()}`),
-            fetch(`/api/admin/users?role=STUDENT&organizationId=${encodeURIComponent(organizationId)}&schoolId=${encodeURIComponent(schoolId)}`),
-            fetch(`/api/admin/fee-types?${params.toString()}`),
-            fetch(`/api/admin/fee-plans?${params.toString()}`),
-          ]);
-
-        const [
-          yearsData,
-          classesData,
-          sectionsData,
-          studentsData,
-          feeTypesData,
-          feePlansData,
-        ] = await Promise.all([
-          yearsRes.json(),
-          classesRes.json(),
-          sectionsRes.json(),
-          studentsRes.json(),
-          feeTypesRes.json(),
-          feePlansRes.json(),
-        ]);
+        params.set("includeStudents", "true");
+        params.set("includeFees", "true");
+        const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
+        const data = await response.json();
 
         if (!active) return;
+        if (!response.ok) return;
 
-        if (yearsRes.ok) {
-          setAcademicYears(
-            ((yearsData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-            }))
-          );
-        }
-        if (classesRes.ok) {
-          setClassMasters(
-            ((classesData as Array<{ id: string; name: string; level?: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-              level: item.level,
-            }))
-          );
-        }
-        if (sectionsRes.ok) {
-          setSections(
-            ((sectionsData as Array<{ id: string; name: string; classMasterId: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-              classMasterId: item.classMasterId,
-            }))
-          );
-        }
-        if (studentsRes.ok) {
-          setStudents(
-            ((studentsData as Array<{ id: string; firstName?: string; lastName?: string; email: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || item.email,
-              email: item.email,
-            }))
-          );
-        }
-        if (feeTypesRes.ok) {
-          setFeeTypes(
-            ((feeTypesData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-            }))
-          );
-        }
-        if (feePlansRes.ok) {
-          setFeePlans(
-            ((feePlansData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-            }))
-          );
-        }
+        setAcademicYears(
+          ((data?.academicYears as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+          }))
+        );
+        setClassMasters(
+          ((data?.classMasters as Array<{ id: string; name: string; level?: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            level: item.level,
+          }))
+        );
+        setSections(
+          ((data?.sections as Array<{ id: string; name: string; classMasterId: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            classMasterId: item.classMasterId,
+          }))
+        );
+        setStudents(
+          ((data?.students as Array<{ id: string; firstName?: string; lastName?: string; email: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || item.email,
+            email: item.email,
+          }))
+        );
+        setFeeTypes(
+          ((data?.feeTypes as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+          }))
+        );
+        setFeePlans(
+          ((data?.feePlans as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+          }))
+        );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         // Ignore background option loading errors.

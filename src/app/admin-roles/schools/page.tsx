@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
 import { useToast } from "@/shared/components/ui/ToastProvider";
 import {
+  getAdminOrganizations,
+  invalidateAdminSchools,
+} from "@/shared/lib/client/adminTenantReferenceData";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -109,13 +113,7 @@ export default function SchoolsPage() {
   async function loadOrganizations() {
     setOrganizationsLoading(true);
     try {
-      const response = await fetch("/api/admin/organizations");
-      const data = await response.json();
-      if (!response.ok) return;
-      const items = ((data as OrganizationOption[] | undefined) ?? []).map((item) => ({
-        id: item.id,
-        name: item.name,
-      }));
+      const items = await getAdminOrganizations();
       setOrganizations(items);
       if (items.length === 1) {
         setOrganizationId((prev) => prev || items[0].id);
@@ -233,6 +231,7 @@ export default function SchoolsPage() {
         setMessage(data?.error || `Failed to ${isEditing ? "update" : "create"} school`);
         return;
       }
+      invalidateAdminSchools();
       setMessage(`School ${isEditing ? "updated" : "created"} successfully.`);
       clearForm();
       await loadSchools();
@@ -257,6 +256,7 @@ export default function SchoolsPage() {
         setMessage(data?.error || "Failed to delete school");
         return;
       }
+      invalidateAdminSchools();
       setDeleteSchoolId(null);
       if (editingSchoolId === id) {
         clearForm();

@@ -1,4 +1,5 @@
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { getAdminOrganizations, getAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
 import { StepMeta } from '../components/types';
 
 export type JsonRecord = Record<string, unknown>;
@@ -73,12 +74,8 @@ export function extractId(data: JsonRecord): string {
 
 export async function fetchOrganizations(): Promise<OrgOption[]> {
   try {
-    const response = await fetch('/api/admin/organizations');
-    const data = (await response.json()) as Array<{ id?: string; name?: string }>;
-    if (!response.ok || !Array.isArray(data)) return [];
-    return data
-      .filter((row) => typeof row.id === 'string' && typeof row.name === 'string')
-      .map((row) => ({ id: row.id as string, name: row.name as string }));
+    const data = await getAdminOrganizations();
+    return data.map((row) => ({ id: row.id, name: row.name }));
   } catch {
     return [];
   }
@@ -86,22 +83,12 @@ export async function fetchOrganizations(): Promise<OrgOption[]> {
 
 export async function fetchSchools(orgId?: string): Promise<SchoolOption[]> {
   try {
-    const query = orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';
-    const response = await fetch(`/api/admin/schools${query}`);
-    const data = (await response.json()) as Array<{ id?: string; name?: string; organizationId?: string }>;
-    if (!response.ok || !Array.isArray(data)) return [];
-    return data
-      .filter(
-        (row) =>
-          typeof row.id === 'string' &&
-          typeof row.name === 'string' &&
-          typeof row.organizationId === 'string'
-      )
-      .map((row) => ({
-        id: row.id as string,
-        name: row.name as string,
-        organizationId: row.organizationId as string,
-      }));
+    const data = await getAdminSchools(orgId);
+    return data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      organizationId: row.organizationId,
+    }));
   } catch {
     return [];
   }

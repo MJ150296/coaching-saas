@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge } from '@/shared/components/ui/Badge';
+import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
 
 type ChildOverview = {
@@ -107,12 +108,12 @@ export default function ParentDashboardPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600">Loading dashboard...</p>
-        </div>
-      </div>
+      <PageLoader
+        message="Loading dashboard..."
+        spinnerClassName="h-12 w-12 border-b-2 border-indigo-600"
+        containerClassName="min-h-screen flex items-center justify-center bg-slate-50"
+        messageClassName="mt-4 text-slate-600"
+      />
     );
   }
 

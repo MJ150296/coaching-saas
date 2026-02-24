@@ -43,20 +43,8 @@ export default function SignIn() {
         setError(result.error);
         setIsLoading(false);
       } else if (result?.ok) {
-        // Wait a moment for session to update
-        setTimeout(async () => {
-          // Fetch the updated session to get user role
-          const response = await fetch('/api/auth/session');
-          const updatedSession = await response.json();
-
-          if (updatedSession?.user?.role) {
-            const redirectPath = getRoleBasedRedirectPath(updatedSession.user.role as UserRole);
-            router.replace(redirectPath);
-          } else {
-            // Fallback to home if role not available
-            router.replace('/');
-          }
-        }, 100);
+        // Let useSession update and redirect effect handle navigation.
+        setIsLoading(false);
       }
     } catch {
       setError('An error occurred. Please try again.');

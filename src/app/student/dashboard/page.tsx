@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { PageLoader } from '@/shared/components/ui/PageLoader';
 
 interface StudentStats {
   totalCourses: number;
@@ -137,12 +138,10 @@ export default function StudentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
+      <PageLoader
+        message="Loading your dashboard..."
+        spinnerClassName="h-12 w-12 border-b-2 border-blue-600"
+      />
     );
   }
 

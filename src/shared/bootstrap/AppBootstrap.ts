@@ -20,15 +20,29 @@ import { connectDB } from '@/shared/infrastructure/database';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { ServiceKeys } from './ServiceKeys';
 
-export class AppBootstrap {
-  private static isInitialized = false;
+type AppBootstrapGlobalCache = {
+  initialized: boolean;
+};
 
+const globalForAppBootstrap = globalThis as typeof globalThis & {
+  __appBootstrapCache?: AppBootstrapGlobalCache;
+};
+
+const appBootstrapCache: AppBootstrapGlobalCache = globalForAppBootstrap.__appBootstrapCache ?? {
+  initialized: false,
+};
+
+if (!globalForAppBootstrap.__appBootstrapCache) {
+  globalForAppBootstrap.__appBootstrapCache = appBootstrapCache;
+}
+
+export class AppBootstrap {
   /**
    * Initialize the application
    */
   static async initialize(): Promise<void> {
-    if (AppBootstrap.isInitialized) {
-      // Already initialized
+    if (appBootstrapCache.initialized && Container.has(ServiceKeys.USER_REPOSITORY)) {
+      // Already initialized and container is hydrated in this runtime.
       return;
     }
 
@@ -36,7 +50,8 @@ export class AppBootstrap {
     logger.info('Starting application bootstrap...');
 
     try {
-      // Connect to database
+      // Always ensure DB connection for the current runtime.
+      // connectDB() is cached/idempotent and returns quickly when already connected.
       logger.info('Connecting to database...');
       await connectDB();
       logger.info('Database connected successfully');
@@ -50,7 +65,7 @@ export class AppBootstrap {
       // Register other services
       AppBootstrap.registerServices();
 
-      AppBootstrap.isInitialized = true;
+      appBootstrapCache.initialized = true;
       logger.info('Application bootstrap completed successfully');
     } catch (error) {
       logger.error('Application bootstrap failed', error as Error);
@@ -251,14 +266,14 @@ export class AppBootstrap {
    * Check if application is initialized
    */
   static isBootstrapped(): boolean {
-    return AppBootstrap.isInitialized;
+    return appBootstrapCache.initialized;
   }
 
   /**
    * Reset bootstrap (for testing)
    */
   static reset(): void {
-    AppBootstrap.isInitialized = false;
+    appBootstrapCache.initialized = false;
     Container.clear();
   }
 }

@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/shared/components/ui/ToastProvider";
 import {
+  invalidateAdminTenantReferenceData,
+} from "@/shared/lib/client/adminTenantReferenceData";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -173,6 +176,7 @@ export default function OrganizationsPage() {
         setMessage(data?.error || `Failed to ${isEditing ? "update" : "create"} organization`);
         return;
       }
+      invalidateAdminTenantReferenceData();
       setMessage(`Organization ${isEditing ? "updated" : "created"} successfully.`);
       clearForm();
       await loadOrganizations();
@@ -197,6 +201,7 @@ export default function OrganizationsPage() {
         setMessage(data?.error || "Failed to delete organization");
         return;
       }
+      invalidateAdminTenantReferenceData();
       setDeleteOrganizationId(null);
       if (editingOrganizationId === id) {
         clearForm();

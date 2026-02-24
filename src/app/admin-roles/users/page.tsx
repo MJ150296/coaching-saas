@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { UserRole } from "@/domains/user-management/domain/entities/User";
 import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
+import { TableLoader } from "@/shared/components/ui/TableLoader";
 import { useToast } from "@/shared/components/ui/ToastProvider";
 import { canCreateRole } from "@/shared/infrastructure/role-policy";
+import { getAdminOrganizations, getAdminSchools } from "@/shared/lib/client/adminTenantReferenceData";
 
 type OrganizationOption = {
   id: string;
@@ -102,16 +104,7 @@ export default function AdminUsersPage() {
     async function loadOrganizations() {
       setTenantLoading(true);
       try {
-        const response = await fetch("/api/admin/organizations");
-        const data = await response.json();
-        if (!response.ok || !active) return;
-
-        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map(
-          (item) => ({
-            id: item.id,
-            name: item.name,
-          })
-        );
+        const items = await getAdminOrganizations();
         if (!active) return;
         setOrganizations(items);
         if (items.length === 1) {
@@ -142,18 +135,7 @@ export default function AdminUsersPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const params = new URLSearchParams();
-        params.set("organizationId", organizationId);
-        const response = await fetch(`/api/admin/schools?${params.toString()}`);
-        const data = await response.json();
-        if (!response.ok || !active) return;
-        const items = (
-          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
-        ).map((item) => ({
-          id: item.id,
-          name: item.name,
-          organizationId: item.organizationId,
-        }));
+        const items = await getAdminSchools(organizationId);
         if (!active) return;
         setSchools(items);
         setSchoolId((prev) => {
@@ -605,6 +587,9 @@ export default function AdminUsersPage() {
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Created</th>
                 </tr>
               </thead>
+              {usersLoading ? (
+                <TableLoader columns={7} rows={8} className="bg-white/80" />
+              ) : (
               <tbody className="divide-y divide-slate-200 bg-white/80">
                 {filteredUsers.map((item) => (
                   <tr key={item.id}>
@@ -645,6 +630,7 @@ export default function AdminUsersPage() {
                   </tr>
                 )}
               </tbody>
+              )}
             </table>
           </div>
         </div>

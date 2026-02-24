@@ -4,20 +4,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
 import { Badge } from '@/shared/components/ui/Badge';
+import { PageLoader } from '@/shared/components/ui/PageLoader';
+import { TableLoader } from '@/shared/components/ui/TableLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
-
-type OrganizationOption = {
-  id: string;
-  name: string;
-};
-
-type SchoolOption = {
-  id: string;
-  name: string;
-  organizationId: string;
-};
 
 type UserListItem = {
   id: string;
@@ -29,11 +19,17 @@ type UserListItem = {
 };
 
 type DashboardStats = {
+  totalSchools?: number;
   totalUsers: number;
   totalAdmins: number;
   totalTeachers: number;
   totalStudents: number;
   totalStaff: number;
+};
+
+type DashboardOverviewResponse = {
+  summary: DashboardStats;
+  recentUsers: UserListItem[];
 };
 
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
@@ -50,13 +46,6 @@ const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
-  const [organizationOptions, setOrganizationOptions] = useState<OrganizationOption[]>([]);
-  const [schoolOptions, setSchoolOptions] = useState<SchoolOption[]>([]);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
-  const [selectedSchoolId, setSelectedSchoolId] = useState('');
-  const [organizationSearch, setOrganizationSearch] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
-  const [loadingTenant, setLoadingTenant] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -86,115 +75,9 @@ export default function AdminPage() {
     return labels[actorRole];
   }, [actorRole]);
 
-  const canSelectOrganization = actorRole === UserRole.SUPER_ADMIN;
-  const canSelectSchool = actorRole === UserRole.SUPER_ADMIN || actorRole === UserRole.ORGANIZATION_ADMIN;
-
-  useEffect(() => {
-    if (actorOrganizationId) {
-      setSelectedOrganizationId(actorOrganizationId);
-    }
-    if (actorSchoolId) {
-      setSelectedSchoolId(actorSchoolId);
-    }
-  }, [actorOrganizationId, actorSchoolId]);
-
   useEffect(() => {
     if (status !== 'authenticated') return;
-    let active = true;
-
-    async function loadOrganizations() {
-      setLoadingTenant(true);
-      try {
-        const response = await fetch('/api/admin/organizations');
-        const data = await response.json();
-        if (!response.ok || !active) {
-          toastMessage(data?.error || 'Failed to load organizations');
-          return;
-        }
-
-        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
-          id: item.id,
-          name: item.name,
-        }));
-
-        if (!active) return;
-        setOrganizationOptions(items);
-        if (!actorOrganizationId && items.length === 1) {
-          setSelectedOrganizationId(items[0].id);
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        toastMessage(`Error: ${String(error)}`);
-      } finally {
-        if (active) setLoadingTenant(false);
-      }
-    }
-
-    loadOrganizations();
-
-    return () => {
-      active = false;
-    };
-  }, [status, actorOrganizationId, toastMessage]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (!selectedOrganizationId) {
-      setSchoolOptions([]);
-      if (!actorSchoolId) {
-        setSelectedSchoolId('');
-      }
-      return;
-    }
-
-    let active = true;
-
-    async function loadSchools() {
-      setLoadingTenant(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('organizationId', selectedOrganizationId);
-        const response = await fetch(`/api/admin/schools?${params.toString()}`);
-        const data = await response.json();
-        if (!response.ok || !active) {
-          toastMessage(data?.error || 'Failed to load schools');
-          return;
-        }
-
-        const items = (
-          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
-        ).map((item) => ({
-          id: item.id,
-          name: item.name,
-          organizationId: item.organizationId,
-        }));
-
-        if (!active) return;
-        setSchoolOptions(items);
-        setSelectedSchoolId((prev) => {
-          if (actorSchoolId) return actorSchoolId;
-          if (items.length === 1) return items[0].id;
-          if (items.some((item) => item.id === prev)) return prev;
-          return '';
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        toastMessage(`Error: ${String(error)}`);
-      } finally {
-        if (active) setLoadingTenant(false);
-      }
-    }
-
-    loadSchools();
-
-    return () => {
-      active = false;
-    };
-  }, [status, selectedOrganizationId, actorSchoolId, toastMessage]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (!selectedOrganizationId || !selectedSchoolId) {
+    if (!actorRole) {
       setStats({
         totalUsers: 0,
         totalAdmins: 0,
@@ -208,66 +91,24 @@ export default function AdminPage() {
 
     let active = true;
 
-    async function fetchCountByRole(role?: UserRole): Promise<number> {
-      const params = new URLSearchParams();
-      params.set('withMeta', 'true');
-      params.set('limit', '1');
-      params.set('organizationId', selectedOrganizationId);
-      params.set('schoolId', selectedSchoolId);
-      if (role) params.set('role', role);
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to load user stats');
-      }
-      if (Array.isArray(data)) return data.length;
-      return Number(data?.total ?? 0);
-    }
-
     async function loadDashboardData() {
       setLoadingStats(true);
       try {
-        const [totalUsers, totalAdmins, totalTeachers, totalStudents, totalStaff, recentUsersResponse] =
-          await Promise.all([
-            fetchCountByRole(),
-            Promise.all([
-              fetchCountByRole(UserRole.SUPER_ADMIN),
-              fetchCountByRole(UserRole.ORGANIZATION_ADMIN),
-              fetchCountByRole(UserRole.SCHOOL_ADMIN),
-              fetchCountByRole(UserRole.ADMIN),
-            ]).then((counts) => counts.reduce((sum, current) => sum + current, 0)),
-            fetchCountByRole(UserRole.TEACHER),
-            fetchCountByRole(UserRole.STUDENT),
-            fetchCountByRole(UserRole.STAFF),
-            fetch(
-              `/api/admin/users?${new URLSearchParams({
-                withMeta: 'true',
-                limit: '8',
-                organizationId: selectedOrganizationId,
-                schoolId: selectedSchoolId,
-              }).toString()}`
-            ),
-          ]);
-
-        const recentUsersData = await recentUsersResponse.json();
-        if (!recentUsersResponse.ok) {
-          throw new Error(recentUsersData?.error || 'Failed to load recent users');
+        const response = await fetch('/api/admin/dashboard/overview');
+        const data = (await response.json()) as DashboardOverviewResponse & { error?: string };
+        if (!response.ok) {
+          throw new Error(data?.error || 'Failed to load dashboard data');
         }
 
         if (!active) return;
-        const recentItems = Array.isArray(recentUsersData)
-          ? ((recentUsersData as UserListItem[]) ?? [])
-          : ((recentUsersData?.items as UserListItem[] | undefined) ?? []);
-
         setStats({
-          totalUsers,
-          totalAdmins,
-          totalTeachers,
-          totalStudents,
-          totalStaff,
+          totalUsers: Number(data.summary?.totalUsers ?? 0),
+          totalAdmins: Number(data.summary?.totalAdmins ?? 0),
+          totalTeachers: Number(data.summary?.totalTeachers ?? 0),
+          totalStudents: Number(data.summary?.totalStudents ?? 0),
+          totalStaff: Number(data.summary?.totalStaff ?? 0),
         });
-        setRecentUsers(recentItems);
+        setRecentUsers(Array.isArray(data.recentUsers) ? data.recentUsers : []);
       } catch (error) {
         toastMessage(`Error: ${String(error)}`);
       } finally {
@@ -280,17 +121,10 @@ export default function AdminPage() {
     return () => {
       active = false;
     };
-  }, [status, selectedOrganizationId, selectedSchoolId, toastMessage]);
+  }, [status, actorRole, actorOrganizationId, actorSchoolId, toastMessage]);
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading dashboard..." />;
   }
 
   return (
@@ -306,58 +140,9 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {actorRole ? <Badge variant="blue">{actorRole.replaceAll('_', ' ')}</Badge> : null}
-              {selectedOrganizationId ? <Badge variant="green">Org: {selectedOrganizationId}</Badge> : null}
-              {selectedSchoolId ? <Badge variant="orange">School: {selectedSchoolId}</Badge> : null}
+              {actorOrganizationId ? <Badge variant="green">Org: {actorOrganizationId}</Badge> : null}
+              {actorSchoolId ? <Badge variant="orange">School: {actorSchoolId}</Badge> : null}
             </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">Tenant Scope</h2>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedOrganizationId(actorOrganizationId ?? selectedOrganizationId);
-                setSelectedSchoolId(actorSchoolId ?? selectedSchoolId);
-              }}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Reset to Session Scope
-            </button>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <SearchableDropdown
-              options={organizationOptions.map((item) => ({
-                value: item.id,
-                label: `${item.name} (${item.id})`,
-              }))}
-              value={selectedOrganizationId}
-              onChange={(value) => {
-                setSelectedOrganizationId(value);
-                if (!actorSchoolId) setSelectedSchoolId('');
-              }}
-              search={organizationSearch}
-              onSearchChange={setOrganizationSearch}
-              placeholder="Select organization"
-              searchPlaceholder="Search organization"
-              label="Organization"
-              disabled={loadingTenant || !canSelectOrganization}
-            />
-            <SearchableDropdown
-              options={schoolOptions.map((item) => ({
-                value: item.id,
-                label: `${item.name} (${item.id})`,
-              }))}
-              value={selectedSchoolId}
-              onChange={setSelectedSchoolId}
-              search={schoolSearch}
-              onSearchChange={setSchoolSearch}
-              placeholder={!selectedOrganizationId ? 'Select organization first' : 'Select school'}
-              searchPlaceholder="Search school"
-              label="School"
-              disabled={loadingTenant || !selectedOrganizationId || !canSelectSchool}
-            />
           </div>
         </section>
 
@@ -396,6 +181,9 @@ export default function AdminPage() {
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
                   </tr>
                 </thead>
+                {loadingStats ? (
+                  <TableLoader columns={4} rows={6} />
+                ) : (
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {recentUsers.map((item) => (
                     <tr key={item.id}>
@@ -410,15 +198,12 @@ export default function AdminPage() {
                   {recentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
-                        {!selectedOrganizationId || !selectedSchoolId
-                          ? 'Select organization and school to load dashboard data.'
-                          : loadingStats
-                          ? 'Loading users...'
-                          : 'No users found in selected scope.'}
+                        No users found in current role scope.
                       </td>
                     </tr>
                   )}
                 </tbody>
+                )}
               </table>
             </div>
           </div>

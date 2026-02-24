@@ -47,6 +47,7 @@ import {
   TeacherOption,
 } from './lib/onboardingData';
 import { clearDraft, loadDraft, saveDraft } from './lib/draftPersistence';
+import { invalidateAdminOrganizations, invalidateAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
 
 const initialStatus: StepStatus = { type: 'idle', message: '' };
 const DRAFT_KEY = 'onboarding_wizard_draft_v1';
@@ -1030,6 +1031,8 @@ export default function OnboardingFlowPage() {
               }
               setFieldErrors({});
               postStep('organization', '/api/admin/organizations', orgForm, async (d) => {
+                invalidateAdminOrganizations();
+                invalidateAdminSchools();
                 const id = extractId(d);
                 if (id) {
                   setOrganizationId(id);
@@ -1062,6 +1065,7 @@ export default function OnboardingFlowPage() {
               }
               setFieldErrors({});
               postStep('school', '/api/admin/schools', { ...schoolForm, organizationId }, async (d) => {
+                invalidateAdminSchools(organizationId);
                 const id = extractId(d);
                 if (id) {
                   setSchoolId(id);

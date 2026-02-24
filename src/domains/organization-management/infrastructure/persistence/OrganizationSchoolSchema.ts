@@ -50,6 +50,8 @@ const organizationSchema = new Schema(
   }
 );
 
+organizationSchema.index({ status: 1, createdAt: -1 });
+
 export const getOrCreateOrganizationModel = () => {
   if (models.Organization) return models.Organization;
   return model<IOrganizationDocument>('Organization', organizationSchema);
@@ -110,6 +112,9 @@ const schoolSchema = new Schema(
     timestamps: true,
   }
 );
+
+schoolSchema.index({ organizationId: 1, status: 1 });
+schoolSchema.index({ organizationId: 1, createdAt: -1 });
 
 export const getOrCreateSchoolModel = () => {
   if (models.School) return models.School;

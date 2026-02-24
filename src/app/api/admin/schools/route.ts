@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateSchoolUseCase } from '@/domains/organization-management/application/use-cases';
-import { School } from '@/domains/organization-management/domain/entities/School';
 import { MongoSchoolRepository } from '@/domains/organization-management/infrastructure/persistence';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Permission } from '@/shared/infrastructure/rbac';
@@ -10,8 +9,15 @@ import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { SchoolModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { getLogger } from '@/shared/infrastructure/logger';
+import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
+
+const SCHOOL_CACHE_TTL_MS = 15_000;
+const SCHOOL_CACHE_PREFIX = 'api:admin:schools:';
 
 export async function GET(request: NextRequest) {
+  const logger = getLogger();
+  const start = Date.now();
   try {
     const actor = await getActorUser();
     if (!actor) {
@@ -28,54 +34,202 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const repo = await initializeAppAndGetService<MongoSchoolRepository>(
-      ServiceKeys.SCHOOL_REPOSITORY
-    );
-
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
+    const cacheKey = `${SCHOOL_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getSchoolId() ?? ''}:${requestedOrganizationId ?? ''}`;
+    const cached = getCachedValue<unknown[]>(cacheKey);
+    if (cached) {
+      logger.debug('GET /api/admin/schools cache hit', { durationMs: Date.now() - start, role });
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
 
-    let schools: School[] = [];
+    const repoStart = Date.now();
+    let data: Array<{
+      id: string;
+      organizationId: string;
+      name: string;
+      code: string;
+      status: 'active' | 'inactive';
+      address: {
+        street: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        country?: string;
+      };
+      contactInfo: {
+        email: string;
+        phone: string;
+      };
+    }> = [];
     if (role === UserRole.SUPER_ADMIN) {
       if (requestedOrganizationId) {
-        schools = await repo.findByOrganizationId(requestedOrganizationId);
+        const rows = await SchoolModel.find({ organizationId: requestedOrganizationId })
+          .sort({ createdAt: -1 })
+          .select('_id organizationId schoolName schoolCode status address contactInfo')
+          .lean<
+            Array<{
+              _id: string;
+              organizationId: string;
+              schoolName: string;
+              schoolCode: string;
+              status: 'active' | 'inactive';
+              address: {
+                street: string;
+                city: string;
+                state: string;
+                zipCode: string;
+                country?: string;
+              };
+              contactInfo: {
+                email: string;
+                phone: string;
+              };
+            }>
+          >();
+        data = rows.map((row) => ({
+          id: row._id,
+          organizationId: row.organizationId,
+          name: row.schoolName,
+          code: row.schoolCode,
+          status: row.status,
+          address: row.address,
+          contactInfo: row.contactInfo,
+        }));
       } else {
-        schools = await repo.findAll();
+        const rows = await SchoolModel.find({})
+          .sort({ createdAt: -1 })
+          .select('_id organizationId schoolName schoolCode status address contactInfo')
+          .lean<
+            Array<{
+              _id: string;
+              organizationId: string;
+              schoolName: string;
+              schoolCode: string;
+              status: 'active' | 'inactive';
+              address: {
+                street: string;
+                city: string;
+                state: string;
+                zipCode: string;
+                country?: string;
+              };
+              contactInfo: {
+                email: string;
+                phone: string;
+              };
+            }>
+          >();
+        data = rows.map((row) => ({
+          id: row._id,
+          organizationId: row.organizationId,
+          name: row.schoolName,
+          code: row.schoolCode,
+          status: row.status,
+          address: row.address,
+          contactInfo: row.contactInfo,
+        }));
       }
     } else if (role === UserRole.ORGANIZATION_ADMIN || role === UserRole.ADMIN) {
       if (!actor.getOrganizationId()) {
         return NextResponse.json([], { status: 200 });
       }
-      schools = await repo.findByOrganizationId(actor.getOrganizationId());
+      const rows = await SchoolModel.find({ organizationId: actor.getOrganizationId() })
+        .sort({ createdAt: -1 })
+        .select('_id organizationId schoolName schoolCode status address contactInfo')
+        .lean<
+          Array<{
+            _id: string;
+            organizationId: string;
+            schoolName: string;
+            schoolCode: string;
+            status: 'active' | 'inactive';
+            address: {
+              street: string;
+              city: string;
+              state: string;
+              zipCode: string;
+              country?: string;
+            };
+            contactInfo: {
+              email: string;
+              phone: string;
+            };
+          }>
+        >();
+      data = rows.map((row) => ({
+        id: row._id,
+        organizationId: row.organizationId,
+        name: row.schoolName,
+        code: row.schoolCode,
+        status: row.status,
+        address: row.address,
+        contactInfo: row.contactInfo,
+      }));
     } else if (role === UserRole.SCHOOL_ADMIN) {
       if (!actor.getSchoolId()) {
         return NextResponse.json([], { status: 200 });
       }
-      const school = await repo.findById(actor.getSchoolId());
-      schools = school ? [school] : [];
+      const row = await SchoolModel.findById(actor.getSchoolId())
+        .select('_id organizationId schoolName schoolCode status address contactInfo')
+        .lean<{
+          _id: string;
+          organizationId: string;
+          schoolName: string;
+          schoolCode: string;
+          status: 'active' | 'inactive';
+          address: {
+            street: string;
+            city: string;
+            state: string;
+            zipCode: string;
+            country?: string;
+          };
+          contactInfo: {
+            email: string;
+            phone: string;
+          };
+        } | null>();
+      if (row) {
+        data = [{
+          id: row._id,
+          organizationId: row.organizationId,
+          name: row.schoolName,
+          code: row.schoolCode,
+          status: row.status,
+          address: row.address,
+          contactInfo: row.contactInfo,
+        }];
+      }
     }
 
-    const data = schools.map((school) => ({
-      id: school.getId(),
-      organizationId: school.getOrganizationId(),
-      name: school.getSchoolName().getValue(),
-      code: school.getSchoolCode().getValue(),
-      status: school.getStatus(),
-      address: {
-        street: school.getAddress().getStreet(),
-        city: school.getAddress().getCity(),
-        state: school.getAddress().getState(),
-        zipCode: school.getAddress().getZipCode(),
-        country: school.getAddress().getCountry(),
-      },
-      contactInfo: {
-        email: school.getContactInfo().getEmail(),
-        phone: school.getContactInfo().getPhone(),
-      },
-    }));
+    setCachedValue(cacheKey, data, SCHOOL_CACHE_TTL_MS);
+    logger.info('GET /api/admin/schools', {
+      durationMs: Date.now() - start,
+      repoResolveMs: repoStart - start,
+      queryMs: Date.now() - repoStart,
+      count: data.length,
+      role,
+      requestedOrganizationId,
+    });
 
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json(data, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+        'X-Cache': 'MISS',
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
+    logger.error('GET /api/admin/schools failed', error instanceof Error ? error : undefined, {
+      durationMs: Date.now() - start,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -113,6 +267,9 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json(result.getValue(), { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -206,6 +363,9 @@ export async function PUT(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -249,6 +409,9 @@ export async function DELETE(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';

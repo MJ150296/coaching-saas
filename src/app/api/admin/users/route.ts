@@ -4,7 +4,7 @@ import { authOptions } from '@/shared/infrastructure/auth';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
-import { UserMapper } from '@/domains/user-management/application/mappers/UserMapper';
+import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { CreateUserUseCase } from '@/domains/user-management/application/use-cases';
 import { canCreateRole } from '@/shared/infrastructure/role-policy';
@@ -15,8 +15,12 @@ import { ParentStudentLinkModel } from '@/domains/user-management/infrastructure
 import { connectDB } from '@/shared/infrastructure/database';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
+import { invalidateCacheByPrefix } from '@/shared/infrastructure/api-response-cache';
+import { getLogger } from '@/shared/infrastructure/logger';
 
 export async function GET(request: NextRequest) {
+  const logger = getLogger();
+  const start = Date.now();
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
   if (
@@ -38,38 +42,80 @@ export async function GET(request: NextRequest) {
   const requestedOrganizationId =
     request.nextUrl.searchParams.get('organizationId') || undefined;
   const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
-  const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
-  const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
   const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
+  const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
+  const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
 
   const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
   if (actor.getRole() !== UserRole.SUPER_ADMIN) {
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
   }
 
-  const repo = await initializeAppAndGetService<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
-  const users = await repo.findByFilters({
-    role: requestedRole,
-    organizationId: tenant.organizationId,
-    schoolId: tenant.schoolId,
-    limit,
-    offset,
-  });
-  const items = users.map(UserMapper.toDTO);
+  await connectDB();
+  const query: {
+    role?: string;
+    organizationId?: string;
+    schoolId?: string;
+  } = {};
+  if (requestedRole) query.role = requestedRole;
+  if (tenant.organizationId) query.organizationId = tenant.organizationId;
+  if (tenant.schoolId) query.schoolId = tenant.schoolId;
+
+  const items = await UserModel.find(query)
+    .sort({ createdAt: -1 })
+    .skip(offset)
+    .limit(limit)
+    .select('_id email firstName lastName role phone organizationId schoolId isActive emailVerified createdAt updatedAt')
+    .lean<
+      Array<{
+        _id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: UserRole;
+        phone?: string;
+        organizationId?: string;
+        schoolId?: string;
+        isActive: boolean;
+        emailVerified: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+      }>
+    >()
+    .then((rows) =>
+      rows.map((row) => ({
+        id: row._id,
+        email: row.email,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        role: row.role,
+        phone: row.phone,
+        organizationId: row.organizationId,
+        schoolId: row.schoolId,
+        isActive: row.isActive,
+        emailVerified: row.emailVerified,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }))
+    );
   if (!withMeta) {
+    logger.debug('GET /api/admin/users', {
+      durationMs: Date.now() - start,
+      count: items.length,
+      withMeta,
+      role: requestedRole ?? null,
+      limit,
+      offset,
+    });
     return NextResponse.json(items);
   }
 
-  const total = await repo.countByFilters({
-    role: requestedRole,
-    organizationId: tenant.organizationId,
-    schoolId: tenant.schoolId,
-  });
+  const total = await UserModel.countDocuments(query);
   return NextResponse.json({
     items,
     total,
-    limit: limit ?? null,
-    offset: offset ?? 0,
+    limit,
+    offset,
   });
 }
 
@@ -191,5 +237,7 @@ export async function POST(request: NextRequest) {
     ip: request.headers.get('x-forwarded-for') || undefined,
   });
 
+  invalidateCacheByPrefix('api:admin:dashboard:overview:');
+  invalidateCacheByPrefix('api:admin:academic-options:');
   return NextResponse.json(result.getValue(), { status: 201 });
 }

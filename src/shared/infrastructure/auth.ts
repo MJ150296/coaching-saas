@@ -6,8 +6,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { PasswordEncryption } from '@/domains/user-management/infrastructure/external-services/PasswordEncryption';
-import { initializeApp } from '@/shared/bootstrap/init';
-import { Container } from '@/shared/bootstrap';
+import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 
 export const authOptions: NextAuthOptions = {
@@ -24,9 +23,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Initialize app and get user repository
-          await initializeApp();
-          const userRepository = Container.resolve<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
+          const userRepository = await initializeAppAndGetService<MongoUserRepository>(
+            ServiceKeys.USER_REPOSITORY
+          );
 
           const user = await userRepository.findByEmail(credentials.email);
 

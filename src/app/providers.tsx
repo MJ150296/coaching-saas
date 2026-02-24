@@ -14,7 +14,7 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false} refetchInterval={0}>
       <ToastProvider>{children}</ToastProvider>
     </SessionProvider>
   );

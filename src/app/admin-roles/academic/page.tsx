@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SingleSelect } from "@/shared/components/ui/SingleSelect";
 import { useToast } from "@/shared/components/ui/ToastProvider";
+import { getAdminOrganizations, getAdminSchools } from "@/shared/lib/client/adminTenantReferenceData";
 
 const CLASS_LEVEL_OPTIONS = [
   { value: "LOWER_PRIMARY", label: "Lower Primary (Classes 1-5)" },
@@ -281,16 +282,7 @@ export default function AcademicManagementPage() {
     async function loadOrganizations() {
       setTenantLoading(true);
       try {
-        const response = await fetch("/api/admin/organizations");
-        const data = await response.json();
-        if (!response.ok || !active) return;
-
-        const items = ((data as Array<{ id: string; name: string }> | undefined) ?? []).map(
-          (item) => ({
-            id: item.id,
-            name: item.name,
-          })
-        );
+        const items = await getAdminOrganizations();
         if (!active) return;
         setOrganizations(items);
         if (items.length === 1) {
@@ -322,19 +314,7 @@ export default function AcademicManagementPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const params = new URLSearchParams();
-        params.set("organizationId", organizationId);
-        const response = await fetch(`/api/admin/schools?${params.toString()}`);
-        const data = await response.json();
-        if (!response.ok || !active) return;
-
-        const items = (
-          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
-        ).map((item) => ({
-          id: item.id,
-          name: item.name,
-          organizationId: item.organizationId,
-        }));
+        const items = await getAdminSchools(organizationId);
         if (!active) return;
         setSchools(items);
 
@@ -375,63 +355,39 @@ export default function AcademicManagementPage() {
         const params = new URLSearchParams();
         params.set("organizationId", organizationId);
         params.set("schoolId", schoolId);
-
-        const [yearRes, classRes, sectionRes, teacherRes] = await Promise.all([
-          fetch(`/api/admin/academic-years?${params.toString()}`),
-          fetch(`/api/admin/class-masters?${params.toString()}`),
-          fetch(`/api/admin/sections?${params.toString()}`),
-          fetch(
-            `/api/admin/users?role=TEACHER&organizationId=${encodeURIComponent(organizationId)}&schoolId=${encodeURIComponent(schoolId)}`
-          ),
-        ]);
-
-        const [yearData, classData, sectionData, teacherData] = await Promise.all([
-          yearRes.json(),
-          classRes.json(),
-          sectionRes.json(),
-          teacherRes.json(),
-        ]);
+        const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
+        const data = await response.json();
 
         if (!active) return;
+        if (!response.ok) return;
 
-        if (yearRes.ok) {
-          setAcademicYearOptions(
-            ((yearData as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-            }))
-          );
-        }
-
-        if (classRes.ok) {
-          setClassMasterOptions(
-            ((classData as Array<{ id: string; name: string; level?: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-              level: item.level,
-            }))
-          );
-        }
-
-        if (sectionRes.ok) {
-          setAllSections(
-            ((sectionData as Array<{ id: string; name: string; classMasterId: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: item.name,
-              classMasterId: item.classMasterId,
-            }))
-          );
-        }
-
-        if (teacherRes.ok) {
-          setTeacherOptions(
-            ((teacherData as Array<{ id: string; firstName?: string; lastName?: string; email: string }> | undefined) ?? []).map((item) => ({
-              id: item.id,
-              name: `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim() || item.email,
-              email: item.email,
-            }))
-          );
-        }
+        setAcademicYearOptions(
+          ((data?.academicYears as Array<{ id: string; name: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+          }))
+        );
+        setClassMasterOptions(
+          ((data?.classMasters as Array<{ id: string; name: string; level?: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            level: item.level,
+          }))
+        );
+        setAllSections(
+          ((data?.sections as Array<{ id: string; name: string; classMasterId: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            classMasterId: item.classMasterId,
+          }))
+        );
+        setTeacherOptions(
+          ((data?.teachers as Array<{ id: string; name: string; email: string }> | undefined) ?? []).map((item) => ({
+            id: item.id,
+            name: item.name,
+            email: item.email,
+          }))
+        );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         // Ignore background option loading errors.

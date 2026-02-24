@@ -4,34 +4,54 @@
  */
 
 import { Container } from './Container';
+import { ServiceKeys } from './ServiceKeys';
 
-let initPromise: Promise<void> | null = null;
+type BootstrapGlobalCache = {
+  initPromise: Promise<void> | null;
+};
+
+const globalForBootstrap = globalThis as typeof globalThis & {
+  __bootstrapCache?: BootstrapGlobalCache;
+};
+
+const bootstrapCache: BootstrapGlobalCache = globalForBootstrap.__bootstrapCache ?? {
+  initPromise: null,
+};
+
+if (!globalForBootstrap.__bootstrapCache) {
+  globalForBootstrap.__bootstrapCache = bootstrapCache;
+}
 
 /**
  * Initialize the application (idempotent)
  * Safe to call multiple times
  */
 export async function initializeApp(): Promise<void> {
-  // Prevent multiple concurrent initializations
-  if (initPromise) {
-    return initPromise;
+  // If the current runtime already has registered services, skip bootstrap.
+  if (Container.has(ServiceKeys.USER_REPOSITORY)) {
+    return;
   }
 
-  initPromise = (async () => {
+  // Prevent multiple concurrent initializations
+  if (bootstrapCache.initPromise) {
+    await bootstrapCache.initPromise;
+    if (Container.has(ServiceKeys.USER_REPOSITORY)) {
+      return;
+    }
+    // Existing promise resolved in another runtime state but container is still empty (e.g. HMR).
+    bootstrapCache.initPromise = null;
+  }
+
+  bootstrapCache.initPromise = (async () => {
     const bootstrapModule = (await import('./AppBootstrap')) as {
       AppBootstrap: {
-        isBootstrapped(): boolean;
         initialize(): Promise<void>;
       };
     };
 
-    if (bootstrapModule.AppBootstrap.isBootstrapped()) {
-      return;
-    }
-
     await bootstrapModule.AppBootstrap.initialize();
   })();
-  await initPromise;
+  await bootstrapCache.initPromise;
 }
 
 /**

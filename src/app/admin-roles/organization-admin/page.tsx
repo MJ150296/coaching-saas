@@ -1,18 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Badge } from '@/shared/components/ui/Badge';
-import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
+import { TableLoader } from '@/shared/components/ui/TableLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
-
-type SchoolOption = {
-  id: string;
-  name: string;
-  organizationId: string;
-};
 
 type UserListItem = {
   id: string;
@@ -31,6 +25,18 @@ type DashboardStats = {
   totalStudents: number;
 };
 
+type DashboardOverviewResponse = {
+  summary: {
+    totalSchools: number;
+    totalUsers: number;
+    totalAdmins: number;
+    totalTeachers: number;
+    totalStudents: number;
+    totalStaff: number;
+  };
+  recentUsers: UserListItem[];
+};
+
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
   [UserRole.SUPER_ADMIN]: 'purple',
   [UserRole.ORGANIZATION_ADMIN]: 'blue',
@@ -43,11 +49,8 @@ const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' 
 };
 
 export default function OrganizationAdminDashboardPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { toastMessage } = useToast();
-  const [schoolOptions, setSchoolOptions] = useState<SchoolOption[]>([]);
-  const [selectedSchoolId, setSelectedSchoolId] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalSchools: 0,
@@ -58,143 +61,39 @@ export default function OrganizationAdminDashboardPage() {
   });
   const [recentUsers, setRecentUsers] = useState<UserListItem[]>([]);
 
-  const organizationId = (session?.user as { organizationId?: string } | undefined)?.organizationId;
-  const schoolIdFromSession = (session?.user as { schoolId?: string } | undefined)?.schoolId;
-
-  const schoolDropdownOptions = useMemo(
-    () =>
-      schoolOptions.map((school) => ({
-        value: school.id,
-        label: `${school.name} (${school.id})`,
-      })),
-    [schoolOptions]
-  );
-
   useEffect(() => {
-    if (!schoolIdFromSession) return;
-    setSelectedSchoolId((prev) => prev || schoolIdFromSession);
-  }, [schoolIdFromSession]);
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !organizationId) return;
-    let active = true;
-
-    async function loadSchools() {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('organizationId', organizationId);
-        const response = await fetch(`/api/admin/schools?${params.toString()}`);
-        const data = await response.json();
-        if (!response.ok || !active) {
-          toastMessage(data?.error || 'Failed to load schools');
-          return;
-        }
-
-        const schools = (
-          (data as Array<{ id: string; name: string; organizationId: string }> | undefined) ?? []
-        ).map((item) => ({
-          id: item.id,
-          name: item.name,
-          organizationId: item.organizationId,
-        }));
-
-        if (!active) return;
-        setSchoolOptions(schools);
-        setStats((prev) => ({ ...prev, totalSchools: schools.length }));
-        setSelectedSchoolId((prev) => {
-          if (schoolIdFromSession) return schoolIdFromSession;
-          if (prev && schools.some((item) => item.id === prev)) return prev;
-          if (schools.length === 1) return schools[0].id;
-          return '';
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        toastMessage(`Error: ${String(error)}`);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    loadSchools();
-    return () => {
-      active = false;
-    };
-  }, [status, organizationId, schoolIdFromSession, toastMessage]);
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !organizationId || !selectedSchoolId) {
+    if (status !== 'authenticated') {
       setRecentUsers([]);
-      setStats((prev) => ({
-        ...prev,
+      setStats({
+        totalSchools: 0,
         totalUsers: 0,
         totalAdmins: 0,
         totalTeachers: 0,
         totalStudents: 0,
-      }));
+      });
       return;
     }
 
     let active = true;
 
-    async function fetchCountByRole(role?: UserRole): Promise<number> {
-      const params = new URLSearchParams();
-      params.set('withMeta', 'true');
-      params.set('limit', '1');
-      params.set('organizationId', organizationId);
-      params.set('schoolId', selectedSchoolId);
-      if (role) params.set('role', role);
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to load dashboard stats');
-      }
-
-      if (Array.isArray(data)) return data.length;
-      return Number(data?.total ?? 0);
-    }
-
     async function loadStatsAndUsers() {
       setLoading(true);
       try {
-        const [totalUsers, totalAdmins, totalTeachers, totalStudents, usersResponse] = await Promise.all([
-          fetchCountByRole(),
-          Promise.all([
-            fetchCountByRole(UserRole.ORGANIZATION_ADMIN),
-            fetchCountByRole(UserRole.SCHOOL_ADMIN),
-            fetchCountByRole(UserRole.ADMIN),
-          ]).then((counts) => counts.reduce((sum, current) => sum + current, 0)),
-          fetchCountByRole(UserRole.TEACHER),
-          fetchCountByRole(UserRole.STUDENT),
-          fetch(
-            `/api/admin/users?${new URLSearchParams({
-              withMeta: 'true',
-              limit: '8',
-              organizationId,
-              schoolId: selectedSchoolId,
-            }).toString()}`
-          ),
-        ]);
-
-        const usersData = await usersResponse.json();
-        if (!usersResponse.ok) {
-          throw new Error(usersData?.error || 'Failed to load recent users');
+        const response = await fetch('/api/admin/dashboard/overview');
+        const data = (await response.json()) as DashboardOverviewResponse & { error?: string };
+        if (!response.ok) {
+          throw new Error(data?.error || 'Failed to load dashboard data');
         }
 
         if (!active) return;
-        const items = Array.isArray(usersData)
-          ? ((usersData as UserListItem[]) ?? [])
-          : ((usersData?.items as UserListItem[] | undefined) ?? []);
-
-        setStats((prev) => ({
-          ...prev,
-          totalUsers,
-          totalAdmins,
-          totalTeachers,
-          totalStudents,
-        }));
-        setRecentUsers(items);
+        setStats({
+          totalSchools: Number(data.summary?.totalSchools ?? 0),
+          totalUsers: Number(data.summary?.totalUsers ?? 0),
+          totalAdmins: Number(data.summary?.totalAdmins ?? 0),
+          totalTeachers: Number(data.summary?.totalTeachers ?? 0),
+          totalStudents: Number(data.summary?.totalStudents ?? 0),
+        });
+        setRecentUsers(Array.isArray(data.recentUsers) ? data.recentUsers : []);
       } catch (error) {
         toastMessage(`Error: ${String(error)}`);
       } finally {
@@ -207,7 +106,7 @@ export default function OrganizationAdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [status, organizationId, selectedSchoolId, toastMessage]);
+  }, [status, toastMessage]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50/30 to-blue-50/50 py-8">
@@ -221,26 +120,9 @@ export default function OrganizationAdminDashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {organizationId ? <Badge variant="green">Org: {organizationId}</Badge> : null}
-              {selectedSchoolId ? <Badge variant="orange">School: {selectedSchoolId}</Badge> : null}
+              <Badge variant="green">Organization Scope</Badge>
+              <Badge variant="orange">All Schools</Badge>
             </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
-          <h2 className="text-lg font-semibold text-slate-900">School Scope</h2>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <SearchableDropdown
-              options={schoolDropdownOptions}
-              value={selectedSchoolId}
-              onChange={setSelectedSchoolId}
-              search={schoolSearch}
-              onSearchChange={setSchoolSearch}
-              placeholder="Select school"
-              searchPlaceholder="Search school"
-              label="School"
-              disabled={Boolean(schoolIdFromSession)}
-            />
           </div>
         </section>
 
@@ -279,6 +161,9 @@ export default function OrganizationAdminDashboardPage() {
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
                   </tr>
                 </thead>
+                {loading ? (
+                  <TableLoader columns={4} rows={6} />
+                ) : (
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {recentUsers.map((item) => (
                     <tr key={item.id}>
@@ -293,11 +178,12 @@ export default function OrganizationAdminDashboardPage() {
                   {recentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
-                        {selectedSchoolId ? 'No users found for selected school.' : 'Select a school to load user data.'}
+                        No users found across schools.
                       </td>
                     </tr>
                   )}
                 </tbody>
+                )}
               </table>
             </div>
           </div>

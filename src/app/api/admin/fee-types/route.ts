@@ -11,6 +11,7 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { hasPermission } from '@/shared/infrastructure/rbac';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
+import { invalidateCacheByPrefix } from '@/shared/infrastructure/api-response-cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,9 +30,9 @@ export async function GET(request: NextRequest) {
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
     const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
-    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
-    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
     const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
 
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
@@ -63,8 +64,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       items,
       total,
-      limit: limit ?? null,
-      offset: offset ?? 0,
+      limit,
+      offset,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -101,6 +102,8 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
+    invalidateCacheByPrefix('api:admin:academic-options:');
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
     return NextResponse.json(result.getValue(), { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';

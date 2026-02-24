@@ -80,6 +80,9 @@ const userSchema = new Schema<IUserDocument>(
 // Note: email index is created automatically by unique: true
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
+userSchema.index({ organizationId: 1, schoolId: 1, role: 1 });
+userSchema.index({ organizationId: 1, schoolId: 1, createdAt: -1 });
+userSchema.index({ organizationId: 1, role: 1 });
 
 // Get or create the User model (handles Next.js hot reload)
 const getOrCreateUserModel = (): Model<IUserDocument> => {

@@ -16,7 +16,7 @@ interface NavItem {
   href: string;
   icon: IconName;
   allowedRoles: UserRole[];
-  section: 'primary' | 'manage';
+  section: 'primary' | 'manage' | 'general';
 }
 
 type IconName =
@@ -25,7 +25,8 @@ type IconName =
   | 'school'
   | 'users'
   | 'academic'
-  | 'fees';
+  | 'fees'
+  | 'profile';
 
 const roleLabels: Record<UserRole, string> = {
   [UserRole.SUPER_ADMIN]: 'Super Administrator',
@@ -144,6 +145,22 @@ const navItems: NavItem[] = [
     allowedRoles: [UserRole.STAFF],
     section: 'primary',
   },
+  {
+    label: 'Profile Settings',
+    href: '/profile/settings',
+    icon: 'profile',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ORGANIZATION_ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.ADMIN,
+      UserRole.TEACHER,
+      UserRole.STUDENT,
+      UserRole.PARENT,
+      UserRole.STAFF,
+    ],
+    section: 'general',
+  },
 ];
 
 function isItemActive(pathname: string, href: string): boolean {
@@ -161,6 +178,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   );
   const primaryItems = useMemo(() => items.filter((item) => item.section === 'primary'), [items]);
   const manageItems = useMemo(() => items.filter((item) => item.section === 'manage'), [items]);
+  const generalItems = useMemo(() => items.filter((item) => item.section === 'general'), [items]);
   const sidebarWidth = isCollapsed ? 80 : 288;
 
   return (
@@ -173,6 +191,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           role={role}
           primaryItems={primaryItems}
           manageItems={manageItems}
+          generalItems={generalItems}
           pathname={pathname}
           userName={session?.user?.name ?? 'User'}
           collapsed={isCollapsed}
@@ -197,6 +216,7 @@ function SidebarContent({
   role,
   primaryItems,
   manageItems,
+  generalItems,
   pathname,
   userName,
   collapsed = false,
@@ -206,6 +226,7 @@ function SidebarContent({
   role: UserRole;
   primaryItems: NavItem[];
   manageItems: NavItem[];
+  generalItems: NavItem[];
   pathname: string;
   userName: string;
   collapsed?: boolean;
@@ -326,6 +347,63 @@ function SidebarContent({
             })}
           </ul>
         )}
+
+        {generalItems.length > 0 && !collapsed && (
+          <div className="px-2">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              General
+            </p>
+            <ul className="space-y-1">
+              {generalItems.map((item) => {
+                const active = isItemActive(pathname, item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="mr-3 inline-flex">
+                        <SidebarIcon name={item.icon} active={active} />
+                      </span>
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {generalItems.length > 0 && collapsed && (
+          <ul className="space-y-1">
+            {generalItems.map((item) => {
+              const active = isItemActive(pathname, item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    title={item.label}
+                    className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="mx-auto inline-flex">
+                      <SidebarIcon name={item.icon} active={active} />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </nav>
 
       <div className="border-t border-gray-200 p-4">
@@ -384,6 +462,12 @@ function SidebarIcon({ name, active }: { name: IconName; active: boolean }) {
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2" />
+        </svg>
+      );
+    case 'profile':
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" />
         </svg>
       );
     default:

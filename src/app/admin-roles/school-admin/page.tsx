@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Badge } from '@/shared/components/ui/Badge';
+import { TableLoader } from '@/shared/components/ui/TableLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { getAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
 
 type UserListItem = {
   id: string;
@@ -22,6 +24,11 @@ type DashboardStats = {
   totalTeachers: number;
   totalStudents: number;
   totalStaff: number;
+};
+
+type DashboardOverviewResponse = {
+  summary: DashboardStats;
+  recentUsers: UserListItem[];
 };
 
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
@@ -56,73 +63,32 @@ export default function SchoolAdminDashboardPage() {
     if (status !== 'authenticated' || !organizationId || !schoolId) return;
     let active = true;
 
-    async function fetchCountByRole(role?: UserRole): Promise<number> {
-      const params = new URLSearchParams();
-      params.set('withMeta', 'true');
-      params.set('limit', '1');
-      params.set('organizationId', organizationId);
-      params.set('schoolId', schoolId);
-      if (role) params.set('role', role);
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to load dashboard stats');
-      }
-      if (Array.isArray(data)) return data.length;
-      return Number(data?.total ?? 0);
-    }
-
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const [totalUsers, totalAdmins, totalTeachers, totalStudents, totalStaff, usersResponse, schoolsResponse] =
-          await Promise.all([
-            fetchCountByRole(),
-            Promise.all([
-              fetchCountByRole(UserRole.SCHOOL_ADMIN),
-              fetchCountByRole(UserRole.ADMIN),
-            ]).then((counts) => counts.reduce((sum, current) => sum + current, 0)),
-            fetchCountByRole(UserRole.TEACHER),
-            fetchCountByRole(UserRole.STUDENT),
-            fetchCountByRole(UserRole.STAFF),
-            fetch(
-              `/api/admin/users?${new URLSearchParams({
-                withMeta: 'true',
-                limit: '8',
-                organizationId,
-                schoolId,
-              }).toString()}`
-            ),
-            fetch(`/api/admin/schools?${new URLSearchParams({ organizationId }).toString()}`),
-          ]);
-
-        const usersData = await usersResponse.json();
-        if (!usersResponse.ok) {
-          throw new Error(usersData?.error || 'Failed to load recent users');
-        }
-
-        const schoolsData = await schoolsResponse.json();
-        if (!schoolsResponse.ok) {
-          throw new Error(schoolsData?.error || 'Failed to load school information');
+        const [overviewResponse, schools] = await Promise.all([
+          fetch('/api/admin/dashboard/overview'),
+          getAdminSchools(organizationId),
+        ]);
+        const overviewData = (await overviewResponse.json()) as DashboardOverviewResponse & {
+          error?: string;
+        };
+        if (!overviewResponse.ok) {
+          throw new Error(overviewData?.error || 'Failed to load dashboard data');
         }
 
         if (!active) return;
 
-        const users = Array.isArray(usersData)
-          ? ((usersData as UserListItem[]) ?? [])
-          : ((usersData?.items as UserListItem[] | undefined) ?? []);
-        const schools = (schoolsData as Array<{ id: string; name: string }> | undefined) ?? [];
         const currentSchool = schools.find((item) => item.id === schoolId);
 
         setStats({
-          totalUsers,
-          totalAdmins,
-          totalTeachers,
-          totalStudents,
-          totalStaff,
+          totalUsers: Number(overviewData.summary?.totalUsers ?? 0),
+          totalAdmins: Number(overviewData.summary?.totalAdmins ?? 0),
+          totalTeachers: Number(overviewData.summary?.totalTeachers ?? 0),
+          totalStudents: Number(overviewData.summary?.totalStudents ?? 0),
+          totalStaff: Number(overviewData.summary?.totalStaff ?? 0),
         });
-        setRecentUsers(users);
+        setRecentUsers(Array.isArray(overviewData.recentUsers) ? overviewData.recentUsers : []);
         setSchoolName(currentSchool?.name ?? schoolId);
       } catch (error) {
         toastMessage(`Error: ${String(error)}`);
@@ -190,6 +156,9 @@ export default function SchoolAdminDashboardPage() {
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
                   </tr>
                 </thead>
+                {loading ? (
+                  <TableLoader columns={4} rows={6} />
+                ) : (
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {recentUsers.map((item) => (
                     <tr key={item.id}>
@@ -204,11 +173,12 @@ export default function SchoolAdminDashboardPage() {
                   {recentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
-                        {loading ? 'Loading users...' : 'No users found for your school scope.'}
+                        No users found for your school scope.
                       </td>
                     </tr>
                   )}
                 </tbody>
+                )}
               </table>
             </div>
           </div>
