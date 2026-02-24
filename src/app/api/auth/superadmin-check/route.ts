@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 

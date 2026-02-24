@@ -100,6 +100,56 @@ export class MongoUserRepository implements UserRepository {
     return documents.map((doc) => this.toDomainEntity(doc));
   }
 
+  async findByFilters(filters: {
+    role?: string;
+    organizationId?: string;
+    schoolId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<User[]> {
+    await this.ensureConnection();
+
+    const query: {
+      role?: string;
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+
+    if (filters.role) query.role = filters.role;
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+
+    let dbQuery = UserModel.find(query);
+    if (typeof filters.offset === 'number' && filters.offset > 0) {
+      dbQuery = dbQuery.skip(filters.offset);
+    }
+    if (typeof filters.limit === 'number' && filters.limit > 0) {
+      dbQuery = dbQuery.limit(filters.limit);
+    }
+
+    const documents = await dbQuery;
+    return documents.map((doc) => this.toDomainEntity(doc));
+  }
+
+  async countByFilters(filters: {
+    role?: string;
+    organizationId?: string;
+    schoolId?: string;
+  }): Promise<number> {
+    await this.ensureConnection();
+    const query: {
+      role?: string;
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+
+    if (filters.role) query.role = filters.role;
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+
+    return UserModel.countDocuments(query);
+  }
+
   async findAllActive(): Promise<User[]> {
     await this.ensureConnection();
 

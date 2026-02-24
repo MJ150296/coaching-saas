@@ -1,2 +1,3 @@
 export { Container, getService, registerService, registerSingletonService } from './Container';
-export { AppBootstrap, ServiceKeys } from './AppBootstrap';
+export { AppBootstrap } from './AppBootstrap';
+export { ServiceKeys } from './ServiceKeys';

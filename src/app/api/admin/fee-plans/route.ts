@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateFeePlanUseCase } from '@/domains/fee-management/application/use-cases';
 import { MongoFeePlanRepository } from '@/domains/fee-management/infrastructure/persistence/MongoFeeRepository';
@@ -10,6 +10,7 @@ import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { hasPermission } from '@/shared/infrastructure/rbac';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,10 @@ export async function GET(request: NextRequest) {
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
     const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedAcademicYearId = request.nextUrl.searchParams.get('academicYearId') || undefined;
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
+    const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
 
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
@@ -37,22 +42,33 @@ export async function GET(request: NextRequest) {
     const repo = await initializeAppAndGetService<MongoFeePlanRepository>(
       ServiceKeys.FEE_PLAN_REPOSITORY
     );
-    const feePlans = await repo.findAll();
-    const filtered = feePlans.filter((item) => {
-      if (tenant.organizationId && item.getOrganizationId() !== tenant.organizationId) return false;
-      if (tenant.schoolId && item.getSchoolId() !== tenant.schoolId) return false;
-      return true;
+    const filtered = await repo.findByTenant(tenant.organizationId, tenant.schoolId, {
+      academicYearId: requestedAcademicYearId,
+      limit,
+      offset,
     });
 
-    return NextResponse.json(
-      filtered.map((item) => ({
-        id: item.getId(),
-        name: item.getName(),
-        organizationId: item.getOrganizationId(),
-        schoolId: item.getSchoolId(),
-        academicYearId: item.getAcademicYearId(),
-      }))
-    );
+    const items = filtered.map((item) => ({
+      id: item.getId(),
+      name: item.getName(),
+      organizationId: item.getOrganizationId(),
+      schoolId: item.getSchoolId(),
+      academicYearId: item.getAcademicYearId(),
+    }));
+
+    if (!withMeta) {
+      return NextResponse.json(items);
+    }
+
+    const total = await repo.countByTenant(tenant.organizationId, tenant.schoolId, {
+      academicYearId: requestedAcademicYearId,
+    });
+    return NextResponse.json({
+      items,
+      total,
+      limit: limit ?? null,
+      offset: offset ?? 0,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;

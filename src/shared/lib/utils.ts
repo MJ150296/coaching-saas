@@ -29,6 +29,16 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function parsePositiveIntParam(
+  value: string | null,
+  max = 500
+): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return Math.min(parsed, max);
+}
+
 export class Guard {
   static againstNullOrUndefined(value: unknown, argName: string): void {
     if (value === null || value === undefined) {

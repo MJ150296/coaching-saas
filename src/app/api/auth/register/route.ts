@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateUserUseCase } from '@/domains/user-management/application/use-cases';
 import { UserRole } from '@/domains/user-management/domain/entities/User';

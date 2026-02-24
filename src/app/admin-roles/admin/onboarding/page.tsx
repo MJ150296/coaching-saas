@@ -566,15 +566,28 @@ export default function OnboardingFlowPage() {
 
     if (draft.orgForm && typeof draft.orgForm === 'object') setOrgForm((prev) => ({ ...prev, ...draft.orgForm }));
     if (draft.schoolForm && typeof draft.schoolForm === 'object') setSchoolForm((prev) => ({ ...prev, ...draft.schoolForm }));
-    if (draft.adminForm && typeof draft.adminForm === 'object') setAdminForm((prev) => ({ ...prev, ...draft.adminForm }));
+    if (draft.adminForm && typeof draft.adminForm === 'object') {
+      const safeAdminForm = { ...(draft.adminForm as Record<string, unknown>) };
+      delete safeAdminForm.password;
+      setAdminForm((prev) => ({ ...prev, ...safeAdminForm }));
+    }
     if (draft.yearForm && typeof draft.yearForm === 'object') setYearForm((prev) => ({ ...prev, ...draft.yearForm }));
     if (draft.classForm && typeof draft.classForm === 'object') setClassForm((prev) => ({ ...prev, ...draft.classForm }));
-    if (draft.teacherForm && typeof draft.teacherForm === 'object') setTeacherForm((prev) => ({ ...prev, ...draft.teacherForm }));
+    if (draft.teacherForm && typeof draft.teacherForm === 'object') {
+      const safeTeacherForm = { ...(draft.teacherForm as Record<string, unknown>) };
+      delete safeTeacherForm.password;
+      setTeacherForm((prev) => ({ ...prev, ...safeTeacherForm }));
+    }
     if (draft.sectionForm && typeof draft.sectionForm === 'object') setSectionForm((prev) => ({ ...prev, ...draft.sectionForm }));
     if (draft.subjectForm && typeof draft.subjectForm === 'object') setSubjectForm((prev) => ({ ...prev, ...draft.subjectForm }));
     if (draft.feeTypeForm && typeof draft.feeTypeForm === 'object') setFeeTypeForm((prev) => ({ ...prev, ...draft.feeTypeForm }));
     if (draft.feePlanForm && typeof draft.feePlanForm === 'object') setFeePlanForm((prev) => ({ ...prev, ...draft.feePlanForm }));
-    if (draft.studentForm && typeof draft.studentForm === 'object') setStudentForm((prev) => ({ ...prev, ...draft.studentForm }));
+    if (draft.studentForm && typeof draft.studentForm === 'object') {
+      const safeStudentForm = { ...(draft.studentForm as Record<string, unknown>) };
+      delete safeStudentForm.password;
+      delete safeStudentForm.parentPassword;
+      setStudentForm((prev) => ({ ...prev, ...safeStudentForm }));
+    }
     if (draft.ledgerForm && typeof draft.ledgerForm === 'object') setLedgerForm((prev) => ({ ...prev, ...draft.ledgerForm }));
   }, []);
 
@@ -737,15 +750,19 @@ export default function OnboardingFlowPage() {
       skipAssignFeePlan,
       orgForm,
       schoolForm,
-      adminForm,
+      adminForm: { ...adminForm, password: '' },
       yearForm,
       classForm,
-      teacherForm,
+      teacherForm: { ...teacherForm, password: '' },
       sectionForm,
       subjectForm,
       feeTypeForm,
       feePlanForm,
-      studentForm,
+      studentForm: {
+        ...studentForm,
+        password: '',
+        parentPassword: '',
+      },
       ledgerForm,
     };
     saveDraft(DRAFT_KEY, draft);

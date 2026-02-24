@@ -1,342 +1,198 @@
-/**
- * Staff Dashboard
- * /staff/dashboard
- */
-
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Badge } from '@/shared/components/ui/Badge';
+import { useToast } from '@/shared/components/ui/ToastProvider';
 
-interface StaffStats {
-  totalDocuments: number;
-  pendingRequests: number;
-  completedTasks: number;
-  upcomingMeetings: number;
-}
-
-interface Request {
+type RequestItem = {
   id: string;
   title: string;
   requester: string;
-  date: string;
-  status: 'pending' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
-}
-
-interface Task {
-  id: string;
-  title: string;
-  assignedTo: string;
-  dueDate: string;
   status: 'pending' | 'in-progress' | 'completed';
-}
-
-const stats: StaffStats = {
-  totalDocuments: 245,
-  pendingRequests: 8,
-  completedTasks: 34,
-  upcomingMeetings: 3,
 };
 
-const requests: Request[] = [
-  {
-    id: '1',
-    title: 'Student Registration Documents',
-    requester: 'Admin Office',
-    date: '2026-02-10',
-    status: 'pending',
-    priority: 'high',
-  },
-  {
-    id: '2',
-    title: 'Grade Sheets Processing',
-    requester: 'Academic Office',
-    date: '2026-02-09',
-    status: 'in-progress',
-    priority: 'high',
-  },
-  {
-    id: '3',
-    title: 'Certificate Preparation',
-    requester: 'Registrar',
-    date: '2026-02-08',
-    status: 'pending',
-    priority: 'medium',
-  },
-  {
-    id: '4',
-    title: 'Attendance Report',
-    requester: 'Principal Office',
-    date: '2026-02-07',
-    status: 'completed',
-    priority: 'medium',
-  },
-  {
-    id: '5',
-    title: 'Fee Processing',
-    requester: 'Finance Office',
-    date: '2026-02-06',
-    status: 'in-progress',
-    priority: 'high',
-  },
-];
+type ScheduleItem = {
+  id: string;
+  title: string;
+  time: string;
+  owner: string;
+};
 
-const tasks: Task[] = [
-  {
-    id: '1',
-    title: 'Update Student Database',
-    assignedTo: 'You',
-    dueDate: '2026-02-12',
-    status: 'in-progress',
-  },
-  {
-    id: '2',
-    title: 'Process Transfer Requests',
-    assignedTo: 'You',
-    dueDate: '2026-02-15',
-    status: 'pending',
-  },
-  {
-    id: '3',
-    title: 'Prepare Admission Letters',
-    assignedTo: 'Team',
-    dueDate: '2026-02-18',
-    status: 'pending',
-  },
-  {
-    id: '4',
-    title: 'Archive Old Records',
-    assignedTo: 'You',
-    dueDate: '2026-02-20',
-    status: 'pending',
-  },
-];
+type StaffDashboardResponse = {
+  summary: {
+    pendingRequests: number;
+    completedToday: number;
+    highPriority: number;
+    scheduledBlocks: number;
+  };
+  requests: RequestItem[];
+  schedule: ScheduleItem[];
+};
 
-export default function StaffDashboard() {
+function priorityVariant(priority: RequestItem['priority']): 'blue' | 'yellow' | 'red' {
+  if (priority === 'high') return 'red';
+  if (priority === 'medium') return 'yellow';
+  return 'blue';
+}
+
+function statusVariant(status: RequestItem['status']): 'gray' | 'blue' | 'green' {
+  if (status === 'completed') return 'green';
+  if (status === 'in-progress') return 'blue';
+  return 'gray';
+}
+
+export default function StaffDashboardPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-  const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
-  const isLoading = status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STAFF);
+  const { toastMessage } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<StaffDashboardResponse>({
+    summary: { pendingRequests: 0, completedToday: 0, highPriority: 0, scheduledBlocks: 0 },
+    requests: [],
+    schedule: [],
+  });
 
-  // Redirect if not authenticated or not staff
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+    if (status !== 'authenticated') return;
+    let active = true;
+
+    async function loadDashboard() {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/staff/dashboard');
+        const body = await response.json();
+        if (!response.ok) {
+          toastMessage(body?.error || 'Failed to load staff dashboard');
+          return;
+        }
+
+        if (!active) return;
+        setData({
+          summary: {
+            pendingRequests: Number(body?.summary?.pendingRequests ?? 0),
+            completedToday: Number(body?.summary?.completedToday ?? 0),
+            highPriority: Number(body?.summary?.highPriority ?? 0),
+            scheduledBlocks: Number(body?.summary?.scheduledBlocks ?? 0),
+          },
+          requests: Array.isArray(body?.requests) ? body.requests : [],
+          schedule: Array.isArray(body?.schedule) ? body.schedule : [],
+        });
+      } catch (error) {
+        toastMessage(`Error: ${String(error)}`);
+      } finally {
+        if (active) setLoading(false);
+      }
     }
 
-    if (status === 'authenticated' && userRole !== UserRole.STAFF) {
-      router.push('/auth/signin');
-    }
-  }, [router, status, userRole]);
+    loadDashboard();
 
-  if (isLoading) {
+    return () => {
+      active = false;
+    };
+  }, [status, toastMessage]);
+
+  const summary = useMemo(() => data.summary, [data.summary]);
+
+  if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-orange-600"></div>
+          <p className="mt-4 text-slate-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  const getPriorityVariant = (priority: string): 'gray' | 'blue' | 'green' | 'yellow' | 'red' => {
-    switch (priority) {
-      case 'high':
-        return 'red';
-      case 'medium':
-        return 'yellow';
-      case 'low':
-        return 'blue';
-      default:
-        return 'gray';
-    }
-  };
+  const firstName = session?.user?.name?.split(' ')[0] ?? 'Staff';
 
-  const getStatusVariant = (status: string): 'gray' | 'blue' | 'green' | 'yellow' | 'red' => {
-    switch (status) {
-      case 'pending':
-        return 'gray';
-      case 'in-progress':
-        return 'blue';
-      case 'completed':
-        return 'green';
-      default:
-        return 'gray';
-    }
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50/25 to-amber-50/45 py-8">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+        <section className="rounded-2xl border border-orange-100 bg-linear-to-r from-orange-600 via-amber-600 to-yellow-600 p-6 shadow-lg shadow-orange-200/70">
+          <h1 className="text-2xl font-bold text-white">Welcome back, {firstName}</h1>
+          <p className="mt-2 text-sm text-amber-50">
+            Operational requests, processing queue, and today&apos;s support schedule.
+          </p>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Pending Requests" value={summary.pendingRequests} tone="yellow" loading={loading} />
+          <StatCard title="Completed Today" value={summary.completedToday} tone="green" loading={loading} />
+          <StatCard title="High Priority" value={summary.highPriority} tone="red" loading={loading} />
+          <StatCard title="Schedule Blocks" value={summary.scheduledBlocks} tone="blue" loading={loading} />
+        </section>
+
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
+            <h2 className="text-lg font-semibold text-slate-900">Request Queue</h2>
+            <div className="mt-4 space-y-3">
+              {data.requests.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.title}</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={priorityVariant(item.priority)}>{item.priority}</Badge>
+                      <Badge variant={statusVariant(item.status)}>{item.status}</Badge>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">Requester: {item.requester}</p>
+                </div>
+              ))}
+              {data.requests.length === 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                  {loading ? 'Loading requests...' : 'No pending request items.'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Schedule</h2>
+            <div className="mt-4 space-y-3">
+              {data.schedule.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="font-medium text-slate-900">{item.title}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.time}</p>
+                  <p className="mt-1 text-xs text-slate-500">Owner: {item.owner}</p>
+                </div>
+              ))}
+              {data.schedule.length === 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                  {loading ? 'Loading schedule...' : 'No schedule items available.'}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  tone,
+  loading,
+}: {
+  title: string;
+  value: number;
+  tone: 'blue' | 'green' | 'yellow' | 'red';
+  loading: boolean;
+}) {
+  const toneClass: Record<typeof tone, string> = {
+    blue: 'border-blue-200 bg-blue-50/80',
+    green: 'border-emerald-200 bg-emerald-50/80',
+    yellow: 'border-amber-200 bg-amber-50/80',
+    red: 'border-rose-200 bg-rose-50/80',
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Welcome back, {session?.user?.name?.split(' ')[0]}!</h2>
-          <p className="mt-2 text-gray-600">Track your administrative tasks and requests</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Total Documents</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalDocuments}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Pending Requests</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.pendingRequests}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Completed Tasks</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.completedTasks}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Upcoming Meetings</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.upcomingMeetings}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Requests */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Pending Requests</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                  + New Request
-                </button>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {requests.map((request) => (
-                  <div key={request.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{request.title}</h4>
-                        <p className="text-sm text-gray-600">From: {request.requester}</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Badge variant={getPriorityVariant(request.priority)}>
-                          {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
-                        </Badge>
-                        <Badge variant={getStatusVariant(request.status)}>
-                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Requested: {new Date(request.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-              </div>
-              <div className="p-6 space-y-3">
-                <button className="w-full px-4 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200">
-                  📄 Generate Report
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm font-medium text-green-600 hover:bg-green-50 rounded-md transition-colors border border-green-200">
-                  ✓ Approve Request
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-md transition-colors border border-purple-200">
-                  👥 Schedule Meeting
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-md transition-colors border border-orange-200">
-                  📨 Send Message
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tasks */}
-        <div className="mt-6 bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">My Tasks</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Task</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Due Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{task.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{task.assignedTo}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{new Date(task.dueDate).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <Badge variant={getStatusVariant(task.status)}>
-                        {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <button className="text-blue-600 hover:text-blue-900">Edit</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </main>
+    <div className={`rounded-2xl border p-5 shadow-sm ${toneClass[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="mt-2 text-3xl font-bold text-slate-900">{loading ? '...' : value.toLocaleString()}</p>
     </div>
   );
 }

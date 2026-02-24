@@ -64,6 +64,54 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
     }, doc.createdAt, doc.updatedAt));
   }
 
+  async findByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<AcademicYear[]> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+
+    let dbQuery = AcademicYearModel.find(query);
+    if (typeof filters.offset === 'number' && filters.offset > 0) {
+      dbQuery = dbQuery.skip(filters.offset);
+    }
+    if (typeof filters.limit === 'number' && filters.limit > 0) {
+      dbQuery = dbQuery.limit(filters.limit);
+    }
+
+    const docs = (await dbQuery) as IAcademicYearDocument[];
+    return docs.map((doc) => new AcademicYear(doc._id, {
+      organizationId: doc.organizationId,
+      schoolId: doc.schoolId,
+      name: doc.name,
+      startDate: doc.startDate,
+      endDate: doc.endDate,
+      isActive: doc.isActive,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+  }): Promise<number> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    return AcademicYearModel.countDocuments(query);
+  }
+
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
     await AcademicYearModel.findByIdAndDelete(id);
@@ -117,6 +165,52 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
       name: doc.name,
       level: doc.level,
     }, doc.createdAt, doc.updatedAt));
+  }
+
+  async findByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ClassMaster[]> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+
+    let dbQuery = ClassMasterModel.find(query);
+    if (typeof filters.offset === 'number' && filters.offset > 0) {
+      dbQuery = dbQuery.skip(filters.offset);
+    }
+    if (typeof filters.limit === 'number' && filters.limit > 0) {
+      dbQuery = dbQuery.limit(filters.limit);
+    }
+
+    const docs = (await dbQuery) as IClassMasterDocument[];
+    return docs.map((doc) => new ClassMaster(doc._id, {
+      organizationId: doc.organizationId,
+      schoolId: doc.schoolId,
+      name: doc.name,
+      level: doc.level,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+  }): Promise<number> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+    } = {};
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    return ClassMasterModel.countDocuments(query);
   }
 
   async delete(id: string): Promise<void> {
@@ -184,6 +278,62 @@ export class MongoSectionRepository implements SectionRepository {
       shift: doc.shift,
       classTeacherId: doc.classTeacherId,
     }, doc.createdAt, doc.updatedAt));
+  }
+
+  async findByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+    classMasterId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Section[]> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+      classMasterId?: string;
+    } = {};
+
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.classMasterId) query.classMasterId = filters.classMasterId;
+
+    let dbQuery = SectionModel.find(query);
+    if (typeof filters.offset === 'number' && filters.offset > 0) {
+      dbQuery = dbQuery.skip(filters.offset);
+    }
+    if (typeof filters.limit === 'number' && filters.limit > 0) {
+      dbQuery = dbQuery.limit(filters.limit);
+    }
+
+    const docs = (await dbQuery) as ISectionDocument[];
+    return docs.map((doc) => new Section(doc._id, {
+      organizationId: doc.organizationId,
+      schoolId: doc.schoolId,
+      classMasterId: doc.classMasterId,
+      name: doc.name,
+      capacity: doc.capacity,
+      roomNumber: doc.roomNumber,
+      shift: doc.shift,
+      classTeacherId: doc.classTeacherId,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByFilters(filters: {
+    organizationId?: string;
+    schoolId?: string;
+    classMasterId?: string;
+  }): Promise<number> {
+    await this.ensureConnection();
+    const query: {
+      organizationId?: string;
+      schoolId?: string;
+      classMasterId?: string;
+    } = {};
+    if (filters.organizationId) query.organizationId = filters.organizationId;
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.classMasterId) query.classMasterId = filters.classMasterId;
+    return SectionModel.countDocuments(query);
   }
 
   async delete(id: string): Promise<void> {

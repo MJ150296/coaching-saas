@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateAcademicYearUseCase } from '@/domains/academic-management/application/use-cases';
 import { MongoAcademicYearRepository } from '@/domains/academic-management/infrastructure/persistence/MongoAcademicRepository';
@@ -10,6 +10,7 @@ import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { hasPermission } from '@/shared/infrastructure/rbac';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
     const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
+    const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
 
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
@@ -37,23 +41,36 @@ export async function GET(request: NextRequest) {
     const repo = await initializeAppAndGetService<MongoAcademicYearRepository>(
       ServiceKeys.ACADEMIC_YEAR_REPOSITORY
     );
-    const years = await repo.findAll();
-    const filtered = years.filter((year) => {
-      if (tenant.organizationId && year.getOrganizationId() !== tenant.organizationId) return false;
-      if (tenant.schoolId && year.getSchoolId() !== tenant.schoolId) return false;
-      return true;
+    const filtered = await repo.findByFilters({
+      organizationId: tenant.organizationId,
+      schoolId: tenant.schoolId,
+      limit,
+      offset,
     });
 
-    return NextResponse.json(
-      filtered.map((year) => ({
-        id: year.getId(),
-        name: year.getName(),
-        startDate: year.getStartDate(),
-        endDate: year.getEndDate(),
-        organizationId: year.getOrganizationId(),
-        schoolId: year.getSchoolId(),
-      }))
-    );
+    const items = filtered.map((year) => ({
+      id: year.getId(),
+      name: year.getName(),
+      startDate: year.getStartDate(),
+      endDate: year.getEndDate(),
+      organizationId: year.getOrganizationId(),
+      schoolId: year.getSchoolId(),
+    }));
+
+    if (!withMeta) {
+      return NextResponse.json(items);
+    }
+
+    const total = await repo.countByFilters({
+      organizationId: tenant.organizationId,
+      schoolId: tenant.schoolId,
+    });
+    return NextResponse.json({
+      items,
+      total,
+      limit: limit ?? null,
+      offset: offset ?? 0,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;

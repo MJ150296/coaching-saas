@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateClassMasterUseCase } from '@/domains/academic-management/application/use-cases';
 import { MongoClassMasterRepository } from '@/domains/academic-management/infrastructure/persistence/MongoAcademicRepository';
@@ -10,6 +10,7 @@ import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { hasPermission } from '@/shared/infrastructure/rbac';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
     const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
+    const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
 
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
@@ -37,23 +41,35 @@ export async function GET(request: NextRequest) {
     const repo = await initializeAppAndGetService<MongoClassMasterRepository>(
       ServiceKeys.CLASS_MASTER_REPOSITORY
     );
-    const classMasters = await repo.findAll();
-
-    const filtered = classMasters.filter((item) => {
-      if (tenant.organizationId && item.getOrganizationId() !== tenant.organizationId) return false;
-      if (tenant.schoolId && item.getSchoolId() !== tenant.schoolId) return false;
-      return true;
+    const filtered = await repo.findByFilters({
+      organizationId: tenant.organizationId,
+      schoolId: tenant.schoolId,
+      limit,
+      offset,
     });
 
-    return NextResponse.json(
-      filtered.map((item) => ({
-        id: item.getId(),
-        name: item.getName(),
-        level: item.getLevel(),
-        organizationId: item.getOrganizationId(),
-        schoolId: item.getSchoolId(),
-      }))
-    );
+    const items = filtered.map((item) => ({
+      id: item.getId(),
+      name: item.getName(),
+      level: item.getLevel(),
+      organizationId: item.getOrganizationId(),
+      schoolId: item.getSchoolId(),
+    }));
+
+    if (!withMeta) {
+      return NextResponse.json(items);
+    }
+
+    const total = await repo.countByFilters({
+      organizationId: tenant.organizationId,
+      schoolId: tenant.schoolId,
+    });
+    return NextResponse.json({
+      items,
+      total,
+      limit: limit ?? null,
+      offset: offset ?? 0,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;

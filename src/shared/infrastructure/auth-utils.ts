@@ -60,9 +60,9 @@ export function getRoleBasedRedirectPath(role: UserRole | null): string {
     case UserRole.SUPER_ADMIN:
       return "/admin-roles/superadmin";
     case UserRole.ORGANIZATION_ADMIN:
-      return "/admin-roles/organizations";
+      return "/admin-roles/organization-admin";
     case UserRole.SCHOOL_ADMIN:
-      return "/admin-roles/schools";
+      return "/admin-roles/school-admin";
     case UserRole.ADMIN:
       return "/admin-roles/admin";
     case UserRole.TEACHER:

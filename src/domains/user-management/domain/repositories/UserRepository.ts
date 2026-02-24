@@ -5,5 +5,17 @@ export interface UserRepository extends Repository<User, string> {
   findByEmail(email: string): Promise<User | null>;
   emailExists(email: string): Promise<boolean>;
   findByRole(role: UserRole | string): Promise<User[]>;
+  findByFilters(filters: {
+    role?: UserRole | string;
+    organizationId?: string;
+    schoolId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<User[]>;
+  countByFilters(filters: {
+    role?: UserRole | string;
+    organizationId?: string;
+    schoolId?: string;
+  }): Promise<number>;
   findAllActive(): Promise<User[]>;
 }

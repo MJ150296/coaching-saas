@@ -1,0 +1,17 @@
+import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { RoleBasedAppShell } from '@/shared/components/navigation/RoleBasedAppShell';
+import { requireRole } from '@/shared/lib/requireRole';
+
+export default async function OrganizationAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await requireRole([UserRole.ORGANIZATION_ADMIN, UserRole.SUPER_ADMIN]);
+
+  return (
+    <RoleBasedAppShell role={(session.user as { role: UserRole }).role}>
+      {children}
+    </RoleBasedAppShell>
+  );
+}

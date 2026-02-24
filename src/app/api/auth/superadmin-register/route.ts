@@ -3,7 +3,7 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { CreateUserUseCase } from '@/domains/user-management/application/use-cases';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 
 export async function POST(request: NextRequest) {

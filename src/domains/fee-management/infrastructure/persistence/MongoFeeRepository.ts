@@ -77,6 +77,42 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
     }, doc.createdAt, doc.updatedAt));
   }
 
+  async findByTenant(
+    organizationId?: string,
+    schoolId?: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<FeeType[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; schoolId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (schoolId) query.schoolId = schoolId;
+    let dbQuery = FeeTypeModel.find(query);
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as IFeeTypeDocument[];
+    return docs.map((doc) => new FeeType(doc._id, {
+      organizationId: doc.organizationId,
+      schoolId: doc.schoolId,
+      name: doc.name,
+      amount: doc.amount,
+      frequency: doc.frequency as FeeFrequency,
+      isMandatory: doc.isMandatory,
+      isTaxable: doc.isTaxable,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(organizationId?: string, schoolId?: string): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; schoolId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (schoolId) query.schoolId = schoolId;
+    return FeeTypeModel.countDocuments(query);
+  }
+
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
     await FeeTypeModel.findByIdAndDelete(id);
@@ -133,6 +169,47 @@ export class MongoFeePlanRepository implements FeePlanRepository {
       name: doc.name,
       items: doc.items as FeePlanItem[],
     }, doc.createdAt, doc.updatedAt));
+  }
+
+  async findByTenant(
+    organizationId?: string,
+    schoolId?: string,
+    options?: { academicYearId?: string; limit?: number; offset?: number }
+  ): Promise<FeePlan[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; schoolId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (schoolId) query.schoolId = schoolId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+
+    let dbQuery = FeePlanModel.find(query);
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as IFeePlanDocument[];
+    return docs.map((doc) => new FeePlan(doc._id, {
+      organizationId: doc.organizationId,
+      schoolId: doc.schoolId,
+      academicYearId: doc.academicYearId,
+      name: doc.name,
+      items: doc.items as FeePlanItem[],
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(
+    organizationId?: string,
+    schoolId?: string,
+    options?: { academicYearId?: string }
+  ): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; schoolId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (schoolId) query.schoolId = schoolId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    return FeePlanModel.countDocuments(query);
   }
 
   async delete(id: string): Promise<void> {

@@ -7,7 +7,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { PasswordEncryption } from '@/domains/user-management/infrastructure/external-services/PasswordEncryption';
 import { initializeApp } from '@/shared/bootstrap/init';
-import { Container, ServiceKeys } from '@/shared/bootstrap';
+import { Container } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 
 export const authOptions: NextAuthOptions = {
   providers: [

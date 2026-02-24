@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
+import { SingleSelect } from "@/shared/components/ui/SingleSelect";
+import { useToast } from "@/shared/components/ui/ToastProvider";
 
 const CLASS_LEVEL_OPTIONS = [
   { value: "LOWER_PRIMARY", label: "Lower Primary (Classes 1-5)" },
@@ -72,6 +73,7 @@ function inferClassLevelFromName(className: string): string | undefined {
 }
 
 export default function AcademicManagementPage() {
+  const { toastMessage } = useToast();
   const [organizationId, setOrganizationId] = useState("");
   const [schoolId, setSchoolId] = useState("");
   const [academicYearId, setAcademicYearId] = useState("");
@@ -104,10 +106,6 @@ export default function AcademicManagementPage() {
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
   const [timetableLoading, setTimetableLoading] = useState(false);
   const [timetableTeacherId, setTimetableTeacherId] = useState("");
-  const [timetableYearSearch, setTimetableYearSearch] = useState("");
-  const [timetableClassSearch, setTimetableClassSearch] = useState("");
-  const [timetableSectionSearch, setTimetableSectionSearch] = useState("");
-  const [timetableTeacherSearch, setTimetableTeacherSearch] = useState("");
   const [academicYearOptions, setAcademicYearOptions] = useState<AcademicYearOption[]>([]);
   const [classMasterOptions, setClassMasterOptions] = useState<ClassMasterOption[]>([]);
   const [allSections, setAllSections] = useState<SectionOption[]>([]);
@@ -115,28 +113,24 @@ export default function AcademicManagementPage() {
   const [optionLoading, setOptionLoading] = useState(false);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const [schools, setSchools] = useState<SchoolOption[]>([]);
-  const [organizationSearch, setOrganizationSearch] = useState("");
-  const [schoolSearch, setSchoolSearch] = useState("");
-  const [tenantAcademicYearSearch, setTenantAcademicYearSearch] = useState("");
-  const [sectionClassMasterSearch, setSectionClassMasterSearch] = useState("");
-  const [sectionTeacherSearch, setSectionTeacherSearch] = useState("");
-  const [subjectAcademicYearSearch, setSubjectAcademicYearSearch] = useState("");
-  const [subjectClassMasterSearch, setSubjectClassMasterSearch] = useState("");
-  const [subjectSectionSearch, setSubjectSectionSearch] = useState("");
-  const [subjectTeacherSearch, setSubjectTeacherSearch] = useState("");
   const [tenantLoading, setTenantLoading] = useState(false);
 
   const effectiveClassMasterId = timetableClassMasterId || subjectClassMasterId;
   const effectiveAcademicYearId = timetableAcademicYearId || academicYearId;
 
+  const visibleTimetableEntries = useMemo(
+    () =>
+      timetableTeacherId
+        ? timetableEntries.filter((entry) => entry.teacherId === timetableTeacherId)
+        : timetableEntries,
+    [timetableEntries, timetableTeacherId]
+  );
+
   const timetableDays = useMemo(() => {
-    const filteredEntries = timetableTeacherId
-      ? timetableEntries.filter((entry) => entry.teacherId === timetableTeacherId)
-      : timetableEntries;
-    const fromEntries = Array.from(new Set(filteredEntries.map((entry) => entry.dayOfWeek)));
+    const fromEntries = Array.from(new Set(visibleTimetableEntries.map((entry) => entry.dayOfWeek)));
     if (fromEntries.length === 0) return WEEKDAY_ORDER;
     return WEEKDAY_ORDER.filter((day) => fromEntries.includes(day));
-  }, [timetableEntries, timetableTeacherId]);
+  }, [visibleTimetableEntries]);
 
   const timetablePeriodColumns = useMemo(() => {
     const maxFromEntries = timetableEntries.reduce((max, entry) => Math.max(max, entry.periodNumber), 0);
@@ -144,6 +138,14 @@ export default function AcademicManagementPage() {
     const maxPeriod = Number.isFinite(configured) && configured > 0 ? Math.max(configured, maxFromEntries) : Math.max(8, maxFromEntries);
     return Array.from({ length: maxPeriod }, (_, index) => index + 1);
   }, [timetableEntries, timetablePeriodsPerDay]);
+
+  const timetableSlotMap = useMemo(() => {
+    const slots = new Map<string, TimetableEntry>();
+    for (const entry of visibleTimetableEntries) {
+      slots.set(`${entry.dayOfWeek}-${entry.periodNumber}`, entry);
+    }
+    return slots;
+  }, [visibleTimetableEntries]);
 
   const timetableYearDropdownOptions = useMemo(
     () =>
@@ -267,6 +269,11 @@ export default function AcademicManagementPage() {
         })),
     [schools, organizationId]
   );
+
+  useEffect(() => {
+    if (!message) return;
+    toastMessage(message);
+  }, [message, toastMessage]);
 
   useEffect(() => {
     let active = true;
@@ -546,7 +553,7 @@ export default function AcademicManagementPage() {
       <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
         <Card className="border-indigo-100 bg-linear-to-r from-indigo-600 via-blue-600 to-sky-600 p-0 shadow-lg shadow-indigo-200/70">
           <CardHeader className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-4 my-5">
               <div>
                 <CardTitle className="text-2xl font-bold text-white">Academic Management</CardTitle>
                 <CardDescription className="mt-2 text-indigo-50">
@@ -559,7 +566,6 @@ export default function AcademicManagementPage() {
                 <Badge className="bg-white/20 text-white">Timetable</Badge>
               </div>
             </div>
-            {message && <div className="rounded-lg bg-white/15 px-3 py-2 text-sm text-white">{message}</div>}
           </CardHeader>
         </Card>
 
@@ -568,399 +574,361 @@ export default function AcademicManagementPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Organization</label>
-              <SearchableDropdown
-                options={organizationDropdownOptions}
+              <SingleSelect options={organizationDropdownOptions}
                 value={organizationId}
-                onChange={(value) => {
-                  setOrganizationId(value);
+                onValueChange={(value) => {
+                  setOrganizationId(value || "");
                   setSchoolId("");
-                  setSchoolSearch("");
                 }}
-                search={organizationSearch}
-                onSearchChange={setOrganizationSearch}
                 placeholder="Select organization"
-                searchPlaceholder="Search organization"
-                disabled={tenantLoading}
-              />
+                disabled={tenantLoading} />
+
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">School</label>
-              <SearchableDropdown
-                options={schoolDropdownOptions}
+              <SingleSelect options={schoolDropdownOptions}
                 value={schoolId}
-                onChange={setSchoolId}
-                search={schoolSearch}
-                onSearchChange={setSchoolSearch}
+                onValueChange={(value) => {
+                  setSchoolId(value || "");
+                }}
                 placeholder="Select school"
-                searchPlaceholder="Search school"
-                disabled={tenantLoading || !organizationId}
+                disabled={tenantLoading}
               />
             </div>
           </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Academic Year (optional)</label>
+          <SingleSelect options={tenantAcademicYearDropdownOptions}
+            value={academicYearId}
+            onValueChange={(value) => {
+              setAcademicYearId(value || "");
+            }}
+            placeholder="Select academic year (optional)"
+            disabled={tenantLoading}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl mx-10 border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+        <h3 className="text-lg font-semibold">Create Academic Year</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Academic Year (optional)</label>
-            <SearchableDropdown
-              options={tenantAcademicYearDropdownOptions}
-              value={academicYearId}
-              onChange={setAcademicYearId}
-              search={tenantAcademicYearSearch}
-              onSearchChange={setTenantAcademicYearSearch}
-              placeholder="Select academic year (optional)"
-              searchPlaceholder="Search academic year"
+            <Label>Name</Label>
+            <Input value={yearName} onChange={(e) => setYearName(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>Start Date</Label>
+            <Input type="date" value={yearStart} onChange={(e) => setYearStart(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>End Date</Label>
+            <Input type="date" value={yearEnd} onChange={(e) => setYearEnd(e.target.value)} className="mt-1" />
+          </div>
+        </div>
+        <Button
+          disabled={loading}
+          className="w-full"
+          onClick={() =>
+            postJson("/api/admin/academic-years", {
+              ...tenantPayload(),
+              name: yearName,
+              startDate: yearStart,
+              endDate: yearEnd,
+            })
+          }
+        >
+          {loading ? "Saving..." : "Create Academic Year"}
+        </Button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+        <h3 className="text-lg font-semibold">Create Class Master</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              value={className}
+              onChange={(e) => {
+                const name = e.target.value;
+                setClassName(name);
+                const inferred = inferClassLevelFromName(name);
+                if (inferred) setClassLevel(inferred);
+              }}
+              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Level</label>
+            <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+              {CLASS_LEVEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button
+          disabled={loading}
+          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() =>
+            postJson("/api/admin/class-masters", {
+              ...tenantPayload(),
+              name: className,
+              level: classLevel || undefined,
+            })
+          }
+        >
+          {loading ? "Saving..." : "Create Class Master"}
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+        <h3 className="text-lg font-semibold">Create Section</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Class Master</label>
+
+            <SingleSelect options={sectionClassMasterDropdownOptions}
+              value={sectionClassMasterId}
+              onValueChange={(value) => {
+                setSectionClassMasterId(value || "");
+              }}
+              placeholder="Select class master"
+              disabled={optionLoading || !schoolId}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Section Name</label>
+            <input value={sectionName} onChange={(e) => setSectionName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Capacity</label>
+            <input value={sectionCapacity} onChange={(e) => setSectionCapacity(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Room Number</label>
+            <input value={sectionRoom} onChange={(e) => setSectionRoom(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Shift</label>
+            <input value={sectionShift} onChange={(e) => setSectionShift(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Class Teacher</label>
+            <SingleSelect options={sectionTeacherDropdownOptions}
+              value={sectionTeacherId}
+              onValueChange={(value) => {
+                setSectionTeacherId(value || "");
+              }}
+              placeholder="Select class teacher (optional)"
               disabled={optionLoading || !schoolId}
             />
           </div>
         </div>
+        <button
+          disabled={loading}
+          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() =>
+            postJson("/api/admin/sections", {
+              ...tenantPayload(),
+              classMasterId: sectionClassMasterId,
+              name: sectionName,
+              capacity: sectionCapacity ? Number(sectionCapacity) : undefined,
+              roomNumber: sectionRoom || undefined,
+              shift: sectionShift || undefined,
+              classTeacherId: sectionTeacherId || undefined,
+            })
+          }
+        >
+          {loading ? "Saving..." : "Create Section"}
+        </button>
+      </div>
 
-        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-          <h3 className="text-lg font-semibold">Create Academic Year</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <Label>Name</Label>
-              <Input value={yearName} onChange={(e) => setYearName(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label>Start Date</Label>
-              <Input type="date" value={yearStart} onChange={(e) => setYearStart(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label>End Date</Label>
-              <Input type="date" value={yearEnd} onChange={(e) => setYearEnd(e.target.value)} className="mt-1" />
-            </div>
-          </div>
-          <Button
-            disabled={loading}
-            className="w-full"
-            onClick={() =>
-              postJson("/api/admin/academic-years", {
-                ...tenantPayload(),
-                name: yearName,
-                startDate: yearStart,
-                endDate: yearEnd,
-              })
-            }
-          >
-            {loading ? "Saving..." : "Create Academic Year"}
-          </Button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-          <h3 className="text-lg font-semibold">Create Class Master</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input
-                value={className}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setClassName(name);
-                  const inferred = inferClassLevelFromName(name);
-                  if (inferred) setClassLevel(inferred);
-                }}
-                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Level</label>
-              <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
-                {CLASS_LEVEL_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() =>
-              postJson("/api/admin/class-masters", {
-                ...tenantPayload(),
-                name: className,
-                level: classLevel || undefined,
-              })
-            }
-          >
-            {loading ? "Saving..." : "Create Class Master"}
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-          <h3 className="text-lg font-semibold">Create Section</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Class Master</label>
-              <SearchableDropdown
-                options={sectionClassMasterDropdownOptions}
-                value={sectionClassMasterId}
-                onChange={setSectionClassMasterId}
-                search={sectionClassMasterSearch}
-                onSearchChange={setSectionClassMasterSearch}
-                placeholder="Select class master"
-                searchPlaceholder="Search class master"
-                disabled={optionLoading || !schoolId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Section Name</label>
-              <input value={sectionName} onChange={(e) => setSectionName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Capacity</label>
-              <input value={sectionCapacity} onChange={(e) => setSectionCapacity(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Room Number</label>
-              <input value={sectionRoom} onChange={(e) => setSectionRoom(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Shift</label>
-              <input value={sectionShift} onChange={(e) => setSectionShift(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Class Teacher</label>
-              <SearchableDropdown
-                options={sectionTeacherDropdownOptions}
-                value={sectionTeacherId}
-                onChange={setSectionTeacherId}
-                search={sectionTeacherSearch}
-                onSearchChange={setSectionTeacherSearch}
-                placeholder="Select class teacher (optional)"
-                searchPlaceholder="Search teacher by name/email"
-                disabled={optionLoading || !schoolId}
-              />
-            </div>
-          </div>
-          <button
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() =>
-              postJson("/api/admin/sections", {
-                ...tenantPayload(),
-                classMasterId: sectionClassMasterId,
-                name: sectionName,
-                capacity: sectionCapacity ? Number(sectionCapacity) : undefined,
-                roomNumber: sectionRoom || undefined,
-                shift: sectionShift || undefined,
-                classTeacherId: sectionTeacherId || undefined,
-              })
-            }
-          >
-            {loading ? "Saving..." : "Create Section"}
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-          <h3 className="text-lg font-semibold">Create Subject Allocation</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Academic Year</label>
-              <SearchableDropdown
-                options={subjectAcademicYearDropdownOptions}
-                value={academicYearId}
-                onChange={setAcademicYearId}
-                search={subjectAcademicYearSearch}
-                onSearchChange={setSubjectAcademicYearSearch}
-                placeholder="Select academic year"
-                searchPlaceholder="Search academic year"
-                disabled={optionLoading || !schoolId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Class Master</label>
-              <SearchableDropdown
-                options={subjectClassMasterDropdownOptions}
-                value={subjectClassMasterId}
-                onChange={(value) => {
-                  setSubjectClassMasterId(value);
-                  setSubjectSectionId("");
-                  setSubjectSectionSearch("");
-                }}
-                search={subjectClassMasterSearch}
-                onSearchChange={setSubjectClassMasterSearch}
-                placeholder="Select class master"
-                searchPlaceholder="Search class master"
-                disabled={optionLoading || !schoolId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Section</label>
-              <SearchableDropdown
-                options={subjectSectionDropdownOptions}
-                value={subjectSectionId}
-                onChange={setSubjectSectionId}
-                search={subjectSectionSearch}
-                onSearchChange={setSubjectSectionSearch}
-                placeholder="Select section (optional)"
-                searchPlaceholder="Search section"
-                disabled={optionLoading || !subjectClassMasterId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Subject Name</label>
-              <input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Teacher</label>
-              <SearchableDropdown
-                options={subjectTeacherDropdownOptions}
-                value={subjectTeacherId}
-                onChange={setSubjectTeacherId}
-                search={subjectTeacherSearch}
-                onSearchChange={setSubjectTeacherSearch}
-                placeholder="Select teacher (optional)"
-                searchPlaceholder="Search teacher by name/email"
-                disabled={optionLoading || !schoolId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Weekly Periods</label>
-              <input value={subjectWeeklyPeriods} onChange={(e) => setSubjectWeeklyPeriods(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
-          </div>
-          <button
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() =>
-              postJson("/api/admin/subject-allocations", {
-                ...tenantPayload(),
-                academicYearId,
-                classMasterId: subjectClassMasterId,
-                sectionId: subjectSectionId || undefined,
-                subjectName,
-                teacherId: subjectTeacherId || undefined,
-                weeklyPeriods: subjectWeeklyPeriods ? Number(subjectWeeklyPeriods) : undefined,
-              })
-            }
-          >
-            {loading ? "Saving..." : "Create Subject Allocation"}
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-          <h3 className="text-lg font-semibold">Generate Timetable</h3>
-          <p className="text-sm text-gray-600">
-            Uses each subject allocation&apos;s weekly periods to create weekly slots.
-          </p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Academic Year</label>
-              <SearchableDropdown
-                options={timetableYearDropdownOptions}
-                value={timetableAcademicYearId}
-                onChange={setTimetableAcademicYearId}
-                search={timetableYearSearch}
-                onSearchChange={setTimetableYearSearch}
-                placeholder="Select academic year"
-                searchPlaceholder="Search academic year"
-                disabled={optionLoading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Class Master</label>
-              <SearchableDropdown
-                options={timetableClassDropdownOptions}
-                value={timetableClassMasterId}
-                onChange={(value) => {
-                  setTimetableClassMasterId(value);
-                  setTimetableSectionId("");
-                  setTimetableSectionSearch("");
-                }}
-                search={timetableClassSearch}
-                onSearchChange={setTimetableClassSearch}
-                placeholder="Select class master"
-                searchPlaceholder="Search class master"
-                disabled={optionLoading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Section (optional)</label>
-              <SearchableDropdown
-                options={timetableSectionDropdownOptions}
-                value={timetableSectionId}
-                onChange={setTimetableSectionId}
-                search={timetableSectionSearch}
-                onSearchChange={setTimetableSectionSearch}
-                placeholder="All sections / class-level"
-                searchPlaceholder="Search section"
-                disabled={optionLoading || !effectiveClassMasterId}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Periods Per Day</label>
-              <input value={timetablePeriodsPerDay} onChange={(e) => setTimetablePeriodsPerDay(e.target.value)} type="number" min={1} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-            </div>
+      <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+        <h3 className="text-lg font-semibold">Create Subject Allocation</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Academic Year</label>
+            <SingleSelect options={subjectAcademicYearDropdownOptions}
+              value={academicYearId}
+              onValueChange={(value) => {
+                setAcademicYearId(value || "");
+              }}
+              placeholder="Select academic year"
+              disabled={optionLoading || !schoolId}
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Teacher Filter (optional)</label>
-            <SearchableDropdown
-              options={timetableTeacherDropdownOptions}
-              value={timetableTeacherId}
-              onChange={setTimetableTeacherId}
-              search={timetableTeacherSearch}
-              onSearchChange={setTimetableTeacherSearch}
-              placeholder="All teachers"
-              searchPlaceholder="Search teacher by name/email"
+            <label className="block text-sm font-medium text-gray-700">Class Master</label>
+            <SingleSelect options={subjectClassMasterDropdownOptions}
+              value={subjectClassMasterId}
+              onValueChange={(value) => {
+                setSubjectClassMasterId(value || "");
+                setSubjectSectionId("");
+              }}
+              placeholder="Select class master"
+              disabled={optionLoading || !schoolId}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Section</label>
+            <SingleSelect options={subjectSectionDropdownOptions}
+              value={subjectSectionId}
+              onValueChange={(value) => {
+                setSubjectSectionId(value || "");
+              }}
+              placeholder="Select section (optional)"
+              disabled={optionLoading || !subjectClassMasterId}
+            />
+
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Subject Name</label>
+            <input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Teacher</label>
+            <SingleSelect options={subjectTeacherDropdownOptions}
+              value={subjectTeacherId}
+              onValueChange={(value) => {
+                setSubjectTeacherId(value || "");
+              }}
+              placeholder="Select teacher (optional)"
+              disabled={optionLoading || !schoolId}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Weekly Periods</label>
+            <input value={subjectWeeklyPeriods} onChange={(e) => setSubjectWeeklyPeriods(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+        </div>
+        <button
+          disabled={loading}
+          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() =>
+            postJson("/api/admin/subject-allocations", {
+              ...tenantPayload(),
+              academicYearId,
+              classMasterId: subjectClassMasterId,
+              sectionId: subjectSectionId || undefined,
+              subjectName,
+              teacherId: subjectTeacherId || undefined,
+              weeklyPeriods: subjectWeeklyPeriods ? Number(subjectWeeklyPeriods) : undefined,
+            })
+          }
+        >
+          {loading ? "Saving..." : "Create Subject Allocation"}
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+        <h3 className="text-lg font-semibold">Generate Timetable</h3>
+        <p className="text-sm text-gray-600">
+          Uses each subject allocation&apos;s weekly periods to create weekly slots.
+        </p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Academic Year</label>
+            <SingleSelect options={timetableYearDropdownOptions}
+              value={timetableAcademicYearId}
+              onValueChange={(value) => {
+                setTimetableAcademicYearId(value || "");
+              }}
+              placeholder="Select academic year"
               disabled={optionLoading}
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <button
-              disabled={timetableLoading}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={generateTimetable}
-            >
-              {timetableLoading ? "Working..." : "Generate Timetable"}
-            </button>
-            <button
-              disabled={timetableLoading}
-              className="w-full rounded-lg border border-indigo-600 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={loadTimetable}
-            >
-              {timetableLoading ? "Working..." : "Load Timetable"}
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Class Master</label>
+            <SingleSelect options={timetableClassDropdownOptions}
+              value={timetableClassMasterId}
+              onValueChange={(value) => {
+                setTimetableClassMasterId(value || "");
+                setTimetableSectionId("");
+              }}
+              placeholder="Select class master"
+              disabled={optionLoading}
+            />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Section (optional)</label>
+            <SingleSelect options={timetableSectionDropdownOptions}
+              value={timetableSectionId}
+              onValueChange={(value) => {
+                setTimetableSectionId(value || "");
+              }}
+              placeholder="All sections / class-level"
+              disabled={optionLoading || !effectiveClassMasterId}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Periods Per Day</label>
+            <input value={timetablePeriodsPerDay} onChange={(e) => setTimetablePeriodsPerDay(e.target.value)} type="number" min={1} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Teacher Filter (optional)</label>
+          <SingleSelect options={timetableTeacherDropdownOptions}
+            value={timetableTeacherId}
+            onValueChange={(value) => {
+              setTimetableTeacherId(value || "");
+            }}
+            placeholder="All teachers"
+            disabled={optionLoading}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <button
+            disabled={timetableLoading}
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={generateTimetable}
+          >
+            {timetableLoading ? "Working..." : "Generate Timetable"}
+          </button>
+          <button
+            disabled={timetableLoading}
+            className="w-full rounded-lg border border-indigo-600 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={loadTimetable}
+          >
+            {timetableLoading ? "Working..." : "Load Timetable"}
+          </button>
+        </div>
 
-          <div className="overflow-x-auto border rounded">
-            <table className="min-w-full border-collapse text-sm text-slate-700">
-              <thead>
-                <tr className="bg-slate-100">
-                  <th className="border border-slate-200 px-3 py-2 text-left">Day</th>
-                  {timetablePeriodColumns.map((period) => (
-                    <th key={period} className="border border-slate-200 px-3 py-2 text-left">{`P${period}`}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {timetableDays.map((day) => (
-                  <tr key={day}>
-                    <td className="border border-slate-200 px-3 py-2 font-medium">{day}</td>
-                    {timetablePeriodColumns.map((period) => {
-                      const slot = timetableEntries.find(
-                        (entry) =>
-                          entry.dayOfWeek === day &&
-                          entry.periodNumber === period &&
-                          (!timetableTeacherId || entry.teacherId === timetableTeacherId)
-                      );
-                      return (
-                        <td key={`${day}-${period}`} className="border border-slate-200 px-3 py-2 align-top">
-                          {slot ? (
-                            <div className="space-y-1">
-                              <div className="font-medium">{slot.subjectName}</div>
-                              <div className="text-xs text-gray-500">{slot.teacherId ? `Teacher: ${slot.teacherId}` : "Teacher not assigned"}</div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
+        <div className="overflow-x-auto border rounded">
+          <table className="min-w-full border-collapse text-sm text-slate-700">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-200 px-3 py-2 text-left">Day</th>
+                {timetablePeriodColumns.map((period) => (
+                  <th key={period} className="border border-slate-200 px-3 py-2 text-left">{`P${period}`}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {timetableDays.map((day) => (
+                <tr key={day}>
+                  <td className="border border-slate-200 px-3 py-2 font-medium">{day}</td>
+                  {timetablePeriodColumns.map((period) => {
+                    const slot = timetableSlotMap.get(`${day}-${period}`);
+                    return (
+                      <td key={`${day}-${period}`} className="border border-slate-200 px-3 py-2 align-top">
+                        {slot ? (
+                          <div className="space-y-1">
+                            <div className="font-medium">{slot.subjectName}</div>
+                            <div className="text-xs text-gray-500">{slot.teacherId ? `Teacher: ${slot.teacherId}` : "Teacher not assigned"}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

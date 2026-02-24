@@ -47,6 +47,27 @@ const navItems: NavItem[] = [
     section: 'primary',
   },
   {
+    label: 'Dashboard',
+    href: '/admin-roles/organization-admin',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.ORGANIZATION_ADMIN],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/admin-roles/school-admin',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.SCHOOL_ADMIN],
+    section: 'primary',
+  },
+  {
+    label: 'Dashboard',
+    href: '/admin-roles/admin',
+    icon: 'dashboard',
+    allowedRoles: [UserRole.ADMIN],
+    section: 'primary',
+  },
+  {
     label: 'Onboarding Flow',
     href: '/admin-roles/admin/onboarding',
     icon: 'dashboard',
@@ -94,13 +115,6 @@ const navItems: NavItem[] = [
     icon: 'fees',
     allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
     section: 'manage',
-  },
-  {
-    label: 'Admin Workspace',
-    href: '/admin-roles/admin',
-    icon: 'dashboard',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-    section: 'primary',
   },
   {
     label: 'Dashboard',

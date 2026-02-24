@@ -3,7 +3,7 @@
  * Call this once at server startup
  */
 
-import { AppBootstrap } from '@/shared/bootstrap';
+import { Container } from './Container';
 
 let initPromise: Promise<void> | null = null;
 
@@ -17,13 +17,20 @@ export async function initializeApp(): Promise<void> {
     return initPromise;
   }
 
-  // Skip if already initialized
-  if (AppBootstrap.isBootstrapped()) {
-    return;
-  }
+  initPromise = (async () => {
+    const bootstrapModule = (await import('./AppBootstrap')) as {
+      AppBootstrap: {
+        isBootstrapped(): boolean;
+        initialize(): Promise<void>;
+      };
+    };
 
-  // Initialize and cache the promise
-  initPromise = AppBootstrap.initialize();
+    if (bootstrapModule.AppBootstrap.isBootstrapped()) {
+      return;
+    }
+
+    await bootstrapModule.AppBootstrap.initialize();
+  })();
   await initPromise;
 }
 
@@ -32,6 +39,5 @@ export async function initializeApp(): Promise<void> {
  */
 export async function initializeAppAndGetService<T>(serviceKey: string): Promise<T> {
   await initializeApp();
-  const { Container } = await import('@/shared/bootstrap');
   return Container.resolve<T>(serviceKey);
 }

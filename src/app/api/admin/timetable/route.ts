@@ -11,6 +11,7 @@ import {
   TimetableEntryModel,
 } from '@/domains/academic-management/infrastructure/persistence/AcademicSchema';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
 
 const DEFAULT_WORKING_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
 
@@ -183,6 +184,8 @@ export async function GET(request: NextRequest) {
     const academicYearId = normalizeId(request.nextUrl.searchParams.get('academicYearId') || undefined);
     const classMasterId = normalizeId(request.nextUrl.searchParams.get('classMasterId') || undefined);
     const sectionId = normalizeId(request.nextUrl.searchParams.get('sectionId') || undefined);
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
 
     if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !classMasterId) {
       return NextResponse.json(
@@ -200,9 +203,22 @@ export async function GET(request: NextRequest) {
       classMasterId,
     };
 
-    const entries = sectionId
-      ? await TimetableEntryModel.find({ ...baseQuery, sectionId }).sort({ dayOfWeek: 1, periodNumber: 1 })
-      : await TimetableEntryModel.find({ ...baseQuery, sectionId: { $exists: false } }).sort({ dayOfWeek: 1, periodNumber: 1 });
+    const query = sectionId
+      ? { ...baseQuery, sectionId }
+      : { ...baseQuery, sectionId: { $exists: false } };
+
+    let findQuery = TimetableEntryModel.find(query).sort({ dayOfWeek: 1, periodNumber: 1 });
+    if (typeof offset === 'number' && offset > 0) {
+      findQuery = findQuery.skip(offset);
+    }
+    if (typeof limit === 'number' && limit > 0) {
+      findQuery = findQuery.limit(limit);
+    }
+
+    const [entries, total] = await Promise.all([
+      findQuery,
+      TimetableEntryModel.countDocuments(query),
+    ]);
 
     return NextResponse.json({
       entries: entries.map((entry) => ({
@@ -213,6 +229,9 @@ export async function GET(request: NextRequest) {
         teacherId: entry.teacherId,
         sourceAllocationId: entry.sourceAllocationId,
       })),
+      total,
+      limit: limit ?? null,
+      offset: offset ?? 0,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';

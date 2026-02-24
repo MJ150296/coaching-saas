@@ -162,6 +162,34 @@ const creditNoteSchema = new Schema(
   { timestamps: true }
 );
 
+feeTypeSchema.index(
+  { organizationId: 1, schoolId: 1, name: 1 },
+  { unique: true }
+);
+
+feePlanSchema.index(
+  { organizationId: 1, schoolId: 1, academicYearId: 1, name: 1 },
+  { unique: true }
+);
+
+feePlanAssignmentSchema.index(
+  { organizationId: 1, schoolId: 1, academicYearId: 1, feePlanId: 1, classMasterId: 1, sectionId: 1 },
+  { unique: true }
+);
+
+studentFeeLedgerSchema.index(
+  { organizationId: 1, schoolId: 1, academicYearId: 1, studentId: 1, status: 1, dueDate: 1 }
+);
+
+studentFeeLedgerSchema.index(
+  { organizationId: 1, schoolId: 1, academicYearId: 1, studentId: 1, feePlanId: 1, feeTypeId: 1, dueDate: 1 },
+  { unique: true }
+);
+
+paymentSchema.index(
+  { organizationId: 1, schoolId: 1, academicYearId: 1, studentId: 1, paidAt: -1 }
+);
+
 const getOrCreateModel = <T>(name: string, schema: Schema): Model<T> => {
   if (models[name]) return models[name] as Model<T>;
   return model<T>(name, schema);

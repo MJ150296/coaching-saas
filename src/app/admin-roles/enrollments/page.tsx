@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
+import { useToast } from '@/shared/components/ui/ToastProvider';
 
 type OrganizationOption = { id: string; name: string };
 type SchoolOption = { id: string; name: string; organizationId: string };
@@ -22,6 +23,7 @@ type Enrollment = {
 };
 
 export default function EnrollmentPage() {
+  const { toastMessage } = useToast();
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tenantLoading, setTenantLoading] = useState(false);
@@ -301,11 +303,23 @@ export default function EnrollmentPage() {
     }
 
     loadOptions();
-    loadEnrollments(organizationId, schoolId, academicYearId || undefined);
     return () => {
       active = false;
     };
+  }, [organizationId, schoolId]);
+
+  useEffect(() => {
+    if (!organizationId || !schoolId) {
+      setEnrollments([]);
+      return;
+    }
+    loadEnrollments(organizationId, schoolId, academicYearId || undefined);
   }, [academicYearId, organizationId, schoolId]);
+
+  useEffect(() => {
+    if (!message) return;
+    toastMessage(message);
+  }, [message, toastMessage]);
 
   async function submitEnrollment() {
     if (!organizationId || !schoolId || !academicYearId || !studentId || !classMasterId || !sectionId) {
@@ -316,10 +330,12 @@ export default function EnrollmentPage() {
     setLoading(true);
     setMessage(null);
     try {
+      const isUpdate = Boolean(editingEnrollmentId);
       const response = await fetch('/api/admin/enrollments', {
-        method: 'POST',
+        method: isUpdate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingEnrollmentId || undefined,
           organizationId,
           schoolId,
           academicYearId,
@@ -334,7 +350,8 @@ export default function EnrollmentPage() {
         setMessage(data?.error || 'Enrollment failed');
         return;
       }
-      setMessage('Enrollment saved successfully.');
+      setEditingEnrollmentId(null);
+      setMessage(isUpdate ? 'Enrollment updated successfully.' : 'Enrollment saved successfully.');
       await loadEnrollments(organizationId, schoolId, academicYearId || undefined);
     } catch (error) {
       setMessage(`Error: ${String(error)}`);
@@ -447,44 +464,66 @@ export default function EnrollmentPage() {
       let failed = 0;
       const errors: string[] = [];
 
-      for (let rowIndex = 1; rowIndex < lines.length; rowIndex += 1) {
-        const cells = parseCsvLine(lines[rowIndex]);
-        const studentIdValue = cells[indexMap.get('studentid') ?? -1]?.trim();
-        const classMasterIdValue = cells[indexMap.get('classmasterid') ?? -1]?.trim();
-        const sectionIdValue = cells[indexMap.get('sectionid') ?? -1]?.trim();
-        const academicYearIdValue = cells[indexMap.get('academicyearid') ?? -1]?.trim() || academicYearId;
-        const rollNumberValue = cells[indexMap.get('rollnumber') ?? -1]?.trim() || undefined;
+      const rows = lines.slice(1).map((line, index) => ({
+        rowNumber: index + 2,
+        cells: parseCsvLine(line),
+      }));
+      const batchSize = 5;
+      for (let start = 0; start < rows.length; start += batchSize) {
+        const batch = rows.slice(start, start + batchSize);
+        const results = await Promise.all(
+          batch.map(async ({ rowNumber, cells }) => {
+            const studentIdValue = cells[indexMap.get('studentid') ?? -1]?.trim();
+            const classMasterIdValue = cells[indexMap.get('classmasterid') ?? -1]?.trim();
+            const sectionIdValue = cells[indexMap.get('sectionid') ?? -1]?.trim();
+            const academicYearIdValue = cells[indexMap.get('academicyearid') ?? -1]?.trim() || academicYearId;
+            const rollNumberValue = cells[indexMap.get('rollnumber') ?? -1]?.trim() || undefined;
 
-        if (!studentIdValue || !classMasterIdValue || !sectionIdValue || !academicYearIdValue) {
-          failed += 1;
-          errors.push(`Row ${rowIndex + 1}: studentId, classMasterId, sectionId and academicYearId are required.`);
-          continue;
-        }
+            if (!studentIdValue || !classMasterIdValue || !sectionIdValue || !academicYearIdValue) {
+              return {
+                ok: false,
+                error: `Row ${rowNumber}: studentId, classMasterId, sectionId and academicYearId are required.`,
+              };
+            }
 
-        try {
-          const response = await fetch('/api/admin/enrollments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              organizationId,
-              schoolId,
-              academicYearId: academicYearIdValue,
-              studentId: studentIdValue,
-              classMasterId: classMasterIdValue,
-              sectionId: sectionIdValue,
-              rollNumber: rollNumberValue,
-            }),
-          });
-          const data = await response.json();
-          if (!response.ok) {
+            try {
+              const response = await fetch('/api/admin/enrollments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  organizationId,
+                  schoolId,
+                  academicYearId: academicYearIdValue,
+                  studentId: studentIdValue,
+                  classMasterId: classMasterIdValue,
+                  sectionId: sectionIdValue,
+                  rollNumber: rollNumberValue,
+                }),
+              });
+              const data = await response.json();
+              if (!response.ok) {
+                return {
+                  ok: false,
+                  error: `Row ${rowNumber}: ${data?.error || 'failed'}`,
+                };
+              }
+              return { ok: true };
+            } catch (error) {
+              return {
+                ok: false,
+                error: `Row ${rowNumber}: ${String(error)}`,
+              };
+            }
+          })
+        );
+
+        for (const result of results) {
+          if (result.ok) {
+            success += 1;
+          } else {
             failed += 1;
-            errors.push(`Row ${rowIndex + 1}: ${data?.error || 'failed'}`);
-            continue;
+            errors.push(result.error ?? 'Unknown error');
           }
-          success += 1;
-        } catch (error) {
-          failed += 1;
-          errors.push(`Row ${rowIndex + 1}: ${String(error)}`);
         }
       }
 
@@ -513,9 +552,9 @@ export default function EnrollmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-sky-50/50 py-8">
-      <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 shadow-lg shadow-emerald-200/70">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-indigo-50/40 to-sky-50/50 py-8">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-emerald-100 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 shadow-lg shadow-emerald-200/70">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white">Student Enrollment</h1>
@@ -529,7 +568,6 @@ export default function EnrollmentPage() {
               <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Edit & Remove</span>
             </div>
           </div>
-          {message && <div className="mt-4 rounded-lg bg-white/15 px-3 py-2 text-sm text-white">{message}</div>}
           {csvSummary && <div className="mt-3 rounded-lg bg-white/15 px-3 py-2 text-sm text-white">{csvSummary}</div>}
         </div>
 

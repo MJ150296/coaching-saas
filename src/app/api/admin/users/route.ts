@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/shared/infrastructure/auth';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { UserMapper } from '@/domains/user-management/application/mappers/UserMapper';
@@ -14,6 +14,7 @@ import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { ParentStudentLinkModel } from '@/domains/user-management/infrastructure/persistence/ParentStudentLinkSchema';
 import { connectDB } from '@/shared/infrastructure/database';
 import { getActorUser } from '@/shared/infrastructure/actor';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest) {
   const requestedOrganizationId =
     request.nextUrl.searchParams.get('organizationId') || undefined;
   const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+  const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
+  const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
+  const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
 
   const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
   if (actor.getRole() !== UserRole.SUPER_ADMIN) {
@@ -44,15 +48,29 @@ export async function GET(request: NextRequest) {
   }
 
   const repo = await initializeAppAndGetService<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
-  const users = await repo.findAll();
-  const filtered = users.filter((user) => {
-    if (requestedRole && user.getRole() !== requestedRole) return false;
-    if (tenant.organizationId && user.getOrganizationId() !== tenant.organizationId) return false;
-    if (tenant.schoolId && user.getSchoolId() !== tenant.schoolId) return false;
-    return true;
+  const users = await repo.findByFilters({
+    role: requestedRole,
+    organizationId: tenant.organizationId,
+    schoolId: tenant.schoolId,
+    limit,
+    offset,
   });
+  const items = users.map(UserMapper.toDTO);
+  if (!withMeta) {
+    return NextResponse.json(items);
+  }
 
-  return NextResponse.json(filtered.map(UserMapper.toDTO));
+  const total = await repo.countByFilters({
+    role: requestedRole,
+    organizationId: tenant.organizationId,
+    schoolId: tenant.schoolId,
+  });
+  return NextResponse.json({
+    items,
+    total,
+    limit: limit ?? null,
+    offset: offset ?? 0,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -87,6 +105,14 @@ export async function POST(request: NextRequest) {
   const useCase = await initializeAppAndGetService<CreateUserUseCase>(
     ServiceKeys.CREATE_USER_USE_CASE
   );
+  const repo = await initializeAppAndGetService<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
+
+  if (targetRole === UserRole.STUDENT) {
+    const parent = body.parent;
+    if (!parent?.email || !parent?.password || !parent?.firstName || !parent?.lastName) {
+      return NextResponse.json({ error: 'Parent details are required for student creation' }, { status: 400 });
+    }
+  }
 
   const result = await useCase.execute({
     email: body.email,
@@ -106,9 +132,6 @@ export async function POST(request: NextRequest) {
   // Auto-create parent when student is created
   if (targetRole === UserRole.STUDENT) {
     const parent = body.parent;
-    if (!parent?.email || !parent?.password || !parent?.firstName || !parent?.lastName) {
-      return NextResponse.json({ error: 'Parent details are required for student creation' }, { status: 400 });
-    }
 
     const parentResult = await useCase.execute({
       email: parent.email,
@@ -122,7 +145,27 @@ export async function POST(request: NextRequest) {
     });
 
     if (parentResult.getIsFailure()) {
+      await repo.delete(result.getValue().user.id).catch(() => undefined);
       return NextResponse.json({ error: parentResult.getError() }, { status: 400 });
+    }
+
+    const linkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    try {
+      await connectDB();
+      await ParentStudentLinkModel.create({
+        _id: linkId,
+        parentId: parentResult.getValue().user.id,
+        studentId: result.getValue().user.id,
+        organizationId: tenant.organizationId,
+        schoolId: tenant.schoolId,
+      });
+    } catch {
+      await repo.delete(parentResult.getValue().user.id).catch(() => undefined);
+      await repo.delete(result.getValue().user.id).catch(() => undefined);
+      return NextResponse.json(
+        { error: 'Failed to link parent and student. Rolled back user creation.' },
+        { status: 500 }
+      );
     }
 
     await logAuditEvent({
@@ -134,16 +177,6 @@ export async function POST(request: NextRequest) {
       organizationId: tenant.organizationId,
       schoolId: tenant.schoolId,
       ip: request.headers.get('x-forwarded-for') || undefined,
-    });
-
-    const linkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    await connectDB();
-    await ParentStudentLinkModel.create({
-      _id: linkId,
-      parentId: parentResult.getValue().user.id,
-      studentId: result.getValue().user.id,
-      organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
     });
   }
 

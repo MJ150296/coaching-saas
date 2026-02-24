@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap';
+import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { CreateStudentFeeLedgerUseCase } from '@/domains/fee-management/application/use-cases';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
