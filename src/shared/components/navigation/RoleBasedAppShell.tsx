@@ -198,10 +198,35 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   // Mobile: drawer open/closed
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Track viewport size to show mobile header/drawer on mobile + medium screens (<=1023px)
+  // Treat screens <= 1023px as "mobile-like" where the topbar/drawer should be used.
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    setIsMobile(mq.matches);
+    const handle = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    if ('addEventListener' in mq) {
+      mq.addEventListener('change', handle);
+      return () => mq.removeEventListener('change', handle);
+    }
+    // legacy
+    // @ts-expect-error
+    mq.addListener(handle);
+    return () => {
+      // @ts-expect-error
+      mq.removeListener(handle);
+    };
+  }, []);
+
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Close mobile drawer when switching away from mobile-like screens
+  useEffect(() => {
+    if (isMobile === false) setMobileOpen(false);
+  }, [isMobile]);
 
   // Prevent body scroll when mobile drawer is open
   useEffect(() => {
@@ -229,7 +254,8 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* ── Mobile top bar ── */}
-      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
+      {isMobile === true && (
+        <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -242,10 +268,11 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           </svg>
         </button>
         <span className="ml-3 text-sm font-semibold text-gray-800">School SaaS</span>
-      </header>
+        </header>
+      )}
 
       {/* ── Mobile overlay backdrop ── */}
-      {mobileOpen && (
+      {isMobile === true && mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setMobileOpen(false)}
@@ -254,42 +281,44 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
       )}
 
       {/* ── Mobile drawer ── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* Close button inside drawer */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">School SaaS</p>
-            <h2 className="mt-0.5 text-base font-semibold text-gray-900">Control Center</h2>
-            <p className="text-xs text-gray-600">{roleLabels[role]}</p>
+      {isMobile === true && (
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          {/* Close button inside drawer */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">School SaaS</p>
+              <h2 className="mt-0.5 text-base font-semibold text-gray-900">Control Center</h2>
+              <p className="text-xs text-gray-600">{roleLabels[role]}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+              aria-label="Close navigation"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
-            aria-label="Close navigation"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
 
-        <SidebarContent
-          role={role}
-          primaryItems={primaryItems}
-          manageItems={manageItems}
-          generalItems={generalItems}
-          pagesItems={pagesItems}
-          pathname={pathname}
-          userName={session?.user?.name ?? 'User'}
-          collapsed={false}
-          onNavigate={() => setMobileOpen(false)}
-        />
-      </aside>
+          <SidebarContent
+            role={role}
+            primaryItems={primaryItems}
+            manageItems={manageItems}
+            generalItems={generalItems}
+            pagesItems={pagesItems}
+            pathname={pathname}
+            userName={session?.user?.name ?? 'User'}
+            collapsed={false}
+            onNavigate={() => setMobileOpen(false)}
+          />
+        </aside>
+      )}
 
       {/* ── Desktop sidebar ── */}
       <aside
@@ -410,11 +439,110 @@ function SidebarContent({
             );
           })}
         </ul>
+        {/* Pages section (placed directly after primary items) */}
+        {pagesItems.length > 0 && (
+          <div className="px-2">
+            <div className="flex items-center justify-between mb-2">
+              {!collapsed ? (
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Pages</p>
+              ) : (
+                <p className="sr-only">Pages</p>
+              )}
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setPagesOpen((s) => !s)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-50"
+                  aria-expanded={pagesOpen}
+                >
+                  <svg className={`h-4 w-4 transform ${pagesOpen ? 'rotate-0' : '-rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {!collapsed && pagesOpen && (
+              <ul className="space-y-1">
+                {pagesItems.map((item) => {
+                  const active = isItemActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="mr-3 inline-flex">
+                          <SidebarIcon name={item.icon} active={active} />
+                        </span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Collapsed: compact column showing only major section icons */}
+        {collapsed && (
+          <div className="flex flex-col items-center space-y-2 py-2">
+            {manageItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleCollapse && onToggleCollapse();
+                  setManageOpen(true);
+                }}
+                title="Manage"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-600 hover:bg-gray-50"
+              >
+                <SidebarIcon name="organization" active={false} />
+              </button>
+            )}
+            {generalItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleCollapse && onToggleCollapse();
+                  setGeneralOpen(true);
+                }}
+                title="General"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-600 hover:bg-gray-50"
+              >
+                <SidebarIcon name="profile" active={false} />
+              </button>
+            )}
+            {pagesItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleCollapse && onToggleCollapse();
+                  setPagesOpen(true);
+                }}
+                title="Pages"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-600 hover:bg-gray-50"
+              >
+                <SidebarIcon name="academic" active={false} />
+              </button>
+            )}
+          </div>
+        )}
 
         {manageItems.length > 0 && (
           <div className="px-2">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Manage Setting</p>
+              {!collapsed ? (
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Manage Setting</p>
+              ) : (
+                <p className="sr-only">Manage Setting</p>
+              )}
               {!collapsed && (
                 <button
                   type="button"
@@ -457,36 +585,16 @@ function SidebarContent({
           </div>
         )}
 
-        {manageItems.length > 0 && collapsed && (
-          <ul className="space-y-1">
-            {manageItems.map((item) => {
-              const active = isItemActive(pathname, item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    title={item.label}
-                    className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      active
-                        ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="mx-auto inline-flex">
-                      <SidebarIcon name={item.icon} active={active} />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        
 
         {generalItems.length > 0 && (
           <div className="px-2">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">General</p>
+              {!collapsed ? (
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">General</p>
+              ) : (
+                <p className="sr-only">General</p>
+              )}
               {!collapsed && (
                 <button
                   type="button"
@@ -529,103 +637,9 @@ function SidebarContent({
           </div>
         )}
 
-        {generalItems.length > 0 && collapsed && (
-          <ul className="space-y-1">
-            {generalItems.map((item) => {
-              const active = isItemActive(pathname, item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    title={item.label}
-                    className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      active
-                        ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="mx-auto inline-flex">
-                      <SidebarIcon name={item.icon} active={active} />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        
 
-        {pagesItems.length > 0 && (
-          <div className="px-2">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Pages</p>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setPagesOpen((s) => !s)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-50"
-                  aria-expanded={pagesOpen}
-                >
-                  <svg className={`h-4 w-4 transform ${pagesOpen ? 'rotate-0' : '-rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {!collapsed && pagesOpen && (
-              <ul className="space-y-1">
-                {pagesItems.map((item) => {
-                  const active = isItemActive(pathname, item.href);
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={onNavigate}
-                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                          active
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <span className="mr-3 inline-flex">
-                          <SidebarIcon name={item.icon} active={active} />
-                        </span>
-                        {item.label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {pagesItems.length > 0 && collapsed && (
-              <ul className="space-y-1">
-                {pagesItems.map((item) => {
-                  const active = isItemActive(pathname, item.href);
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={onNavigate}
-                        title={item.label}
-                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                          active
-                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <span className="mx-auto inline-flex">
-                          <SidebarIcon name={item.icon} active={active} />
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        )}
+        
       </nav>
 
       <div className="border-t border-gray-200 p-4">
