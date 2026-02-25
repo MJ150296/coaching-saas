@@ -155,8 +155,8 @@ export async function POST(request: NextRequest) {
 
   if (targetRole === UserRole.STUDENT) {
     const parent = body.parent;
-    if (!parent?.email || !parent?.password || !parent?.firstName || !parent?.lastName) {
-      return NextResponse.json({ error: 'Parent details are required for student creation' }, { status: 400 });
+    if (typeof parent?.email !== 'string' || !parent.email.trim()) {
+      return NextResponse.json({ error: 'Parent email is required for student creation' }, { status: 400 });
     }
   }
 
@@ -178,35 +178,80 @@ export async function POST(request: NextRequest) {
   // Auto-create parent when student is created
   if (targetRole === UserRole.STUDENT) {
     const parent = body.parent;
+    const parentEmail = typeof parent?.email === 'string' ? parent.email.trim().toLowerCase() : '';
+    let parentId = '';
+    let createdParentId: string | null = null;
+    let parentCreated = false;
 
-    const parentResult = await useCase.execute({
-      email: parent.email,
-      password: parent.password,
-      firstName: parent.firstName,
-      lastName: parent.lastName,
-      phone: parent.phone,
-      role: UserRole.PARENT,
-      organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
-    });
-
-    if (parentResult.getIsFailure()) {
-      await repo.delete(result.getValue().user.id).catch(() => undefined);
-      return NextResponse.json({ error: parentResult.getError() }, { status: 400 });
-    }
-
-    const linkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    try {
-      await connectDB();
-      await ParentStudentLinkModel.create({
-        _id: linkId,
-        parentId: parentResult.getValue().user.id,
-        studentId: result.getValue().user.id,
+    const existingParent = await repo.findByEmail(parentEmail);
+    if (existingParent) {
+      if (existingParent.getRole() !== UserRole.PARENT) {
+        await repo.delete(result.getValue().user.id).catch(() => undefined);
+        return NextResponse.json(
+          { error: 'Parent email belongs to a non-parent user. Use a different email.' },
+          { status: 400 }
+        );
+      }
+      if (
+        existingParent.getOrganizationId() !== tenant.organizationId ||
+        existingParent.getSchoolId() !== tenant.schoolId
+      ) {
+        await repo.delete(result.getValue().user.id).catch(() => undefined);
+        return NextResponse.json(
+          { error: 'Parent email exists outside selected organization/school scope.' },
+          { status: 400 }
+        );
+      }
+      parentId = existingParent.getId();
+    } else {
+      if (!parent?.password || !parent?.firstName || !parent?.lastName) {
+        await repo.delete(result.getValue().user.id).catch(() => undefined);
+        return NextResponse.json(
+          { error: 'Parent password, first name and last name are required when creating a new parent.' },
+          { status: 400 }
+        );
+      }
+      const parentResult = await useCase.execute({
+        email: parentEmail,
+        password: parent.password,
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        phone: parent.phone,
+        role: UserRole.PARENT,
         organizationId: tenant.organizationId,
         schoolId: tenant.schoolId,
       });
+
+      if (parentResult.getIsFailure()) {
+        await repo.delete(result.getValue().user.id).catch(() => undefined);
+        return NextResponse.json({ error: parentResult.getError() }, { status: 400 });
+      }
+      parentId = parentResult.getValue().user.id;
+      createdParentId = parentId;
+      parentCreated = true;
+    }
+
+    try {
+      await connectDB();
+      const existingLink = await ParentStudentLinkModel.findOne({
+        parentId,
+        studentId: result.getValue().user.id,
+      }).lean<{ _id: string } | null>();
+
+      if (!existingLink) {
+        const linkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        await ParentStudentLinkModel.create({
+          _id: linkId,
+          parentId,
+          studentId: result.getValue().user.id,
+          organizationId: tenant.organizationId,
+          schoolId: tenant.schoolId,
+        });
+      }
     } catch {
-      await repo.delete(parentResult.getValue().user.id).catch(() => undefined);
+      if (createdParentId) {
+        await repo.delete(createdParentId).catch(() => undefined);
+      }
       await repo.delete(result.getValue().user.id).catch(() => undefined);
       return NextResponse.json(
         { error: 'Failed to link parent and student. Rolled back user creation.' },
@@ -214,16 +259,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await logAuditEvent({
-      actorId: actor.getId(),
-      actorRole: actor.getRole(),
-      action: 'CREATE_USER',
-      targetId: parentResult.getValue().user.id,
-      targetRole: parentResult.getValue().user.role,
-      organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
-      ip: request.headers.get('x-forwarded-for') || undefined,
-    });
+    if (parentCreated && createdParentId) {
+      await logAuditEvent({
+        actorId: actor.getId(),
+        actorRole: actor.getRole(),
+        action: 'CREATE_USER',
+        targetId: createdParentId,
+        targetRole: UserRole.PARENT,
+        organizationId: tenant.organizationId,
+        schoolId: tenant.schoolId,
+        ip: request.headers.get('x-forwarded-for') || undefined,
+      });
+    }
   }
 
   await logAuditEvent({

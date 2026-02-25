@@ -905,9 +905,6 @@ export default function OnboardingFlowPage() {
         if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
         if (!hasText(studentForm.lastName)) errors.studentLastName = 'Student last name is required.';
         if (!hasText(studentForm.parentEmail)) errors.parentEmail = 'Parent email is required.';
-        if (!hasText(studentForm.parentPassword)) errors.parentPassword = 'Parent password is required.';
-        if (!hasText(studentForm.parentFirstName)) errors.parentFirstName = 'Parent first name is required.';
-        if (!hasText(studentForm.parentLastName)) errors.parentLastName = 'Parent last name is required.';
         break;
       case 8:
         if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
@@ -950,9 +947,6 @@ export default function OnboardingFlowPage() {
     studentForm.firstName,
     studentForm.lastName,
     studentForm.parentEmail,
-    studentForm.parentFirstName,
-    studentForm.parentLastName,
-    studentForm.parentPassword,
     studentForm.password,
     studentId,
     subjectForm.subjectName,
@@ -1375,9 +1369,6 @@ export default function OnboardingFlowPage() {
               if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
               if (!hasText(studentForm.lastName)) errors.studentLastName = 'Student last name is required.';
               if (!hasText(studentForm.parentEmail)) errors.parentEmail = 'Parent email is required.';
-              if (!hasText(studentForm.parentPassword)) errors.parentPassword = 'Parent password is required.';
-              if (!hasText(studentForm.parentFirstName)) errors.parentFirstName = 'Parent first name is required.';
-              if (!hasText(studentForm.parentLastName)) errors.parentLastName = 'Parent last name is required.';
               const error = firstError(errors);
               if (error) {
                 setFieldErrors(errors);

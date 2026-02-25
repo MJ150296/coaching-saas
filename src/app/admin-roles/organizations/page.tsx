@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { UserRole } from "@/domains/user-management/domain/entities/User";
 import { useToast } from "@/shared/components/ui/ToastProvider";
 import {
   invalidateAdminTenantReferenceData,
@@ -45,6 +47,7 @@ type OrganizationFormErrors = Partial<Record<
 >>;
 
 export default function OrganizationsPage() {
+  const { data: session } = useSession();
   const { toastMessage } = useToast();
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,6 +68,8 @@ export default function OrganizationsPage() {
   const [contactPhone, setContactPhone] = useState("");
   const [statusValue, setStatusValue] = useState<"active" | "inactive">("active");
   const [formErrors, setFormErrors] = useState<OrganizationFormErrors>({});
+  const actorRole = session?.user?.role as UserRole | undefined;
+  const isSuperAdmin = actorRole === UserRole.SUPER_ADMIN;
 
   const filteredOrganizations = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -146,6 +151,10 @@ export default function OrganizationsPage() {
 
   async function handleSaveOrganization(e: React.FormEvent) {
     e.preventDefault();
+    if (!isSuperAdmin && !editingOrganizationId) {
+      setMessage("Only superadmin can create organizations.");
+      return;
+    }
     if (!validateForm()) {
       setMessage("Please fix highlighted form errors.");
       return;
@@ -254,8 +263,13 @@ export default function OrganizationsPage() {
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <h2 className="text-lg font-semibold text-gray-900">
-            {editingOrganizationId ? "Edit Organization" : "Create Organization"}
+            {editingOrganizationId ? "Edit Organization" : isSuperAdmin ? "Create Organization" : "Organization Details"}
           </h2>
+          {!isSuperAdmin && !editingOrganizationId && (
+            <p className="mt-1 text-sm text-gray-600">
+              Organization admins can edit organization details but cannot create or delete organizations.
+            </p>
+          )}
           <form onSubmit={handleSaveOrganization} className="mt-4 space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
@@ -329,11 +343,23 @@ export default function OrganizationsPage() {
 
             <div className="flex items-center gap-2">
               <button
-                disabled={loading}
+                type="submit"
+                disabled={loading || (!isSuperAdmin && !editingOrganizationId)}
                 className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? (editingOrganizationId ? "Updating..." : "Creating...") : editingOrganizationId ? "Update Organization" : "Create Organization"}
+                {loading
+                  ? editingOrganizationId
+                    ? "Updating..."
+                    : "Creating..."
+                  : !isSuperAdmin && !editingOrganizationId
+                    ? "Select Organization to Edit"
+                  : editingOrganizationId
+                    ? "Update Organization"
+                    : "Create Organization"}
               </button>
+              {!isSuperAdmin && !editingOrganizationId && (
+                <span className="text-xs text-slate-500">Select your organization from the list and click Edit.</span>
+              )}
               <button
                 type="button"
                 disabled={loading}
@@ -425,14 +451,16 @@ export default function OrganizationsPage() {
                       >
                         Edit
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteOrganizationId(item.id)}
-                        disabled={loading}
-                        className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteOrganizationId(item.id)}
+                          disabled={loading}
+                          className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -448,33 +476,35 @@ export default function OrganizationsPage() {
           </div>
         </div>
 
-        <Dialog open={Boolean(deleteOrganizationId)} onOpenChange={(open) => !open && setDeleteOrganizationId(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Organization</DialogTitle>
-              <DialogDescription>
-                This action cannot be undone. If the organization has schools, deletion will be blocked.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <button
-                type="button"
-                onClick={() => setDeleteOrganizationId(null)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={loading || !deleteOrganizationId}
-                onClick={() => deleteOrganizationId && handleDeleteOrganization(deleteOrganizationId)}
-                className="rounded-lg border border-red-600 bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "Deleting..." : "Delete"}
-              </button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {isSuperAdmin && (
+          <Dialog open={Boolean(deleteOrganizationId)} onOpenChange={(open) => !open && setDeleteOrganizationId(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Organization</DialogTitle>
+                <DialogDescription>
+                  This action cannot be undone. If the organization has schools, deletion will be blocked.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <button
+                  type="button"
+                  onClick={() => setDeleteOrganizationId(null)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={loading || !deleteOrganizationId}
+                  onClick={() => deleteOrganizationId && handleDeleteOrganization(deleteOrganizationId)}
+                  className="rounded-lg border border-red-600 bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Deleting..." : "Delete"}
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { Payment } from '../../domain/entities/Payment';
 import { CreditNote } from '../../domain/entities/CreditNote';
 import type { FeeFrequency } from '../../domain/entities/FeeType';
 import type { FeePlanItem } from '../../domain/entities/FeePlan';
-import type { LedgerStatus } from '../../domain/entities/StudentFeeLedgerEntry';
+import type { DiscountMode, DiscountType, LedgerStatus } from '../../domain/entities/StudentFeeLedgerEntry';
 import type { PaymentMethod } from '../../domain/entities/Payment';
 import {
   FeeTypeModel,
@@ -302,7 +302,9 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
         studentId: entity.getStudentId(),
         feePlanId: entity.getFeePlanId(),
         feeTypeId: entity.getFeeTypeId(),
+        originalAmount: entity.getOriginalAmount(),
         amount: entity.getAmount(),
+        discount: entity.getDiscount(),
         dueDate: entity.getDueDate(),
         status: entity.getStatus(),
       },
@@ -321,7 +323,17 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
       studentId: doc.studentId,
       feePlanId: doc.feePlanId,
       feeTypeId: doc.feeTypeId,
+      originalAmount: doc.originalAmount ?? doc.amount,
       amount: doc.amount,
+      discount: doc.discount
+        ? {
+            type: doc.discount.type as DiscountType,
+            mode: doc.discount.mode as DiscountMode,
+            value: Number(doc.discount.value),
+            amount: Number(doc.discount.amount),
+            reason: doc.discount.reason,
+          }
+        : undefined,
       dueDate: doc.dueDate,
       status: doc.status as LedgerStatus,
     }, doc.createdAt, doc.updatedAt);
@@ -337,7 +349,17 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
       studentId: doc.studentId,
       feePlanId: doc.feePlanId,
       feeTypeId: doc.feeTypeId,
+      originalAmount: doc.originalAmount ?? doc.amount,
       amount: doc.amount,
+      discount: doc.discount
+        ? {
+            type: doc.discount.type as DiscountType,
+            mode: doc.discount.mode as DiscountMode,
+            value: Number(doc.discount.value),
+            amount: Number(doc.discount.amount),
+            reason: doc.discount.reason,
+          }
+        : undefined,
       dueDate: doc.dueDate,
       status: doc.status as LedgerStatus,
     }, doc.createdAt, doc.updatedAt));

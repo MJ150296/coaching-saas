@@ -192,8 +192,13 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const actor = await requireActorWithPermission(Permission.CREATE_ORGANIZATION);
-    if (actor.getRole() !== UserRole.SUPER_ADMIN) {
+    const actor = await getActorUser();
+    if (!actor) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const actorRole = actor.getRole();
+    if (actorRole !== UserRole.SUPER_ADMIN && actorRole !== UserRole.ORGANIZATION_ADMIN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -201,6 +206,9 @@ export async function PUT(request: NextRequest) {
     const id = typeof body.id === 'string' ? body.id.trim() : '';
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+    if (actorRole === UserRole.ORGANIZATION_ADMIN && actor.getOrganizationId() !== id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const repo = await initializeAppAndGetService<MongoOrganizationRepository>(

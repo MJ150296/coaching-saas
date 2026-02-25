@@ -85,6 +85,12 @@ export default function FeeManagementPage() {
   const [ledgerFeeTypeSearch, setLedgerFeeTypeSearch] = useState("");
   const [ledgerAmount, setLedgerAmount] = useState("");
   const [ledgerDueDate, setLedgerDueDate] = useState("");
+  const [ledgerDiscountType, setLedgerDiscountType] = useState("NONE");
+  const [ledgerDiscountTypeSearch, setLedgerDiscountTypeSearch] = useState("");
+  const [ledgerDiscountMode, setLedgerDiscountMode] = useState("FLAT");
+  const [ledgerDiscountModeSearch, setLedgerDiscountModeSearch] = useState("");
+  const [ledgerDiscountValue, setLedgerDiscountValue] = useState("");
+  const [ledgerDiscountReason, setLedgerDiscountReason] = useState("");
 
   const [paymentStudentId, setPaymentStudentId] = useState("");
   const [paymentStudentSearch, setPaymentStudentSearch] = useState("");
@@ -162,6 +168,27 @@ export default function FeeManagementPage() {
     { value: "UPI", label: "UPI" },
     { value: "BANK_TRANSFER", label: "BANK_TRANSFER" },
   ];
+  const discountTypeOptions = [
+    { value: "NONE", label: "NONE" },
+    { value: "SCHOLARSHIP", label: "SCHOLARSHIP" },
+    { value: "SIBLING", label: "SIBLING" },
+    { value: "STAFF", label: "STAFF" },
+    { value: "CUSTOM", label: "CUSTOM" },
+  ];
+  const discountModeOptions = [
+    { value: "FLAT", label: "FLAT" },
+    { value: "PERCENT", label: "PERCENT" },
+  ];
+  const ledgerNetAmountPreview = useMemo(() => {
+    const amount = Number(ledgerAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+    if (ledgerDiscountType === "NONE") return amount;
+    const value = Number(ledgerDiscountValue || 0);
+    if (!Number.isFinite(value) || value <= 0) return amount;
+    const discount =
+      ledgerDiscountMode === "PERCENT" ? (amount * Math.min(100, value)) / 100 : value;
+    return Math.max(0, Number((amount - discount).toFixed(2)));
+  }, [ledgerAmount, ledgerDiscountMode, ledgerDiscountType, ledgerDiscountValue]);
 
   const organizationOptions = useMemo(
     () =>
@@ -660,7 +687,61 @@ export default function FeeManagementPage() {
               <label className="block text-sm font-medium text-gray-700">Due Date</label>
               <input value={ledgerDueDate} onChange={(e) => setLedgerDueDate(e.target.value)} type="date" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Discount Type</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={discountTypeOptions}
+                  value={ledgerDiscountType}
+                  onChange={setLedgerDiscountType}
+                  search={ledgerDiscountTypeSearch}
+                  onSearchChange={setLedgerDiscountTypeSearch}
+                  placeholder="Select discount type"
+                  searchPlaceholder="Search discount type"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Discount Mode</label>
+              <div className="mt-1">
+                <SearchableDropdown
+                  options={discountModeOptions}
+                  value={ledgerDiscountMode}
+                  onChange={setLedgerDiscountMode}
+                  search={ledgerDiscountModeSearch}
+                  onSearchChange={setLedgerDiscountModeSearch}
+                  placeholder="Select discount mode"
+                  searchPlaceholder="Search discount mode"
+                  disabled={ledgerDiscountType === "NONE"}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Discount Value {ledgerDiscountMode === "PERCENT" ? "(%)" : ""}
+              </label>
+              <input
+                value={ledgerDiscountValue}
+                onChange={(e) => setLedgerDiscountValue(e.target.value)}
+                type="number"
+                min="0"
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                disabled={ledgerDiscountType === "NONE"}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Discount Reason (optional)</label>
+              <input
+                value={ledgerDiscountReason}
+                onChange={(e) => setLedgerDiscountReason(e.target.value)}
+                className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                disabled={ledgerDiscountType === "NONE"}
+              />
+            </div>
           </div>
+          <p className="text-xs text-slate-600">
+            Net payable preview: INR {ledgerNetAmountPreview.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
           <button
             disabled={loading}
             className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -672,6 +753,12 @@ export default function FeeManagementPage() {
                 feeTypeId: ledgerFeeTypeId || undefined,
                 amount: ledgerAmount ? Number(ledgerAmount) : 0,
                 dueDate: ledgerDueDate,
+                discountType: ledgerDiscountType,
+                discountMode: ledgerDiscountType === "NONE" ? undefined : ledgerDiscountMode,
+                discountValue:
+                  ledgerDiscountType === "NONE" ? undefined : ledgerDiscountValue ? Number(ledgerDiscountValue) : 0,
+                discountReason:
+                  ledgerDiscountType === "NONE" ? undefined : ledgerDiscountReason || undefined,
               })
             }
           >

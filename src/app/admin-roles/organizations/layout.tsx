@@ -12,10 +12,7 @@ export default async function AdminOrganizationsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireRole([
-    UserRole.SUPER_ADMIN,
-    UserRole.ORGANIZATION_ADMIN,
-  ]);
+  const session = await requireRole([UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN]);
 
   return (
     <RoleBasedAppShell role={(session.user as { role: UserRole }).role}>

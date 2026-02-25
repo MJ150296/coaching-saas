@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
 interface RoleBasedAppShellProps {
@@ -170,7 +170,28 @@ function isItemActive(pathname: string, href: string): boolean {
 export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  // Desktop: collapsed/expanded toggle
   const [isCollapsed, setIsCollapsed] = useState(false);
+  // Mobile: drawer open/closed
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   const items = useMemo(
     () => navItems.filter((item) => item.allowedRoles.includes(role)),
@@ -179,13 +200,77 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   const primaryItems = useMemo(() => items.filter((item) => item.section === 'primary'), [items]);
   const manageItems = useMemo(() => items.filter((item) => item.section === 'manage'), [items]);
   const generalItems = useMemo(() => items.filter((item) => item.section === 'general'), [items]);
-  const sidebarWidth = isCollapsed ? 80 : 288;
+
+  const desktopSidebarWidth = isCollapsed ? 80 : 288;
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* ── Mobile top bar ── */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+          aria-label="Open navigation"
+        >
+          {/* Hamburger icon */}
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span className="ml-3 text-sm font-semibold text-gray-800">School SaaS</span>
+      </header>
+
+      {/* ── Mobile overlay backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ── Mobile drawer ── */}
       <aside
-        style={{ width: `${sidebarWidth}px` }}
-        className="fixed inset-y-0 left-0 z-30 flex h-screen max-h-screen flex-col overflow-hidden border-r border-gray-200 bg-white"
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Close button inside drawer */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">School SaaS</p>
+            <h2 className="mt-0.5 text-base font-semibold text-gray-900">Control Center</h2>
+            <p className="text-xs text-gray-600">{roleLabels[role]}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+            aria-label="Close navigation"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <SidebarContent
+          role={role}
+          primaryItems={primaryItems}
+          manageItems={manageItems}
+          generalItems={generalItems}
+          pathname={pathname}
+          userName={session?.user?.name ?? 'User'}
+          collapsed={false}
+          onNavigate={() => setMobileOpen(false)}
+        />
+      </aside>
+
+      {/* ── Desktop sidebar ── */}
+      <aside
+        style={{ width: `${desktopSidebarWidth}px` }}
+        className="fixed inset-y-0 left-0 z-30 hidden h-screen flex-col overflow-hidden border-r border-gray-200 bg-white lg:flex"
       >
         <SidebarContent
           role={role}
@@ -199,12 +284,16 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
         />
       </aside>
 
+      {/* ── Main content ── */}
+      {/*
+        Mobile  (<lg): no left margin — sidebar slides over the content as an overlay.
+        Desktop (≥lg): left margin equals the sidebar width so content is pushed aside.
+        We drive the desktop margin via a CSS custom property so the collapse animation
+        is smooth without needing a JS resize listener.
+      */}
       <main
-        style={{
-          marginLeft: `${sidebarWidth}px`,
-          width: `calc(100vw - ${sidebarWidth}px)`,
-        }}
-        className="min-h-screen"
+        style={{ '--sidebar-w': `${desktopSidebarWidth}px` } as React.CSSProperties}
+        className="min-h-screen pt-14 lg:pt-0 lg:ml-(--sidebar-w)"
       >
         <div className="min-h-screen w-full overflow-x-hidden">{children}</div>
       </main>
@@ -235,6 +324,7 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full flex-col">
+      {/* Header – only shown on desktop sidebar (mobile has its own header above) */}
       <div className="border-b border-gray-200 px-3 py-4">
         <div className="flex items-center justify-between">
           {!collapsed ? (

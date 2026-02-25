@@ -267,7 +267,7 @@ export default function Register() {
 
             {formData.role === UserRole.STUDENT && (
               <div className="rounded-md border border-gray-200 p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Parent Details (required for student)</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Parent Details (email required; other fields only for new parent)</h3>
                 <input
                   type="email"
                   name="parentEmail"
@@ -284,7 +284,6 @@ export default function Register() {
                   placeholder="Parent Password"
                   value={formData.parentPassword}
                   onChange={handleChange}
-                  required
                   disabled={isLoading || !canRegister}
                   className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
@@ -295,7 +294,6 @@ export default function Register() {
                     placeholder="Parent First Name"
                     value={formData.parentFirstName}
                     onChange={handleChange}
-                    required
                     disabled={isLoading || !canRegister}
                     className="flex-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   />
@@ -305,7 +303,6 @@ export default function Register() {
                     placeholder="Parent Last Name"
                     value={formData.parentLastName}
                     onChange={handleChange}
-                    required
                     disabled={isLoading || !canRegister}
                     className="flex-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   />

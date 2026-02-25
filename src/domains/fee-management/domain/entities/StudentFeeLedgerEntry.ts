@@ -1,6 +1,16 @@
 import { AggregateRoot } from '@/shared/domain';
 
 export type LedgerStatus = 'DUE' | 'PAID' | 'CANCELLED';
+export type DiscountType = 'NONE' | 'SCHOLARSHIP' | 'SIBLING' | 'STAFF' | 'CUSTOM';
+export type DiscountMode = 'FLAT' | 'PERCENT';
+
+export interface LedgerDiscount {
+  type: DiscountType;
+  mode: DiscountMode;
+  value: number;
+  amount: number;
+  reason?: string;
+}
 
 export interface StudentFeeLedgerEntryProps {
   organizationId: string;
@@ -9,7 +19,9 @@ export interface StudentFeeLedgerEntryProps {
   studentId: string;
   feePlanId?: string;
   feeTypeId?: string;
+  originalAmount: number;
   amount: number;
+  discount?: LedgerDiscount;
   dueDate: Date;
   status: LedgerStatus;
 }
@@ -21,7 +33,9 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
   private studentId: string;
   private feePlanId?: string;
   private feeTypeId?: string;
+  private originalAmount: number;
   private amount: number;
+  private discount?: LedgerDiscount;
   private dueDate: Date;
   private status: LedgerStatus;
 
@@ -33,7 +47,9 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
     this.studentId = props.studentId;
     this.feePlanId = props.feePlanId;
     this.feeTypeId = props.feeTypeId;
+    this.originalAmount = props.originalAmount;
     this.amount = props.amount;
+    this.discount = props.discount;
     this.dueDate = props.dueDate;
     this.status = props.status;
   }
@@ -68,6 +84,14 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
 
   getAmount(): number {
     return this.amount;
+  }
+
+  getOriginalAmount(): number {
+    return this.originalAmount;
+  }
+
+  getDiscount(): LedgerDiscount | undefined {
+    return this.discount;
   }
 
   getDueDate(): Date {

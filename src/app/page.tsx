@@ -54,8 +54,10 @@ export default function Home() {
           router.push('/admin-roles/superadmin');
           break;
         case UserRole.ORGANIZATION_ADMIN:
-        case UserRole.SCHOOL_ADMIN:
           router.push('/admin-roles/organizations');
+          break;
+        case UserRole.SCHOOL_ADMIN:
+          router.push('/admin-roles/school-admin');
           break;
         case UserRole.ADMIN:
           router.push('/admin-roles/admin');

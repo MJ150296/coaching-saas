@@ -770,6 +770,9 @@ export function StudentParentStep({
 }) {
   return (
     <section className="rounded-lg bg-white p-6 shadow">
+      <p className="mb-3 text-xs text-gray-600">
+        Parent email is required. If parent already exists (sibling case), leave parent password/name blank.
+      </p>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
           <input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} placeholder="Student Email" className={inputClass(errors?.studentEmail)} />
@@ -806,7 +809,7 @@ export function StudentParentStep({
         </div>
         <input value={studentForm.parentPhone} onChange={(e) => setStudentForm({ ...studentForm, parentPhone: e.target.value })} placeholder="Parent Phone" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
       </div>
-      <button onClick={onCreate} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Student + Parent</button>
+      <button onClick={onCreate} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Student + Link Parent</button>
       <StatusBanner status={status} />
     </section>
   );
@@ -836,7 +839,7 @@ export function ParentHandoverStep({
 }) {
   return (
     <section className="rounded-lg bg-white p-6 shadow">
-      <p className="text-sm text-gray-700">Parent can login with the credentials entered in Step 8.</p>
+      <p className="text-sm text-gray-700">If parent already existed, use existing credentials. Otherwise use the credentials entered in Step 8.</p>
       <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
         <p><span className="font-medium">Parent Email:</span> {parentEmail || 'N/A'}</p>
         <p><span className="font-medium">Login URL:</span> /auth/signin</p>

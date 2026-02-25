@@ -44,7 +44,15 @@ export interface IStudentFeeLedgerDocument {
   studentId: string;
   feePlanId?: string;
   feeTypeId?: string;
+  originalAmount: number;
   amount: number;
+  discount?: {
+    type: string;
+    mode: string;
+    value: number;
+    amount: number;
+    reason?: string;
+  };
   dueDate: Date;
   status: string;
   createdAt: Date;
@@ -126,7 +134,21 @@ const studentFeeLedgerSchema = new Schema(
     studentId: { type: String, required: true, index: true },
     feePlanId: { type: String },
     feeTypeId: { type: String },
+    originalAmount: { type: Number },
     amount: { type: Number, required: true },
+    discount: {
+      type: {
+        type: String,
+        enum: ['NONE', 'SCHOLARSHIP', 'SIBLING', 'STAFF', 'CUSTOM'],
+      },
+      mode: {
+        type: String,
+        enum: ['FLAT', 'PERCENT'],
+      },
+      value: { type: Number },
+      amount: { type: Number },
+      reason: { type: String },
+    },
     dueDate: { type: Date, required: true },
     status: { type: String, required: true },
   },

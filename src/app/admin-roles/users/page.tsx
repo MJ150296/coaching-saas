@@ -303,32 +303,6 @@ export default function AdminUsersPage() {
               <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Parent Link</span>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <a
-              className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white hover:bg-white/25"
-              href="/admin-roles/academic"
-            >
-              Academic
-            </a>
-            <a
-              className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white hover:bg-white/25"
-              href="/admin-roles/fees"
-            >
-              Fees
-            </a>
-            <a
-              className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white hover:bg-white/25"
-              href="/admin-roles/schools"
-            >
-              Schools
-            </a>
-            <a
-              className="rounded-full bg-white/15 px-3 py-1 font-semibold text-white hover:bg-white/25"
-              href="/admin-roles/organizations"
-            >
-              Organizations
-            </a>
-          </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
@@ -431,7 +405,7 @@ export default function AdminUsersPage() {
             {role === UserRole.STUDENT && (
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
                 <h3 className="text-sm font-semibold text-slate-800">
-                  Parent Details (required for student)
+                  Parent Details (email required; other fields only if creating a new parent)
                 </h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
@@ -448,7 +422,6 @@ export default function AdminUsersPage() {
                     <input
                       value={parentPassword}
                       onChange={(e) => setParentPassword(e.target.value)}
-                      required
                       type="password"
                       className={inputClassName}
                     />
@@ -460,7 +433,6 @@ export default function AdminUsersPage() {
                     <input
                       value={parentFirstName}
                       onChange={(e) => setParentFirstName(e.target.value)}
-                      required
                       className={inputClassName}
                     />
                   </div>
@@ -469,7 +441,6 @@ export default function AdminUsersPage() {
                     <input
                       value={parentLastName}
                       onChange={(e) => setParentLastName(e.target.value)}
-                      required
                       className={inputClassName}
                     />
                   </div>
