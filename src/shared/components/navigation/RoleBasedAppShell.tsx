@@ -16,7 +16,7 @@ interface NavItem {
   href: string;
   icon: IconName;
   allowedRoles: UserRole[];
-  section: 'primary' | 'manage' | 'general';
+  section: 'primary' | 'manage' | 'general' | 'pages';
 }
 
 type IconName =
@@ -117,6 +117,28 @@ const navItems: NavItem[] = [
     allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
     section: 'manage',
   },
+  // Analytical Pages
+  {
+    label: 'Academic Analytics',
+    href: '/admin-roles/analytics/academic',
+    icon: 'academic',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
+  {
+    label: 'Fees Analytics',
+    href: '/admin-roles/analytics/fees',
+    icon: 'fees',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
+  {
+    label: 'Users Analytics',
+    href: '/admin-roles/analytics/users',
+    icon: 'users',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
   {
     label: 'Dashboard',
     href: '/teacher/dashboard',
@@ -200,6 +222,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
   const primaryItems = useMemo(() => items.filter((item) => item.section === 'primary'), [items]);
   const manageItems = useMemo(() => items.filter((item) => item.section === 'manage'), [items]);
   const generalItems = useMemo(() => items.filter((item) => item.section === 'general'), [items]);
+  const pagesItems = useMemo(() => items.filter((item) => item.section === 'pages'), [items]);
 
   const desktopSidebarWidth = isCollapsed ? 80 : 288;
 
@@ -260,6 +283,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           primaryItems={primaryItems}
           manageItems={manageItems}
           generalItems={generalItems}
+          pagesItems={pagesItems}
           pathname={pathname}
           userName={session?.user?.name ?? 'User'}
           collapsed={false}
@@ -277,6 +301,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           primaryItems={primaryItems}
           manageItems={manageItems}
           generalItems={generalItems}
+          pagesItems={pagesItems}
           pathname={pathname}
           userName={session?.user?.name ?? 'User'}
           collapsed={isCollapsed}
@@ -306,6 +331,7 @@ function SidebarContent({
   primaryItems,
   manageItems,
   generalItems,
+  pagesItems,
   pathname,
   userName,
   collapsed = false,
@@ -316,12 +342,16 @@ function SidebarContent({
   primaryItems: NavItem[];
   manageItems: NavItem[];
   generalItems: NavItem[];
+  pagesItems: NavItem[];
   pathname: string;
   userName: string;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
 }) {
+  const [manageOpen, setManageOpen] = useState(true);
+  const [generalOpen, setGeneralOpen] = useState(true);
+  const [pagesOpen, setPagesOpen] = useState(true);
   return (
     <div className="flex h-full flex-col">
       {/* Header – only shown on desktop sidebar (mobile has its own header above) */}
@@ -381,34 +411,49 @@ function SidebarContent({
           })}
         </ul>
 
-        {manageItems.length > 0 && !collapsed && (
+        {manageItems.length > 0 && (
           <div className="px-2">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              Manage Setting
-            </p>
-            <ul className="space-y-1">
-              {manageItems.map((item) => {
-                const active = isItemActive(pathname, item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className="mr-3 inline-flex">
-                        <SidebarIcon name={item.icon} active={active} />
-                      </span>
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Manage Setting</p>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setManageOpen((s) => !s)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-50"
+                  aria-expanded={manageOpen}
+                >
+                  <svg className={`h-4 w-4 transform ${manageOpen ? 'rotate-0' : '-rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {!collapsed && manageOpen && (
+              <ul className="space-y-1">
+                {manageItems.map((item) => {
+                  const active = isItemActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="mr-3 inline-flex">
+                          <SidebarIcon name={item.icon} active={active} />
+                        </span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         )}
 
@@ -438,34 +483,49 @@ function SidebarContent({
           </ul>
         )}
 
-        {generalItems.length > 0 && !collapsed && (
+        {generalItems.length > 0 && (
           <div className="px-2">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              General
-            </p>
-            <ul className="space-y-1">
-              {generalItems.map((item) => {
-                const active = isItemActive(pathname, item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className="mr-3 inline-flex">
-                        <SidebarIcon name={item.icon} active={active} />
-                      </span>
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">General</p>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setGeneralOpen((s) => !s)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-50"
+                  aria-expanded={generalOpen}
+                >
+                  <svg className={`h-4 w-4 transform ${generalOpen ? 'rotate-0' : '-rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {!collapsed && generalOpen && (
+              <ul className="space-y-1">
+                {generalItems.map((item) => {
+                  const active = isItemActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="mr-3 inline-flex">
+                          <SidebarIcon name={item.icon} active={active} />
+                        </span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         )}
 
@@ -493,6 +553,78 @@ function SidebarContent({
               );
             })}
           </ul>
+        )}
+
+        {pagesItems.length > 0 && (
+          <div className="px-2">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Pages</p>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setPagesOpen((s) => !s)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-gray-50"
+                  aria-expanded={pagesOpen}
+                >
+                  <svg className={`h-4 w-4 transform ${pagesOpen ? 'rotate-0' : '-rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {!collapsed && pagesOpen && (
+              <ul className="space-y-1">
+                {pagesItems.map((item) => {
+                  const active = isItemActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="mr-3 inline-flex">
+                          <SidebarIcon name={item.icon} active={active} />
+                        </span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {pagesItems.length > 0 && collapsed && (
+              <ul className="space-y-1">
+                {pagesItems.map((item) => {
+                  const active = isItemActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        title={item.label}
+                        className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span className="mx-auto inline-flex">
+                          <SidebarIcon name={item.icon} active={active} />
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         )}
       </nav>
 
