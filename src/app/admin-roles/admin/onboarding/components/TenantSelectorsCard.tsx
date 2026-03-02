@@ -63,9 +63,9 @@ export function TenantSelectorsCard({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {!canSelectOrganization && <Badge variant="gray">Organization locked by role</Badge>}
-        {!canSelectSchool && <Badge variant="gray">School locked by role</Badge>}
+        {!canSelectSchool && <Badge variant="gray">Coaching center locked by role</Badge>}
         {recentOrganizationId && <Badge variant="green">Recent Org: {recentOrganizationId}</Badge>}
-        {recentSchoolId && <Badge variant="green">Recent School: {recentSchoolId}</Badge>}
+        {recentSchoolId && <Badge variant="green">Recent Coaching Center: {recentSchoolId}</Badge>}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
@@ -106,12 +106,12 @@ export function TenantSelectorsCard({
               !organizationId
                 ? 'Select organization first'
                 : canSelectSchool
-                  ? 'Select school'
-                  : 'School prefilled'
+                  ? 'Select coaching center'
+                  : 'Coaching center prefilled'
             }
-            searchPlaceholder="Search school by name or ID"
+            searchPlaceholder="Search coaching center by name or ID"
             disabled={!organizationId || !canSelectSchool}
-            label="School"
+            label="Coaching Center"
           />
         )}
       </div>
@@ -132,7 +132,7 @@ export function TenantSelectorsCard({
             disabled={!organizationId || isLoadingSchools}
             className="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoadingSchools ? 'Refreshing...' : 'Refresh Schools'}
+            {isLoadingSchools ? 'Refreshing...' : 'Refresh Coaching Centers'}
           </button>
         )}
       </div>

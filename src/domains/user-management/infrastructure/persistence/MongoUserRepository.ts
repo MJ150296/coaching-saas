@@ -3,7 +3,10 @@
  */
 
 import { UserRepository } from "../../domain/repositories/UserRepository";
-import { User } from "../../domain/entities/User";
+import {
+  User,
+  normalizeUserRole,
+} from "../../domain/entities/User";
 import {
   Email,
   Password,
@@ -95,7 +98,6 @@ export class MongoUserRepository implements UserRepository {
 
   async findByRole(role: string): Promise<User[]> {
     await this.ensureConnection();
-
     const documents = await UserModel.find({ role });
     return documents.map((doc) => this.toDomainEntity(doc));
   }
@@ -170,7 +172,7 @@ export class MongoUserRepository implements UserRepository {
         password,
         name,
         phone,
-        role: document.role,
+        role: normalizeUserRole(document.role) ?? document.role,
         organizationId: document.organizationId,
         schoolId: document.schoolId,
         isActive: document.isActive,

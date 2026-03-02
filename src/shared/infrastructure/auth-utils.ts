@@ -3,14 +3,14 @@
  */
 
 import { Session } from "next-auth";
-import { UserRole } from "@/domains/user-management/domain/entities/User";
+import { normalizeUserRole, UserRole } from "@/domains/user-management/domain/entities/User";
 
 /**
  * Get the user's role from the session
  */
 export function getUserRole(session: Session | null): UserRole | null {
   if (!session?.user) return null;
-  return session.user.role || null;
+  return normalizeUserRole(session.user.role) ?? null;
 }
 
 /**
@@ -39,13 +39,13 @@ export function isSuperAdmin(session: Session | null): boolean {
 }
 
 /**
- * Check if user is an admin (superadmin, org admin, school admin or admin)
+ * Check if user is an admin (superadmin, org admin, coaching admin or admin)
  */
 export function isAdmin(session: Session | null): boolean {
   return hasAnyRole(session, [
     UserRole.SUPER_ADMIN,
     UserRole.ORGANIZATION_ADMIN,
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
     UserRole.ADMIN,
   ]);
 }
@@ -53,16 +53,17 @@ export function isAdmin(session: Session | null): boolean {
 /**
  * Get redirect path based on user role
  */
-export function getRoleBasedRedirectPath(role: UserRole | null): string {
-  if (!role) return "/auth/signin";
+export function getRoleBasedRedirectPath(role: UserRole | string | null): string {
+  const normalizedRole = normalizeUserRole(role);
+  if (!normalizedRole) return "/auth/signin";
 
-  switch (role) {
+  switch (normalizedRole) {
     case UserRole.SUPER_ADMIN:
       return "/admin-roles/superadmin";
     case UserRole.ORGANIZATION_ADMIN:
       return "/admin-roles/organization-admin";
-    case UserRole.SCHOOL_ADMIN:
-      return "/admin-roles/school-admin";
+    case UserRole.COACHING_ADMIN:
+      return "/admin-roles/coaching-admin";
     case UserRole.ADMIN:
       return "/admin-roles/admin";
     case UserRole.TEACHER:
@@ -85,7 +86,7 @@ export function getRoleDisplayName(role: UserRole): string {
   const displayNames: Record<UserRole, string> = {
     [UserRole.SUPER_ADMIN]: "Super Administrator",
     [UserRole.ORGANIZATION_ADMIN]: "Organization Administrator",
-    [UserRole.SCHOOL_ADMIN]: "School Administrator",
+    [UserRole.COACHING_ADMIN]: "Coaching Administrator",
     [UserRole.ADMIN]: "Administrator",
     [UserRole.TEACHER]: "Teacher",
     [UserRole.STUDENT]: "Student",

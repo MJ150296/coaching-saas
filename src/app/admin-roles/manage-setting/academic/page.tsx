@@ -541,13 +541,13 @@ export default function AcademicManagementPage() {
 
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">School</label>
+              <label className="block text-sm font-medium text-gray-700">Coaching Center</label>
               <SingleSelect options={schoolDropdownOptions}
                 value={schoolId}
                 onValueChange={(value) => {
                   setSchoolId(value || "");
                 }}
-                placeholder="Select school"
+                placeholder="Select coaching center"
                 disabled={tenantLoading}
               />
             </div>

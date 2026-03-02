@@ -19,7 +19,7 @@ ORGANIZATION_ADMIN
   ├─ Manage staff & admins
   └─ View organization data
 
-SCHOOL_ADMIN
+COACHING_ADMIN
   ├─ Manage school
   ├─ Manage teachers & classes
   ├─ Manage students & parents
@@ -60,9 +60,9 @@ Who can create whom:
 
 | Actor Role | Allowed Target Roles |
 | --- | --- |
-| `SUPER_ADMIN` | `ORGANIZATION_ADMIN`, `SCHOOL_ADMIN`, `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
-| `ORGANIZATION_ADMIN` | `SCHOOL_ADMIN`, `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
-| `SCHOOL_ADMIN` | `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
+| `SUPER_ADMIN` | `ORGANIZATION_ADMIN`, `COACHING_ADMIN`, `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
+| `ORGANIZATION_ADMIN` | `COACHING_ADMIN`, `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
+| `COACHING_ADMIN` | `ADMIN`, `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
 | `ADMIN` | `TEACHER`, `STAFF`, `STUDENT`, `PARENT` |
 | Others | None |
 
@@ -84,7 +84,7 @@ Who can create whom:
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',           // Platform administrator
   ORGANIZATION_ADMIN = 'ORGANIZATION_ADMIN', // Organization/Company admin
-  SCHOOL_ADMIN = 'SCHOOL_ADMIN',         // School administrator
+  COACHING_ADMIN = 'COACHING_ADMIN',         // School administrator
   ADMIN = 'ADMIN',                       // General admin
   TEACHER = 'TEACHER',                   // Teacher/Educator
   STUDENT = 'STUDENT',                   // Student
@@ -103,7 +103,7 @@ export enum UserRole {
   "firstName": "John",
   "lastName": "Doe",
   "phone": "+1234567890",
-  "role": "SCHOOL_ADMIN",  // One of the roles above
+  "role": "COACHING_ADMIN",  // One of the roles above
   "organizationId": "org-id",
   "schoolId": "school-id",
   "isActive": true,

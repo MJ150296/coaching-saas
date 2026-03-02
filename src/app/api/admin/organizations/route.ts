@@ -28,7 +28,7 @@ export async function GET() {
     if (
       role !== UserRole.SUPER_ADMIN &&
       role !== UserRole.ORGANIZATION_ADMIN &&
-      role !== UserRole.SCHOOL_ADMIN &&
+      role !== UserRole.COACHING_ADMIN &&
       role !== UserRole.ADMIN
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

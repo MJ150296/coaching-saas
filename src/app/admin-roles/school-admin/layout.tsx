@@ -7,7 +7,7 @@ export default async function SchoolAdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireRole([UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN]);
+  const session = await requireRole([UserRole.COACHING_ADMIN, UserRole.SUPER_ADMIN]);
 
   return (
     <RoleBasedAppShell role={(session.user as { role: UserRole }).role}>

@@ -63,6 +63,9 @@ export default function AdminUsersPage() {
   const [listRoleSearch, setListRoleSearch] = useState("");
   const [userSearchText, setUserSearchText] = useState("");
   const actorRole = session?.user?.role as UserRole | undefined;
+  const formatRoleLabel = (inputRole: UserRole): string =>
+    inputRole === UserRole.COACHING_ADMIN ? "COACHING_ADMIN" : inputRole.replaceAll("_", " ");
+
   const roleOptions = useMemo(
     () =>
       actorRole
@@ -70,7 +73,7 @@ export default function AdminUsersPage() {
             .filter((targetRole) => canCreateRole(actorRole, targetRole))
             .map((targetRole) => ({
               value: targetRole,
-              label: targetRole.replaceAll("_", " "),
+              label: formatRoleLabel(targetRole),
             }))
         : [],
     [actorRole]
@@ -294,7 +297,7 @@ export default function AdminUsersPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">User Management</h1>
               <p className="mt-2 text-sm text-indigo-50">
-                Create users across organization and school scope with role-based access.
+                Create users across organization and coaching center scope with role-based access.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -308,7 +311,7 @@ export default function AdminUsersPage() {
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <h2 className="text-lg font-semibold text-gray-900">Create User</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Organization and school are optional for non-superadmin users. Superadmin must set both.
+            Organization and coaching center are optional for non-superadmin users. Superadmin must set both.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -334,10 +337,10 @@ export default function AdminUsersPage() {
                 onChange={setSchoolId}
                 search={schoolSearch}
                 onSearchChange={setSchoolSearch}
-                placeholder={!organizationId ? "Select organization first" : "Select school"}
-                searchPlaceholder="Search school"
+                placeholder={!organizationId ? "Select organization first" : "Select coaching center"}
+                searchPlaceholder="Search coaching center"
                 disabled={tenantLoading || !organizationId}
-                label="School"
+                label="Coaching Center"
               />
             </div>
 
@@ -568,7 +571,7 @@ export default function AdminUsersPage() {
                     <td className="px-3 py-2 text-sm text-gray-700">{item.email}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">
                       <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">
-                        {item.role.replaceAll("_", " ")}
+                        {formatRoleLabel(item.role).replaceAll("_", " ")}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-700">{item.phone || "-"}</td>
@@ -595,7 +598,7 @@ export default function AdminUsersPage() {
                   <tr>
                     <td colSpan={7} className="px-3 py-4 text-center text-sm text-gray-500">
                       {!organizationId || !schoolId
-                        ? "Select organization and school to view users."
+                        ? "Select organization and coaching center to view users."
                         : "No users found for selected filters."}
                     </td>
                   </tr>

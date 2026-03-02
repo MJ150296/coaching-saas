@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "School Management System",
-  description: "Enterprise-grade school management application",
+  title: "Coaching Management System",
+  description: "Enterprise-grade coaching management application",
 };
 
 export default async function RootLayout({

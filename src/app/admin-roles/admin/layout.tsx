@@ -7,7 +7,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     UserRole.ADMIN,
     UserRole.SUPER_ADMIN,
     UserRole.ORGANIZATION_ADMIN,
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
   ]);
 
   return (

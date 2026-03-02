@@ -1,5 +1,5 @@
 /**
- * Admin Create School Layout
+ * Admin Create Coaching Center Layout
  * SUPER_ADMIN + ORGANIZATION_ADMIN
  */
 

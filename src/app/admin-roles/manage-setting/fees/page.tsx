@@ -451,7 +451,7 @@ export default function FeeManagementPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">School</label>
+              <label className="block text-sm font-medium text-gray-700">Coaching Center</label>
               <div className="mt-1">
                 <SearchableDropdown
                   options={schoolOptions}
@@ -459,8 +459,8 @@ export default function FeeManagementPage() {
                   onChange={setSchoolId}
                   search={schoolSearch}
                   onSearchChange={setSchoolSearch}
-                  placeholder="Select school"
-                  searchPlaceholder="Search school"
+                  placeholder="Select coaching center"
+                  searchPlaceholder="Search coaching center"
                   disabled={tenantLoading || !organizationId}
                 />
               </div>

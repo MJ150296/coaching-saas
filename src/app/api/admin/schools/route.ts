@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (
       role !== UserRole.SUPER_ADMIN &&
       role !== UserRole.ORGANIZATION_ADMIN &&
-      role !== UserRole.SCHOOL_ADMIN &&
+      role !== UserRole.COACHING_ADMIN &&
       role !== UserRole.ADMIN
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
         address: row.address,
         contactInfo: row.contactInfo,
       }));
-    } else if (role === UserRole.SCHOOL_ADMIN) {
+    } else if (role === UserRole.COACHING_ADMIN) {
       if (!actor.getSchoolId()) {
         return NextResponse.json([], { status: 200 });
       }

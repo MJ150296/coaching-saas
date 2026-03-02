@@ -6,7 +6,7 @@ export default async function ProfileLayout({ children }: { children: React.Reac
   const session = await requireRole([
     UserRole.SUPER_ADMIN,
     UserRole.ORGANIZATION_ADMIN,
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
     UserRole.ADMIN,
     UserRole.TEACHER,
     UserRole.STUDENT,

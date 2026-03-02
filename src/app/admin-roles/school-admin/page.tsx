@@ -34,13 +34,18 @@ type DashboardOverviewResponse = {
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
   [UserRole.SUPER_ADMIN]: 'purple',
   [UserRole.ORGANIZATION_ADMIN]: 'blue',
-  [UserRole.SCHOOL_ADMIN]: 'blue',
+  [UserRole.COACHING_ADMIN]: 'blue',
   [UserRole.ADMIN]: 'blue',
   [UserRole.TEACHER]: 'green',
   [UserRole.STUDENT]: 'orange',
   [UserRole.PARENT]: 'gray',
   [UserRole.STAFF]: 'gray',
 };
+
+function formatRoleLabel(role: UserRole): string {
+  if (role === UserRole.COACHING_ADMIN) return 'COACHING ADMIN';
+  return role.replaceAll('_', ' ');
+}
 
 export default function SchoolAdminDashboardPage() {
   const { data: session, status } = useSession();
@@ -110,14 +115,14 @@ export default function SchoolAdminDashboardPage() {
         <section className="rounded-2xl border border-emerald-100 bg-linear-to-r from-emerald-600 via-teal-600 to-lime-600 p-6 shadow-lg shadow-emerald-200/70">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">School Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-white">Coaching Admin Dashboard</h1>
               <p className="mt-2 text-sm text-emerald-50">
-                Monitor users and school operations for your assigned campus.
+                Monitor users and coaching center operations for your assigned campus.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               {organizationId ? <Badge variant="blue">Org: {organizationId}</Badge> : null}
-              {schoolId ? <Badge variant="green">School: {schoolName || schoolId}</Badge> : null}
+              {schoolId ? <Badge variant="green">Coaching Center: {schoolName || schoolId}</Badge> : null}
             </div>
           </div>
         </section>
@@ -134,9 +139,9 @@ export default function SchoolAdminDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
             <div className="mt-4 grid grid-cols-1 gap-2">
-              <QuickLink href="/admin-roles/academic" label="Manage Academic" />
-              <QuickLink href="/admin-roles/enrollments" label="Manage Enrollments" />
-              <QuickLink href="/admin-roles/fees" label="Manage Fees" />
+              <QuickLink href="/admin-roles/manage-setting/academic" label="Manage Academic" />
+              <QuickLink href="/admin-roles/manage-setting/enrollments" label="Manage Enrollments" />
+              <QuickLink href="/admin-roles/manage-setting/fees" label="Manage Fees" />
               <QuickLink href="/admin-roles/admin/onboarding" label="Onboarding Flow" />
             </div>
           </div>
@@ -165,7 +170,7 @@ export default function SchoolAdminDashboardPage() {
                       <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
                       <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
                       <td className="px-3 py-2 text-sm">
-                        <Badge variant={roleBadgeVariant[item.role]}>{item.role.replaceAll('_', ' ')}</Badge>
+                        <Badge variant={roleBadgeVariant[item.role]}>{formatRoleLabel(item.role)}</Badge>
                       </td>
                       <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                     </tr>
@@ -173,7 +178,7 @@ export default function SchoolAdminDashboardPage() {
                   {recentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
-                        No users found for your school scope.
+                        No users found for your coaching center scope.
                       </td>
                     </tr>
                   )}

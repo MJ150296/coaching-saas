@@ -179,7 +179,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Total Schools</p>
+                <p className="text-gray-600 text-sm font-medium">Total Coaching Centers</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalSchools}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -279,13 +279,13 @@ export default function AdminDashboard() {
                 Manage Users
               </a>
               <a
-                href="/admin-roles/academic"
+                href="/admin-roles/manage-setting/academic"
                 className="block w-full px-4 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
               >
                 Academic Management
               </a>
               <a
-                href="/admin-roles/fees"
+                href="/admin-roles/manage-setting/fees"
                 className="block w-full px-4 py-2 text-left text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
               >
                 Fee Management
@@ -390,7 +390,7 @@ export default function AdminDashboard() {
                 <SearchableDropdown
                   options={[
                     { value: UserRole.ORGANIZATION_ADMIN, label: 'Organization Admin' },
-                    { value: UserRole.SCHOOL_ADMIN, label: 'School Admin' },
+                    { value: UserRole.COACHING_ADMIN, label: 'Coaching Admin' },
                   ]}
                   value={createAdminForm.role}
                   onChange={(value) =>

@@ -117,7 +117,7 @@ export default function Register() {
   const canRegister =
     actorRole === UserRole.SUPER_ADMIN ||
     actorRole === UserRole.ORGANIZATION_ADMIN ||
-    actorRole === UserRole.SCHOOL_ADMIN ||
+    actorRole === UserRole.COACHING_ADMIN ||
     actorRole === UserRole.ADMIN;
 
   return (
@@ -175,7 +175,7 @@ export default function Register() {
               <input
                 type="text"
                 name="schoolId"
-                placeholder="School ID (optional)"
+                placeholder="Coaching Center ID (optional)"
                 value={formData.schoolId}
                 onChange={handleChange}
                 disabled={isLoading || !canRegister}

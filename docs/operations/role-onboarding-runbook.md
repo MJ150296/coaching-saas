@@ -85,7 +85,7 @@ Use `/admin-roles/users` page or `POST /api/admin/users`.
 
 Create in this order:
 1. `ORGANIZATION_ADMIN`
-2. `SCHOOL_ADMIN`
+2. `COACHING_ADMIN`
 3. `ADMIN` (optional but recommended)
 
 Example payload:
@@ -96,7 +96,7 @@ Example payload:
   "firstName": "School",
   "lastName": "Admin",
   "phone": "+15550001111",
-  "role": "SCHOOL_ADMIN",
+  "role": "COACHING_ADMIN",
   "organizationId": "org_123",
   "schoolId": "school_123"
 }

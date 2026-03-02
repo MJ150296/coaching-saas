@@ -6,6 +6,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { PasswordEncryption } from '@/domains/user-management/infrastructure/external-services/PasswordEncryption';
+import { normalizeUserRole } from '@/domains/user-management/domain/entities/User';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 
@@ -66,9 +67,11 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        token.role = normalizeUserRole(user.role) ?? undefined;
         token.organizationId = user.organizationId;
         token.schoolId = user.schoolId;
+      } else if (token.role) {
+        token.role = normalizeUserRole(token.role) ?? undefined;
       }
       return token;
     },

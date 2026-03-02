@@ -23,7 +23,7 @@ export async function GET() {
     if (
       role !== UserRole.SUPER_ADMIN &&
       role !== UserRole.ORGANIZATION_ADMIN &&
-      role !== UserRole.SCHOOL_ADMIN &&
+      role !== UserRole.COACHING_ADMIN &&
       role !== UserRole.ADMIN
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -42,7 +42,7 @@ export async function GET() {
       schoolScopeQuery.organizationId = organizationId;
     }
 
-    if (role === UserRole.SCHOOL_ADMIN || role === UserRole.ADMIN) {
+    if (role === UserRole.COACHING_ADMIN || role === UserRole.ADMIN) {
       if (!schoolId) {
         return NextResponse.json({ error: 'Actor school scope missing' }, { status: 400 });
       }
@@ -90,7 +90,7 @@ export async function GET() {
       UserModel.countDocuments(userScopeQuery),
       countByRole(UserRole.SUPER_ADMIN),
       countByRole(UserRole.ORGANIZATION_ADMIN),
-      countByRole(UserRole.SCHOOL_ADMIN),
+      countByRole(UserRole.COACHING_ADMIN),
       countByRole(UserRole.ADMIN),
       countByRole(UserRole.TEACHER),
       countByRole(UserRole.STUDENT),

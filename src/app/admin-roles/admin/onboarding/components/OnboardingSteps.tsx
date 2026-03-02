@@ -149,11 +149,11 @@ export function SchoolStep({
       <FieldError message={errors?.organizationId} />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <input value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} placeholder="School Name" className={inputClass(errors?.schoolName)} />
+          <input value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} placeholder="Coaching Center Name" className={inputClass(errors?.schoolName)} />
           <FieldError message={errors?.schoolName} />
         </div>
         <div>
-          <input value={schoolForm.schoolCode} onChange={(e) => setSchoolForm({ ...schoolForm, schoolCode: e.target.value })} placeholder="School Code" className={inputClass(errors?.schoolCode)} />
+          <input value={schoolForm.schoolCode} onChange={(e) => setSchoolForm({ ...schoolForm, schoolCode: e.target.value })} placeholder="Coaching Center Code" className={inputClass(errors?.schoolCode)} />
           <FieldError message={errors?.schoolCode} />
         </div>
         <input value={schoolForm.street} onChange={(e) => setSchoolForm({ ...schoolForm, street: e.target.value })} placeholder="Street" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
@@ -164,7 +164,7 @@ export function SchoolStep({
         <input value={schoolForm.contactEmail} onChange={(e) => setSchoolForm({ ...schoolForm, contactEmail: e.target.value })} placeholder="Contact Email" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
         <input value={schoolForm.contactPhone} onChange={(e) => setSchoolForm({ ...schoolForm, contactPhone: e.target.value })} placeholder="Contact Phone" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
       </div>
-      <button onClick={onCreate} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create School</button>
+      <button onClick={onCreate} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Coaching Center</button>
       <StatusBanner status={status} />
     </section>
   );
@@ -225,7 +225,7 @@ export function AdminUserStep({
         <SearchableDropdown
           options={[
             { value: UserRole.ORGANIZATION_ADMIN, label: 'ORGANIZATION_ADMIN' },
-            { value: UserRole.SCHOOL_ADMIN, label: 'SCHOOL_ADMIN' },
+            { value: UserRole.COACHING_ADMIN, label: 'COACHING_ADMIN' },
             { value: UserRole.ADMIN, label: 'ADMIN' },
           ]}
           value={adminForm.role}

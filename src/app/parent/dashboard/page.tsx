@@ -125,7 +125,7 @@ export default function ParentDashboardPage() {
         <section className="rounded-2xl border border-indigo-100 bg-linear-to-r from-indigo-600 via-blue-600 to-rose-600 p-6 shadow-lg shadow-indigo-200/70">
           <h1 className="text-2xl font-bold text-white">Welcome, {firstName}</h1>
           <p className="mt-2 text-sm text-indigo-50">
-            Track attendance, fee dues, recent payments, and school notices for your children.
+            Track attendance, fee dues, recent payments, and coaching notices for your children.
           </p>
         </section>
 

@@ -7,18 +7,12 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
+import { useToast } from '@/shared/components/ui/ToastProvider';
 
-interface StudentStats {
-  totalCourses: number;
-  completedAssignments: number;
-  pendingAssignments: number;
-  averageGrade: number;
-}
-
-interface Course {
+interface SubjectItem {
   id: string;
   name: string;
   teacher: string;
@@ -26,106 +20,58 @@ interface Course {
   progress: number;
 }
 
-interface Assignment {
+interface ScheduleItem {
   id: string;
-  title: string;
-  course: string;
-  dueDate: string;
-  status: 'pending' | 'submitted' | 'graded';
-  grade?: number;
+  subject: string;
+  slot: string;
+  periodNumber: number;
 }
 
-const stats: StudentStats = {
-  totalCourses: 5,
-  completedAssignments: 12,
-  pendingAssignments: 3,
-  averageGrade: 85,
-};
+interface DueItem {
+  id: string;
+  title: string;
+  dueDate: string;
+  amount: number;
+  status: string;
+}
 
-const courses: Course[] = [
-  {
-    id: '1',
-    name: 'Mathematics',
-    teacher: 'Dr. Smith',
-    grade: 'A',
-    progress: 85,
-  },
-  {
-    id: '2',
-    name: 'English Literature',
-    teacher: 'Ms. Johnson',
-    grade: 'B+',
-    progress: 78,
-  },
-  {
-    id: '3',
-    name: 'Physics',
-    teacher: 'Mr. Williams',
-    grade: 'A-',
-    progress: 88,
-  },
-  {
-    id: '4',
-    name: 'History',
-    teacher: 'Dr. Brown',
-    grade: 'B',
-    progress: 72,
-  },
-  {
-    id: '5',
-    name: 'Chemistry',
-    teacher: 'Ms. Davis',
-    grade: 'A',
-    progress: 90,
-  },
-];
+interface PaymentItem {
+  id: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  paidAt: string;
+}
 
-const assignments: Assignment[] = [
-  {
-    id: '1',
-    title: 'Calculus Problem Set 5',
-    course: 'Mathematics',
-    dueDate: '2026-02-15',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    title: 'Essay: The Great Gatsby',
-    course: 'English Literature',
-    dueDate: '2026-02-18',
-    status: 'pending',
-  },
-  {
-    id: '3',
-    title: 'Physics Lab Report',
-    course: 'Physics',
-    dueDate: '2026-02-12',
-    status: 'submitted',
-  },
-  {
-    id: '4',
-    title: 'Historical Analysis Essay',
-    course: 'History',
-    dueDate: '2026-02-20',
-    status: 'pending',
-  },
-  {
-    id: '5',
-    title: 'Chemistry Experiment Observations',
-    course: 'Chemistry',
-    dueDate: '2026-02-10',
-    status: 'graded',
-    grade: 95,
-  },
-];
+interface StudentDashboardResponse {
+  summary: {
+    totalSubjects: number;
+    todayClasses: number;
+    pendingDues: number;
+    feeClearance: number;
+  };
+  classLabel: string;
+  subjects: SubjectItem[];
+  todaySchedule: ScheduleItem[];
+  dueItems: DueItem[];
+  recentPayments: PaymentItem[];
+}
 
 export default function StudentDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { toastMessage } = useToast();
   const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
-  const isLoading = status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STUDENT);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<StudentDashboardResponse>({
+    summary: { totalSubjects: 0, todayClasses: 0, pendingDues: 0, feeClearance: 0 },
+    classLabel: '',
+    subjects: [],
+    todaySchedule: [],
+    dueItems: [],
+    recentPayments: [],
+  });
 
-  // Redirect if not authenticated or not a student
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -136,7 +82,50 @@ export default function StudentDashboard() {
     }
   }, [router, status, userRole]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (status !== 'authenticated' || userRole !== UserRole.STUDENT) return;
+    let active = true;
+
+    async function loadDashboard() {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/student/dashboard');
+        const body = (await response.json()) as StudentDashboardResponse & { error?: string };
+        if (!response.ok) {
+          toastMessage(body?.error || 'Failed to load student dashboard');
+          return;
+        }
+
+        if (!active) return;
+        setData({
+          summary: {
+            totalSubjects: Number(body?.summary?.totalSubjects ?? 0),
+            todayClasses: Number(body?.summary?.todayClasses ?? 0),
+            pendingDues: Number(body?.summary?.pendingDues ?? 0),
+            feeClearance: Number(body?.summary?.feeClearance ?? 0),
+          },
+          classLabel: String(body?.classLabel ?? ''),
+          subjects: Array.isArray(body?.subjects) ? body.subjects : [],
+          todaySchedule: Array.isArray(body?.todaySchedule) ? body.todaySchedule : [],
+          dueItems: Array.isArray(body?.dueItems) ? body.dueItems : [],
+          recentPayments: Array.isArray(body?.recentPayments) ? body.recentPayments : [],
+        });
+      } catch (error) {
+        toastMessage(`Error: ${String(error)}`);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadDashboard();
+    return () => {
+      active = false;
+    };
+  }, [status, toastMessage, userRole]);
+
+  const summary = useMemo(() => data.summary, [data.summary]);
+
+  if (status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STUDENT)) {
     return (
       <PageLoader
         message="Loading your dashboard..."
@@ -147,21 +136,20 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Welcome back, {session?.user?.name?.split(' ')[0]}!</h2>
-          <p className="mt-2 text-gray-600">Here&apos;s your academic overview</p>
+          <p className="mt-2 text-gray-600">
+            {data.classLabel ? `Class: ${data.classLabel}` : 'Here is your academic and fee overview.'}
+          </p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Total Courses</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalCourses}</p>
+                <p className="text-gray-600 text-sm font-medium">Total Subjects</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{loading ? '...' : summary.totalSubjects}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg
@@ -184,8 +172,8 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Completed</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.completedAssignments}</p>
+                <p className="text-gray-600 text-sm font-medium">Classes Today</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{loading ? '...' : summary.todayClasses}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg
@@ -208,8 +196,8 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Pending</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.pendingAssignments}</p>
+                <p className="text-gray-600 text-sm font-medium">Pending Dues</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{loading ? '...' : summary.pendingDues}</p>
               </div>
               <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <svg
@@ -232,8 +220,8 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm font-medium">Average Grade</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.averageGrade}%</p>
+                <p className="text-gray-600 text-sm font-medium">Fee Clearance</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{loading ? '...' : `${summary.feeClearance}%`}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg
@@ -254,16 +242,14 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Courses Section */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">My Courses</h3>
+                <h3 className="text-lg font-semibold text-gray-900">My Subjects</h3>
               </div>
               <div className="divide-y divide-gray-200">
-                {courses.map((course) => (
+                {data.subjects.map((course) => (
                   <div key={course.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -285,46 +271,50 @@ export default function StudentDashboard() {
                     <p className="text-xs text-gray-600 mt-1">{course.progress}% Complete</p>
                   </div>
                 ))}
+                {data.subjects.length === 0 && (
+                  <div className="px-6 py-8 text-center text-gray-600">
+                    <p className="text-sm">{loading ? 'Loading subjects...' : 'No subjects found.'}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Upcoming Assignments */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Pending Assignments</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Upcoming Dues</h3>
               </div>
               <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-                {assignments
-                  .filter((a) => a.status === 'pending')
-                  .map((assignment) => (
-                    <div key={assignment.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                      <h4 className="font-medium text-gray-900 text-sm">{assignment.title}</h4>
-                      <p className="text-xs text-gray-600 mt-1">{assignment.course}</p>
-                      <div className="flex items-center mt-2">
-                        <svg
-                          className="w-4 h-4 text-red-500 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <span className="text-xs text-red-600">
-                          Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                        </span>
-                      </div>
+                {data.dueItems.map((item) => (
+                  <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
+                    <p className="text-xs text-gray-600 mt-1">
+                      INR {item.amount.toLocaleString()} · {item.status}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <svg
+                        className="w-4 h-4 text-red-500 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="text-xs text-red-600">
+                        Due: {new Date(item.dueDate).toLocaleDateString()}
+                      </span>
                     </div>
-                  ))}
-                {assignments.filter((a) => a.status === 'pending').length === 0 && (
+                  </div>
+                ))}
+                {data.dueItems.length === 0 && (
                   <div className="px-6 py-8 text-center text-gray-600">
-                    <p className="text-sm">No pending assignments</p>
+                    <p className="text-sm">{loading ? 'Loading dues...' : 'No pending dues.'}</p>
                   </div>
                 )}
               </div>
@@ -332,42 +322,52 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Recent Grades */}
         <div className="mt-6 bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recently Graded</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Schedule</h3>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {data.todaySchedule.map((item) => (
+              <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                <p className="font-medium text-gray-900">{item.subject}</p>
+                <p className="text-sm text-gray-600">{item.slot}</p>
+              </div>
+            ))}
+            {data.todaySchedule.length === 0 && (
+              <div className="px-6 py-8 text-center text-gray-600">
+                <p className="text-sm">{loading ? 'Loading schedule...' : 'No classes scheduled for today.'}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Payments</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Assignment</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Course</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Grade</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Feedback</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Method</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Reference</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Paid On</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {assignments
-                  .filter((a) => a.status === 'graded')
-                  .map((assignment) => (
-                    <tr key={assignment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">{assignment.title}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{assignment.course}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                          {assignment.grade}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <button className="text-blue-600 hover:text-blue-900">View</button>
-                      </td>
-                    </tr>
-                  ))}
-                {assignments.filter((a) => a.status === 'graded').length === 0 && (
+                {data.recentPayments.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900">INR {item.amount.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{item.method}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{item.reference || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{new Date(item.paidAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+                {data.recentPayments.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-gray-600">
-                      <p className="text-sm">No graded assignments yet</p>
+                      <p className="text-sm">{loading ? 'Loading payments...' : 'No payment records found.'}</p>
                     </td>
                   </tr>
                 )}

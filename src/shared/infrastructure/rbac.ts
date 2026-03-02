@@ -15,6 +15,7 @@ export enum Permission {
   CREATE_PAYMENT = 'CREATE_PAYMENT',
   CREATE_CREDIT_NOTE = 'CREATE_CREDIT_NOTE',
   MANAGE_STUDENT_ENROLLMENT = 'MANAGE_STUDENT_ENROLLMENT',
+  MANAGE_COACHING = 'MANAGE_COACHING',
 }
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -33,8 +34,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_PAYMENT,
     Permission.CREATE_CREDIT_NOTE,
     Permission.MANAGE_STUDENT_ENROLLMENT,
+    Permission.MANAGE_COACHING,
   ],
-  [UserRole.SCHOOL_ADMIN]: [
+  [UserRole.COACHING_ADMIN]: [
     Permission.CREATE_USER,
     Permission.CREATE_ACADEMIC_YEAR,
     Permission.CREATE_CLASS_MASTER,
@@ -47,6 +49,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_PAYMENT,
     Permission.CREATE_CREDIT_NOTE,
     Permission.MANAGE_STUDENT_ENROLLMENT,
+    Permission.MANAGE_COACHING,
   ],
   [UserRole.ADMIN]: [
     Permission.CREATE_USER,
@@ -60,6 +63,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_STUDENT_FEE_LEDGER,
     Permission.CREATE_PAYMENT,
     Permission.MANAGE_STUDENT_ENROLLMENT,
+    Permission.MANAGE_COACHING,
   ],
   [UserRole.TEACHER]: [],
   [UserRole.STAFF]: [],

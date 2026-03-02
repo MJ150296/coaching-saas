@@ -250,7 +250,7 @@ export default function OrganizationsPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">Organization Management</h1>
               <p className="mt-2 text-sm text-sky-50">
-                Create and review organizations for multi-tenant school operations.
+                Create and review organizations for multi-tenant coaching operations.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

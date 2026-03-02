@@ -6,7 +6,7 @@
 |------|------|
 | SUPER_ADMIN | `/admin-roles/superadmin` |
 | ORGANIZATION_ADMIN | `/admin-roles/organizations` |
-| SCHOOL_ADMIN | `/admin-roles/schools` |
+| COACHING_ADMIN | `/admin-roles/schools` |
 | ADMIN | `/admin-roles/admin` |
 | TEACHER | `/teacher/dashboard` |
 | STUDENT | `/student/dashboard` |

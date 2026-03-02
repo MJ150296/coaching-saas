@@ -14,12 +14,17 @@ import {
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ORGANIZATION_ADMIN = 'ORGANIZATION_ADMIN',
-  SCHOOL_ADMIN = 'SCHOOL_ADMIN',
+  COACHING_ADMIN = 'COACHING_ADMIN',
   ADMIN = 'ADMIN',
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
   PARENT = 'PARENT',
   STAFF = 'STAFF',
+}
+
+export function normalizeUserRole(role: string | null | undefined): UserRole | null {
+  if (!role) return null;
+  return (Object.values(UserRole) as string[]).includes(role) ? (role as UserRole) : null;
 }
 
 export interface UserProps {

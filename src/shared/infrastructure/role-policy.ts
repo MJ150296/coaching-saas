@@ -3,7 +3,7 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 const ROLE_CREATION_MAP: Record<UserRole, UserRole[]> = {
   [UserRole.SUPER_ADMIN]: [
     UserRole.ORGANIZATION_ADMIN,
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
     UserRole.ADMIN,
     UserRole.TEACHER,
     UserRole.STAFF,
@@ -11,14 +11,14 @@ const ROLE_CREATION_MAP: Record<UserRole, UserRole[]> = {
     UserRole.PARENT,
   ],
   [UserRole.ORGANIZATION_ADMIN]: [
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
     UserRole.ADMIN,
     UserRole.TEACHER,
     UserRole.STAFF,
     UserRole.STUDENT,
     UserRole.PARENT,
   ],
-  [UserRole.SCHOOL_ADMIN]: [
+  [UserRole.COACHING_ADMIN]: [
     UserRole.ADMIN,
     UserRole.TEACHER,
     UserRole.STAFF,

@@ -56,8 +56,8 @@ export default function Home() {
         case UserRole.ORGANIZATION_ADMIN:
           router.push('/admin-roles/organizations');
           break;
-        case UserRole.SCHOOL_ADMIN:
-          router.push('/admin-roles/school-admin');
+        case UserRole.COACHING_ADMIN:
+          router.push('/admin-roles/coaching-admin');
           break;
         case UserRole.ADMIN:
           router.push('/admin-roles/admin');
@@ -92,8 +92,8 @@ export default function Home() {
         <div className="max-w-md w-full">
           <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900">School Management System</h1>
-              <p className="mt-2 text-gray-600">Manage your school efficiently</p>
+              <h1 className="text-3xl font-bold text-gray-900">Coaching Management System</h1>
+              <p className="mt-2 text-gray-600">Manage your coaching operations efficiently</p>
             </div>
 
             <div className="space-y-3">
@@ -121,7 +121,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">School Management System</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Coaching Management System</h1>
         <p className="mt-2 text-gray-600">Redirecting...</p>
       </div>
     </div>

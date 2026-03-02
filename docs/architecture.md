@@ -188,7 +188,7 @@ if (result.getIsFailure()) {
 ### User Schema
 - Indexed on: email, role, isActive
 - Timestamps: createdAt, updatedAt
-- Role enum: SUPER_ADMIN, ORGANIZATION_ADMIN, SCHOOL_ADMIN, ADMIN, TEACHER, STUDENT, PARENT, STAFF
+- Role enum: SUPER_ADMIN, ORGANIZATION_ADMIN, COACHING_ADMIN, ADMIN, TEACHER, STUDENT, PARENT, STAFF
 - Tenant fields: organizationId, schoolId (required for non-superadmin)
 
 ## Academic and Fee Domains

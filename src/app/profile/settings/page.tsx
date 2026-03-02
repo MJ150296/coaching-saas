@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/shared/components/ui/ToastProvider';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
+import { UserRole } from '@/domains/user-management/domain/entities/User';
 
 type ProfileResponse = {
   id: string;
@@ -19,6 +20,12 @@ type ProfileResponse = {
   createdAt: string | Date;
   updatedAt: string | Date;
 };
+
+function formatRoleLabel(role: string): string {
+  return role === UserRole.COACHING_ADMIN
+    ? 'COACHING ADMIN'
+    : role.replaceAll('_', ' ');
+}
 
 export default function ProfileSettingsPage() {
   const { data: session, status } = useSession();
@@ -181,9 +188,9 @@ export default function ProfileSettingsPage() {
             <h2 className="text-lg font-semibold text-slate-900">Account Details</h2>
             <div className="mt-4 space-y-3 text-sm text-slate-700">
               <p><span className="font-semibold">Email:</span> {email || '-'}</p>
-              <p><span className="font-semibold">Role:</span> {role ? role.replaceAll('_', ' ') : '-'}</p>
+              <p><span className="font-semibold">Role:</span> {role ? formatRoleLabel(role) : '-'}</p>
               <p><span className="font-semibold">Organization:</span> {organizationId || '-'}</p>
-              <p><span className="font-semibold">School:</span> {schoolId || '-'}</p>
+              <p><span className="font-semibold">Coaching Center:</span> {schoolId || '-'}</p>
               <p><span className="font-semibold">Email Verified:</span> {emailVerified ? 'Yes' : 'No'}</p>
               <p><span className="font-semibold">Account Created:</span> {createdAt || '-'}</p>
             </div>

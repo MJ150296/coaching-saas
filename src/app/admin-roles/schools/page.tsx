@@ -182,8 +182,8 @@ export default function SchoolsPage() {
   function validateForm(): boolean {
     const errors: SchoolFormErrors = {};
     if (!organizationId.trim()) errors.organizationId = "Organization is required";
-    if (!schoolName.trim()) errors.schoolName = "School name is required";
-    if (!schoolCode.trim()) errors.schoolCode = "School code is required";
+    if (!schoolName.trim()) errors.schoolName = "Coaching center name is required";
+    if (!schoolCode.trim()) errors.schoolCode = "Coaching center code is required";
     if (!street.trim()) errors.street = "Street is required";
     if (!city.trim()) errors.city = "City is required";
     if (!stateValue.trim()) errors.state = "State is required";
@@ -228,11 +228,11 @@ export default function SchoolsPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage(data?.error || `Failed to ${isEditing ? "update" : "create"} school`);
+        setMessage(data?.error || `Failed to ${isEditing ? "update" : "create"} coaching center`);
         return;
       }
       invalidateAdminSchools();
-      setMessage(`School ${isEditing ? "updated" : "created"} successfully.`);
+      setMessage(`Coaching center ${isEditing ? "updated" : "created"} successfully.`);
       clearForm();
       await loadSchools();
     } catch (error) {
@@ -253,7 +253,7 @@ export default function SchoolsPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage(data?.error || "Failed to delete school");
+        setMessage(data?.error || "Failed to delete coaching center");
         return;
       }
       invalidateAdminSchools();
@@ -261,7 +261,7 @@ export default function SchoolsPage() {
       if (editingSchoolId === id) {
         clearForm();
       }
-      setMessage("School deleted successfully.");
+      setMessage("Coaching center deleted successfully.");
       await loadSchools();
     } catch (error) {
       setMessage(`Error: ${String(error)}`);
@@ -283,7 +283,7 @@ export default function SchoolsPage() {
     setContactEmail(item.contactInfo?.email || "");
     setContactPhone(item.contactInfo?.phone || "");
     setStatusValue(item.status || "active");
-    setMessage("Editing selected school. Update details and save.");
+    setMessage("Editing selected coaching center. Update details and save.");
   }
 
   const inputClassName =
@@ -295,13 +295,13 @@ export default function SchoolsPage() {
         <div className="rounded-2xl border border-emerald-100 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 shadow-lg shadow-emerald-200/70">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">School Management</h1>
+              <h1 className="text-2xl font-bold text-white">Coaching Center Management</h1>
               <p className="mt-2 text-sm text-emerald-50">
-                Create and manage schools under selected organization scope.
+                Create and manage coaching centers under selected organization scope.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Schools</span>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Coaching Centers</span>
               <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Organization Scope</span>
               <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">Tenant Setup</span>
             </div>
@@ -310,10 +310,10 @@ export default function SchoolsPage() {
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <h2 className="text-lg font-semibold text-gray-900">
-            {editingSchoolId ? "Edit School" : "Create School"}
+            {editingSchoolId ? "Edit Coaching Center" : "Create Coaching Center"}
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Select organization first. Organization admin users can only create schools in their own organization.
+            Select organization first. Organization admin users can only create coaching centers in their own organization.
           </p>
           <form onSubmit={handleSaveSchool} className="mt-4 space-y-4">
             <SearchableDropdown
@@ -331,12 +331,12 @@ export default function SchoolsPage() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">School Name</label>
+                <label className="block text-sm font-medium text-gray-700">Coaching Center Name</label>
                 <input value={schoolName} onChange={(e) => setSchoolName(e.target.value)} required className={inputClassName} />
                 {formErrors.schoolName && <p className="mt-1 text-xs text-red-600">{formErrors.schoolName}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">School Code</label>
+                <label className="block text-sm font-medium text-gray-700">Coaching Center Code</label>
                 <input value={schoolCode} onChange={(e) => setSchoolCode(e.target.value)} required className={inputClassName} />
                 {formErrors.schoolCode && <p className="mt-1 text-xs text-red-600">{formErrors.schoolCode}</p>}
               </div>
@@ -404,7 +404,7 @@ export default function SchoolsPage() {
                 disabled={loading}
                 className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? (editingSchoolId ? "Updating..." : "Creating...") : editingSchoolId ? "Update School" : "Create School"}
+                {loading ? (editingSchoolId ? "Updating..." : "Creating...") : editingSchoolId ? "Update Coaching Center" : "Create Coaching Center"}
               </button>
               <button
                 type="button"
@@ -420,7 +420,7 @@ export default function SchoolsPage() {
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Existing Schools</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Existing Coaching Centers</h2>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                 Total: {schools.length}
@@ -437,7 +437,7 @@ export default function SchoolsPage() {
               <input
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search by school, code, org, status or id"
+                placeholder="Search by coaching center, code, org, status or id"
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -464,7 +464,7 @@ export default function SchoolsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">School</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Coaching Center</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Code</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Organization</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
@@ -515,7 +515,7 @@ export default function SchoolsPage() {
                 {filteredSchools.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-3 py-4 text-center text-sm text-gray-500">
-                      No schools found for selected scope.
+                      No coaching centers found for selected scope.
                     </td>
                   </tr>
                 )}
@@ -527,9 +527,9 @@ export default function SchoolsPage() {
         <Dialog open={Boolean(deleteSchoolId)} onOpenChange={(open) => !open && setDeleteSchoolId(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete School</DialogTitle>
+              <DialogTitle>Delete Coaching Center</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. Confirm deletion of the selected school.
+                This action cannot be undone. Confirm deletion of the selected coaching center.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

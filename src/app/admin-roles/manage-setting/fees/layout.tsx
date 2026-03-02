@@ -1,13 +1,13 @@
 /**
- * Academic Management Layout
- * SUPER_ADMIN + ORGANIZATION_ADMIN + SCHOOL_ADMIN + ADMIN
+ * Fee Management Layout
+ * SUPER_ADMIN + ORGANIZATION_ADMIN + COACHING_ADMIN + ADMIN
  */
 
 import { UserRole } from "@/domains/user-management/domain/entities/User";
 import { requireRole } from "@/shared/lib/requireRole";
 import { RoleBasedAppShell } from "@/shared/components/navigation/RoleBasedAppShell";
 
-export default async function AcademicLayout({
+export default async function FeeLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -15,7 +15,7 @@ export default async function AcademicLayout({
   const session = await requireRole([
     UserRole.SUPER_ADMIN,
     UserRole.ORGANIZATION_ADMIN,
-    UserRole.SCHOOL_ADMIN,
+    UserRole.COACHING_ADMIN,
     UserRole.ADMIN,
   ]);
 

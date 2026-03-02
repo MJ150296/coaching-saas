@@ -16,8 +16,8 @@ export type ClassLevelOption = { value: string; label: string };
 export const STEP_META: StepMeta[] = [
   { title: 'Bootstrap Check', description: 'Verify superadmin is ready before onboarding.' },
   { title: 'Create Organization', description: 'Create tenant root organization.' },
-  { title: 'Create School', description: 'Create school under organization.' },
-  { title: 'Create Admin Accounts', description: 'Create org/school/admin operators.' },
+  { title: 'Create Coaching Center', description: 'Create coaching center under organization.' },
+  { title: 'Create Admin Accounts', description: 'Create org/coaching/admin operators.' },
   { title: 'Academic Setup', description: 'Create academic year and class master.' },
   { title: 'Teacher + Class Teacher', description: 'Create teacher and assign section class teacher.' },
   { title: 'Fees Setup', description: 'Create fee type/plan and assign plan to class.' },
@@ -31,12 +31,12 @@ export const STEP_ALLOWED_ROLES: UserRole[][] = [
   [UserRole.SUPER_ADMIN],
   [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
   [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
-  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+  [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
 ];
 
 export const CLASS_LEVEL_OPTIONS: ClassLevelOption[] = [

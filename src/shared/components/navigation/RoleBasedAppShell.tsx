@@ -25,13 +25,14 @@ type IconName =
   | 'school'
   | 'users'
   | 'academic'
+  | 'coaching'
   | 'fees'
   | 'profile';
 
 const roleLabels: Record<UserRole, string> = {
   [UserRole.SUPER_ADMIN]: 'Super Administrator',
   [UserRole.ORGANIZATION_ADMIN]: 'Organization Administrator',
-  [UserRole.SCHOOL_ADMIN]: 'School Administrator',
+  [UserRole.COACHING_ADMIN]: 'Coaching Administrator',
   [UserRole.ADMIN]: 'Administrator',
   [UserRole.TEACHER]: 'Teacher',
   [UserRole.STUDENT]: 'Student',
@@ -56,9 +57,9 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Dashboard',
-    href: '/admin-roles/school-admin',
+    href: '/admin-roles/coaching-admin',
     icon: 'dashboard',
-    allowedRoles: [UserRole.SCHOOL_ADMIN],
+    allowedRoles: [UserRole.COACHING_ADMIN],
     section: 'primary',
   },
   {
@@ -72,7 +73,7 @@ const navItems: NavItem[] = [
     label: 'Onboarding Flow',
     href: '/admin-roles/admin/onboarding',
     icon: 'dashboard',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'primary',
   },
   {
@@ -83,8 +84,8 @@ const navItems: NavItem[] = [
     section: 'manage',
   },
   {
-    label: 'Manage Schools',
-    href: '/admin-roles/schools',
+    label: 'Manage Coaching Centers',
+    href: '/admin-roles/coaching-centers',
     icon: 'school',
     allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
     section: 'manage',
@@ -98,45 +99,73 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Manage Academic',
-    href: '/admin-roles/academic',
+    href: '/admin-roles/manage-setting/academic',
     icon: 'academic',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'manage',
   },
   {
     label: 'Manage Enrollments',
-    href: '/admin-roles/enrollments',
+    href: '/admin-roles/manage-setting/enrollments',
     icon: 'academic',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'manage',
   },
   {
     label: 'Manage Fees',
-    href: '/admin-roles/fees',
+    href: '/admin-roles/manage-setting/fees',
     icon: 'fees',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+    section: 'manage',
+  },
+  {
+    label: 'Manage Coaching',
+    href: '/admin-roles/manage-setting/coaching',
+    icon: 'coaching',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'manage',
   },
   // Analytical Pages
   {
     label: 'Academic Analytics',
-    href: '/admin-roles/analytics/academic',
+    href: '/admin-roles/pages/academic',
     icon: 'academic',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'pages',
   },
   {
     label: 'Fees Analytics',
-    href: '/admin-roles/analytics/fees',
+    href: '/admin-roles/pages/fees',
     icon: 'fees',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'pages',
   },
   {
     label: 'Users Analytics',
-    href: '/admin-roles/analytics/users',
+    href: '/admin-roles/pages/users',
     icon: 'users',
-    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN],
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
+  {
+    label: 'Student Analytics',
+    href: '/admin-roles/pages/student',
+    icon: 'users',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
+  {
+    label: 'Teacher Analytics',
+    href: '/admin-roles/pages/teacher',
+    icon: 'users',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+    section: 'pages',
+  },
+  {
+    label: 'Classes Analytics',
+    href: '/admin-roles/pages/classes',
+    icon: 'academic',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'pages',
   },
   {
@@ -174,7 +203,7 @@ const navItems: NavItem[] = [
     allowedRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ORGANIZATION_ADMIN,
-      UserRole.SCHOOL_ADMIN,
+      UserRole.COACHING_ADMIN,
       UserRole.ADMIN,
       UserRole.TEACHER,
       UserRole.STUDENT,
@@ -267,7 +296,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="ml-3 text-sm font-semibold text-gray-800">School SaaS</span>
+        <span className="ml-3 text-sm font-semibold text-gray-800">Coaching SaaS</span>
         </header>
       )}
 
@@ -290,7 +319,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           {/* Close button inside drawer */}
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">School SaaS</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Coaching SaaS</p>
               <h2 className="mt-0.5 text-base font-semibold text-gray-900">Control Center</h2>
               <p className="text-xs text-gray-600">{roleLabels[role]}</p>
             </div>
@@ -388,7 +417,7 @@ function SidebarContent({
         <div className="flex items-center justify-between">
           {!collapsed ? (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">School SaaS</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Coaching SaaS</p>
               <h2 className="mt-1 text-lg font-semibold text-gray-900">Control Center</h2>
               <p className="mt-1 text-xs text-gray-600">{roleLabels[role]}</p>
             </div>
@@ -692,6 +721,12 @@ function SidebarIcon({ name, active }: { name: IconName; active: boolean }) {
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v6" />
+        </svg>
+      );
+    case 'coaching':
+      return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h8m-8 5h5M6 3h12a2 2 0 012 2v14l-4-3-4 3-4-3-4 3V5a2 2 0 012-2z" />
         </svg>
       );
     case 'fees':

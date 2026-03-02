@@ -35,13 +35,18 @@ type DashboardOverviewResponse = {
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
   [UserRole.SUPER_ADMIN]: 'purple',
   [UserRole.ORGANIZATION_ADMIN]: 'blue',
-  [UserRole.SCHOOL_ADMIN]: 'blue',
+  [UserRole.COACHING_ADMIN]: 'blue',
   [UserRole.ADMIN]: 'blue',
   [UserRole.TEACHER]: 'green',
   [UserRole.STUDENT]: 'orange',
   [UserRole.PARENT]: 'gray',
   [UserRole.STAFF]: 'gray',
 };
+
+function formatRoleLabel(role: UserRole): string {
+  if (role === UserRole.COACHING_ADMIN) return 'COACHING ADMIN';
+  return role.replaceAll('_', ' ');
+}
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -65,7 +70,7 @@ export default function AdminPage() {
     const labels: Record<UserRole, string> = {
       [UserRole.SUPER_ADMIN]: 'Superadmin Workspace',
       [UserRole.ORGANIZATION_ADMIN]: 'Organization Admin Workspace',
-      [UserRole.SCHOOL_ADMIN]: 'School Admin Workspace',
+      [UserRole.COACHING_ADMIN]: 'Coaching Admin Workspace',
       [UserRole.ADMIN]: 'Admin Workspace',
       [UserRole.TEACHER]: 'Teacher Workspace',
       [UserRole.STUDENT]: 'Student Workspace',
@@ -135,13 +140,13 @@ export default function AdminPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">{roleTitle}</h1>
               <p className="mt-2 text-sm text-indigo-50">
-                Track users, monitor school operations, and jump directly into admin workflows.
+                Track users, monitor coaching operations, and jump directly into admin workflows.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {actorRole ? <Badge variant="blue">{actorRole.replaceAll('_', ' ')}</Badge> : null}
+              {actorRole ? <Badge variant="blue">{formatRoleLabel(actorRole)}</Badge> : null}
               {actorOrganizationId ? <Badge variant="green">Org: {actorOrganizationId}</Badge> : null}
-              {actorSchoolId ? <Badge variant="orange">School: {actorSchoolId}</Badge> : null}
+              {actorSchoolId ? <Badge variant="orange">Coaching Center: {actorSchoolId}</Badge> : null}
             </div>
           </div>
         </section>
@@ -159,9 +164,10 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
             <div className="mt-4 grid grid-cols-1 gap-2">
               <QuickLink href="/admin-roles/users" label="Manage Users" />
-              <QuickLink href="/admin-roles/academic" label="Manage Academic" />
-              <QuickLink href="/admin-roles/enrollments" label="Manage Enrollments" />
-              <QuickLink href="/admin-roles/fees" label="Manage Fees" />
+              <QuickLink href="/admin-roles/manage-setting/academic" label="Manage Academic" />
+              <QuickLink href="/admin-roles/manage-setting/enrollments" label="Manage Enrollments" />
+              <QuickLink href="/admin-roles/manage-setting/fees" label="Manage Fees" />
+              <QuickLink href="/admin-roles/manage-setting/coaching" label="Manage Coaching" />
               <QuickLink href="/admin-roles/admin/onboarding" label="Onboarding Flow" />
             </div>
           </div>
@@ -190,7 +196,7 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
                       <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
                       <td className="px-3 py-2 text-sm">
-                        <Badge variant={roleBadgeVariant[item.role]}>{item.role.replaceAll('_', ' ')}</Badge>
+                        <Badge variant={roleBadgeVariant[item.role]}>{formatRoleLabel(item.role)}</Badge>
                       </td>
                       <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                     </tr>

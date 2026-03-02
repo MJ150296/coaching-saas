@@ -208,7 +208,7 @@ export default function OnboardingFlowPage() {
     firstName: '',
     lastName: '',
     phone: '',
-    role: UserRole.SCHOOL_ADMIN,
+    role: UserRole.COACHING_ADMIN,
   });
   const [yearForm, setYearForm] = useState({ name: '', startDate: '', endDate: '' });
   const [classForm, setClassForm] = useState({ name: '', level: 'LOWER_PRIMARY' });
@@ -672,6 +672,35 @@ export default function OnboardingFlowPage() {
     }
   }
 
+  const resetSchoolScopedSelections = useCallback(() => {
+    setAcademicYearId('');
+    setClassMasterId('');
+    setSectionId('');
+    setTeacherId('');
+    setFeeTypeId('');
+    setFeePlanId('');
+    setStudentId('');
+  }, []);
+
+  const handleOrganizationChange = useCallback(
+    (nextOrganizationId: string) => {
+      if (nextOrganizationId === organizationId) return;
+      setOrganizationId(nextOrganizationId);
+      setSchoolId('');
+      resetSchoolScopedSelections();
+    },
+    [organizationId, resetSchoolScopedSelections]
+  );
+
+  const handleSchoolChange = useCallback(
+    (nextSchoolId: string) => {
+      if (nextSchoolId === schoolId) return;
+      setSchoolId(nextSchoolId);
+      resetSchoolScopedSelections();
+    },
+    [schoolId, resetSchoolScopedSelections]
+  );
+
   useEffect(() => {
     loadOrganizations();
   }, []);
@@ -687,7 +716,7 @@ export default function OnboardingFlowPage() {
     if (status !== 'authenticated' || !actorRole) return;
 
     if (actorRole === UserRole.ORGANIZATION_ADMIN && actorOrganizationId) {
-      setOrganizationId(actorOrganizationId);
+      setOrganizationId((prev) => (prev === actorOrganizationId ? prev : actorOrganizationId));
     }
 
     if (
@@ -695,26 +724,34 @@ export default function OnboardingFlowPage() {
       actorRole !== UserRole.ORGANIZATION_ADMIN
     ) {
       if (actorOrganizationId) {
-        setOrganizationId(actorOrganizationId);
+        setOrganizationId((prev) => (prev === actorOrganizationId ? prev : actorOrganizationId));
       }
       if (actorSchoolId) {
-        setSchoolId(actorSchoolId);
+        setSchoolId((prev) => (prev === actorSchoolId ? prev : actorSchoolId));
       }
     }
   }, [actorOrganizationId, actorRole, actorSchoolId, status]);
 
   useEffect(() => {
-    if (organizationId) {
-      loadSchools(organizationId);
-      if (schoolId && !schools.find((s) => s.id === schoolId && s.organizationId === organizationId)) {
+    if (!organizationId) {
+      setSchools([]);
+      if (canSelectSchool) {
         setSchoolId('');
       }
-    } else {
-      setSchools([]);
-      setSchoolId('');
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId]);
+    loadSchools(organizationId);
+  }, [canSelectSchool, organizationId]);
+
+  useEffect(() => {
+    if (!canSelectSchool || !organizationId || !schoolId || loadingSchools) return;
+    const existsInCurrentOrganization = schools.some(
+      (item) => item.id === schoolId && item.organizationId === organizationId
+    );
+    if (!existsInCurrentOrganization) {
+      handleSchoolChange('');
+    }
+  }, [canSelectSchool, handleSchoolChange, loadingSchools, organizationId, schoolId, schools]);
 
   useEffect(() => {
     if (!organizationId || !schoolId) {
@@ -853,18 +890,18 @@ export default function OnboardingFlowPage() {
         break;
       case 2:
         if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
-        if (!hasText(schoolForm.schoolName)) errors.schoolName = 'School name is required.';
-        if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'School code is required.';
+        if (!hasText(schoolForm.schoolName)) errors.schoolName = 'Coaching center name is required.';
+        if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'Coaching center code is required.';
         break;
       case 3:
-        if (!tenantSelected) errors.tenant = 'Please select organization and school from tenant selectors.';
+        if (!tenantSelected) errors.tenant = 'Please select organization and coaching center from tenant selectors.';
         if (!hasText(adminForm.email)) errors.email = 'Admin email is required.';
         if (!hasText(adminForm.password)) errors.password = 'Admin password is required.';
         if (!hasText(adminForm.firstName)) errors.firstName = 'Admin first name is required.';
         if (!hasText(adminForm.lastName)) errors.lastName = 'Admin last name is required.';
         break;
       case 4:
-        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!tenantSelected) errors.tenant = 'Organization and coaching center context are required.';
         if (!hasText(yearForm.name)) errors.yearName = 'Academic year name is required.';
         if (!hasText(yearForm.startDate)) errors.yearStartDate = 'Start date is required.';
         if (!hasText(yearForm.endDate)) errors.yearEndDate = 'End date is required.';
@@ -872,7 +909,7 @@ export default function OnboardingFlowPage() {
         if (!hasText(classForm.level)) errors.classLevel = 'Class level is required.';
         break;
       case 5:
-        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!tenantSelected) errors.tenant = 'Organization and coaching center context are required.';
         if (!hasText(teacherForm.email)) errors.teacherEmail = 'Teacher email is required.';
         if (!hasText(teacherForm.password)) errors.teacherPassword = 'Teacher password is required.';
         if (!hasText(teacherForm.firstName)) errors.teacherFirstName = 'Teacher first name is required.';
@@ -884,7 +921,7 @@ export default function OnboardingFlowPage() {
         if (Number(subjectForm.weeklyPeriods || '0') <= 0) errors.weeklyPeriods = 'Weekly periods must be greater than 0.';
         break;
       case 6:
-        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!tenantSelected) errors.tenant = 'Organization and coaching center context are required.';
         if (!hasText(feeTypeForm.name)) errors.feeTypeName = 'Fee type name is required.';
         if (Number(feeTypeForm.amount || '0') <= 0) errors.feeTypeAmount = 'Fee amount must be greater than 0.';
         if (!hasText(feeTypeForm.frequency)) errors.feeTypeFrequency = 'Fee frequency is required.';
@@ -899,7 +936,7 @@ export default function OnboardingFlowPage() {
         if (!hasText(feePlanId)) errors.feePlanId = 'Select or create a fee plan first.';
         break;
       case 7:
-        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!tenantSelected) errors.tenant = 'Organization and coaching center context are required.';
         if (!hasText(studentForm.email)) errors.studentEmail = 'Student email is required.';
         if (!hasText(studentForm.password)) errors.studentPassword = 'Student password is required.';
         if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
@@ -907,7 +944,7 @@ export default function OnboardingFlowPage() {
         if (!hasText(studentForm.parentEmail)) errors.parentEmail = 'Parent email is required.';
         break;
       case 8:
-        if (!tenantSelected) errors.tenant = 'Organization and school context are required.';
+        if (!tenantSelected) errors.tenant = 'Organization and coaching center context are required.';
         if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required.';
         if (!hasText(studentId)) errors.studentId = 'Student selection is required.';
         if (Number(ledgerForm.amount || '0') <= 0) errors.ledgerAmount = 'Ledger amount must be greater than 0.';
@@ -1048,8 +1085,8 @@ export default function OnboardingFlowPage() {
             onCreate={() => {
               const errors: Record<string, string> = {};
               if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
-              if (!hasText(schoolForm.schoolName)) errors.schoolName = 'School name is required.';
-              if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'School code is required.';
+              if (!hasText(schoolForm.schoolName)) errors.schoolName = 'Coaching center name is required.';
+              if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'Coaching center code is required.';
               const error = firstError(errors);
               if (error) {
                 setFieldErrors(errors);
@@ -1081,7 +1118,7 @@ export default function OnboardingFlowPage() {
             setAdminRoleSearch={setAdminRoleSearch}
             onCreate={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Please select organization and school from tenant selectors.';
+              if (!hasTenantContext()) errors.tenant = 'Please select organization and coaching center from tenant selectors.';
               if (!hasText(adminForm.email)) errors.email = 'Admin email is required.';
               if (!hasText(adminForm.password)) errors.password = 'Admin password is required.';
               if (!hasText(adminForm.firstName)) errors.firstName = 'Admin first name is required.';
@@ -1126,7 +1163,7 @@ export default function OnboardingFlowPage() {
             onRefreshClasses={() => loadClassMasters(organizationId, schoolId)}
             onCreateAcademicYear={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(yearForm.name)) errors.yearName = 'Academic year name is required.';
               if (!hasText(yearForm.startDate)) errors.yearStartDate = 'Start date is required.';
               if (!hasText(yearForm.endDate)) errors.yearEndDate = 'End date is required.';
@@ -1150,7 +1187,7 @@ export default function OnboardingFlowPage() {
             }}
             onCreateClassMaster={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(classForm.name)) errors.className = 'Class name is required.';
               if (!hasText(classForm.level)) errors.classLevel = 'Class level is required.';
               const error = firstError(errors);
@@ -1209,7 +1246,7 @@ export default function OnboardingFlowPage() {
             onRefreshTeachers={() => loadTeachers(organizationId, schoolId)}
             onCreateTeacher={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(teacherForm.email)) errors.teacherEmail = 'Teacher email is required.';
               if (!hasText(teacherForm.password)) errors.teacherPassword = 'Teacher password is required.';
               if (!hasText(teacherForm.firstName)) errors.teacherFirstName = 'Teacher first name is required.';
@@ -1234,7 +1271,7 @@ export default function OnboardingFlowPage() {
             }}
             onCreateSectionAssignTeacher={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before creating section.';
               if (!hasText(sectionForm.name)) errors.sectionName = 'Section name is required.';
               const error = firstError(errors);
@@ -1249,7 +1286,7 @@ export default function OnboardingFlowPage() {
             }}
             onCreateSubjectAllocation={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required for subject allocation.';
               if (!hasText(classMasterId)) errors.classMasterId = 'Class master is required for subject allocation.';
               if (!hasText(subjectForm.subjectName)) errors.subjectName = 'Subject name is required.';
@@ -1279,7 +1316,7 @@ export default function OnboardingFlowPage() {
             setFeeFrequencySearch={setFeeFrequencySearch}
             onCreateFeeType={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(feeTypeForm.name)) errors.feeTypeName = 'Fee type name is required.';
               if (Number(feeTypeForm.amount || '0') <= 0) errors.feeTypeAmount = 'Fee amount must be greater than 0.';
               if (!hasText(feeTypeForm.frequency)) errors.feeTypeFrequency = 'Fee frequency is required.';
@@ -1306,7 +1343,7 @@ export default function OnboardingFlowPage() {
             setFeePlanForm={setFeePlanForm}
             onCreateFeePlan={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required before creating fee plan.';
               if (!hasText(feePlanForm.name)) errors.feePlanName = 'Fee plan name is required.';
               try {
@@ -1338,7 +1375,7 @@ export default function OnboardingFlowPage() {
             setSkipAssignFeePlan={setSkipAssignFeePlan}
             onAssignFeePlan={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required before assigning fee plan.';
               if (!hasText(feePlanId)) errors.feePlanId = 'Select or create a fee plan first.';
               if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before assigning fee plan.';
@@ -1363,7 +1400,7 @@ export default function OnboardingFlowPage() {
             setStudentForm={setStudentForm}
             onCreate={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(studentForm.email)) errors.studentEmail = 'Student email is required.';
               if (!hasText(studentForm.password)) errors.studentPassword = 'Student password is required.';
               if (!hasText(studentForm.firstName)) errors.studentFirstName = 'Student first name is required.';
@@ -1418,7 +1455,7 @@ export default function OnboardingFlowPage() {
             onRefreshFeeTypes={() => loadFeeTypes(organizationId, schoolId)}
             onCreateLedger={() => {
               const errors: Record<string, string> = {};
-              if (!hasTenantContext()) errors.tenant = 'Organization and school context are required.';
+              if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required.';
               if (!hasText(studentId)) errors.studentId = 'Student selection is required.';
               if (Number(ledgerForm.amount || '0') <= 0) errors.ledgerAmount = 'Ledger amount must be greater than 0.';
@@ -1515,8 +1552,8 @@ export default function OnboardingFlowPage() {
               tenantSchoolOptions={tenantSchoolOptions}
               recentOrganizationId={recentOrganizationId}
               recentSchoolId={recentSchoolId}
-              onOrganizationChange={setOrganizationId}
-              onSchoolChange={setSchoolId}
+              onOrganizationChange={handleOrganizationChange}
+              onSchoolChange={handleSchoolChange}
               onOrganizationSearchChange={setOrganizationSearch}
               onSchoolSearchChange={setSchoolSearch}
               onRefreshOrganizations={() => loadOrganizations()}

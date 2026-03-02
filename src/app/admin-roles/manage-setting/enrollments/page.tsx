@@ -288,7 +288,7 @@ export default function EnrollmentPage() {
 
   async function submitEnrollment() {
     if (!organizationId || !schoolId || !academicYearId || !studentId || !classMasterId || !sectionId) {
-      setMessage('Please select organization, school, academic year, student, class and section.');
+      setMessage('Please select organization, coaching center, academic year, student, class and section.');
       return;
     }
 
@@ -395,7 +395,7 @@ export default function EnrollmentPage() {
 
   async function importCsv(file: File) {
     if (!organizationId || !schoolId) {
-      setMessage('Select organization and school before CSV import.');
+      setMessage('Select organization and coaching center before CSV import.');
       return;
     }
 
@@ -555,10 +555,10 @@ export default function EnrollmentPage() {
               onChange={setSchoolId}
               search={schoolSearch}
               onSearchChange={setSchoolSearch}
-              placeholder={!organizationId ? 'Select organization first' : 'Select school'}
-              searchPlaceholder="Search school"
+              placeholder={!organizationId ? 'Select organization first' : 'Select coaching center'}
+              searchPlaceholder="Search coaching center"
               disabled={!organizationId}
-              label="School"
+              label="Coaching Center"
             />
           </div>
           {(tenantLoading || optionLoading) && (

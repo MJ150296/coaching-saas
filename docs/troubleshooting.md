@@ -322,7 +322,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Allow only ADMIN and above
-  const allowedRoles = ['SUPER_ADMIN', 'ORGANIZATION_ADMIN', 'SCHOOL_ADMIN', 'ADMIN'];
+  const allowedRoles = ['SUPER_ADMIN', 'ORGANIZATION_ADMIN', 'COACHING_ADMIN', 'ADMIN'];
   if (!allowedRoles.includes(session.user?.role)) {
     return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
   }

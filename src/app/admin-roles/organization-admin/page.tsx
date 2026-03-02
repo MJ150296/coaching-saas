@@ -40,13 +40,18 @@ type DashboardOverviewResponse = {
 const roleBadgeVariant: Record<UserRole, 'blue' | 'green' | 'purple' | 'orange' | 'gray'> = {
   [UserRole.SUPER_ADMIN]: 'purple',
   [UserRole.ORGANIZATION_ADMIN]: 'blue',
-  [UserRole.SCHOOL_ADMIN]: 'blue',
+  [UserRole.COACHING_ADMIN]: 'blue',
   [UserRole.ADMIN]: 'blue',
   [UserRole.TEACHER]: 'green',
   [UserRole.STUDENT]: 'orange',
   [UserRole.PARENT]: 'gray',
   [UserRole.STAFF]: 'gray',
 };
+
+function formatRoleLabel(role: UserRole): string {
+  if (role === UserRole.COACHING_ADMIN) return 'COACHING ADMIN';
+  return role.replaceAll('_', ' ');
+}
 
 export default function OrganizationAdminDashboardPage() {
   const { status } = useSession();
@@ -116,18 +121,18 @@ export default function OrganizationAdminDashboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">Organization Admin Dashboard</h1>
               <p className="mt-2 text-sm text-cyan-50">
-                View school-level performance and manage operations within your organization.
+                View coaching center-level performance and manage operations within your organization.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge variant="green">Organization Scope</Badge>
-              <Badge variant="orange">All Schools</Badge>
+              <Badge variant="orange">All Coaching Centers</Badge>
             </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <StatCard title="Total Schools" value={stats.totalSchools} loading={loading} tone="blue" />
+          <StatCard title="Total Coaching Centers" value={stats.totalSchools} loading={loading} tone="blue" />
           <StatCard title="Total Users" value={stats.totalUsers} loading={loading} tone="green" />
           <StatCard title="Admin Users" value={stats.totalAdmins} loading={loading} tone="purple" />
           <StatCard title="Teachers" value={stats.totalTeachers} loading={loading} tone="orange" />
@@ -138,11 +143,11 @@ export default function OrganizationAdminDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
             <div className="mt-4 grid grid-cols-1 gap-2">
-              <QuickLink href="/admin-roles/schools" label="Manage Schools" />
+              <QuickLink href="/admin-roles/coaching-centers" label="Manage Coaching Centers" />
               <QuickLink href="/admin-roles/users" label="Manage Users" />
-              <QuickLink href="/admin-roles/academic" label="Manage Academic" />
-              <QuickLink href="/admin-roles/enrollments" label="Manage Enrollments" />
-              <QuickLink href="/admin-roles/fees" label="Manage Fees" />
+              <QuickLink href="/admin-roles/manage-setting/academic" label="Manage Academic" />
+              <QuickLink href="/admin-roles/manage-setting/enrollments" label="Manage Enrollments" />
+              <QuickLink href="/admin-roles/manage-setting/fees" label="Manage Fees" />
             </div>
           </div>
 
@@ -170,7 +175,7 @@ export default function OrganizationAdminDashboardPage() {
                       <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
                       <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
                       <td className="px-3 py-2 text-sm">
-                        <Badge variant={roleBadgeVariant[item.role]}>{item.role.replaceAll('_', ' ')}</Badge>
+                        <Badge variant={roleBadgeVariant[item.role]}>{formatRoleLabel(item.role)}</Badge>
                       </td>
                       <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                     </tr>
@@ -178,7 +183,7 @@ export default function OrganizationAdminDashboardPage() {
                   {recentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
-                        No users found across schools.
+                        No users found across coaching centers.
                       </td>
                     </tr>
                   )}

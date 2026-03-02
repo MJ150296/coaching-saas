@@ -16,6 +16,20 @@ import { MongoAcademicYearRepository, MongoClassMasterRepository, MongoSectionRe
 import { CreateAcademicYearUseCase, CreateClassMasterUseCase, CreateSectionUseCase, CreateSubjectAllocationUseCase } from '@/domains/academic-management/application/use-cases';
 import { MongoFeeTypeRepository, MongoFeePlanRepository, MongoFeePlanAssignmentRepository, MongoStudentFeeLedgerRepository, MongoPaymentRepository, MongoCreditNoteRepository } from '@/domains/fee-management/infrastructure/persistence/MongoFeeRepository';
 import { CreateFeeTypeUseCase, CreateFeePlanUseCase, AssignFeePlanUseCase, CreateStudentFeeLedgerUseCase, CreatePaymentUseCase, CreateCreditNoteUseCase } from '@/domains/fee-management/application/use-cases';
+import {
+  MongoCoachingProgramRepository,
+  MongoCoachingBatchRepository,
+  MongoCoachingEnrollmentRepository,
+  MongoCoachingSessionRepository,
+  MongoCoachingAttendanceRepository,
+} from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
+import {
+  CreateCoachingProgramUseCase,
+  CreateCoachingBatchUseCase,
+  CreateCoachingEnrollmentUseCase,
+  CreateCoachingSessionUseCase,
+  MarkCoachingAttendanceUseCase,
+} from '@/domains/coaching-management/application/use-cases';
 import { connectDB } from '@/shared/infrastructure/database';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { ServiceKeys } from './ServiceKeys';
@@ -147,6 +161,31 @@ export class AppBootstrap {
       logger.debug('Creating MongoCreditNoteRepository instance');
       return new MongoCreditNoteRepository();
     });
+
+    Container.registerSingleton(ServiceKeys.COACHING_PROGRAM_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingProgramRepository instance');
+      return new MongoCoachingProgramRepository();
+    });
+
+    Container.registerSingleton(ServiceKeys.COACHING_BATCH_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingBatchRepository instance');
+      return new MongoCoachingBatchRepository();
+    });
+
+    Container.registerSingleton(ServiceKeys.COACHING_ENROLLMENT_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingEnrollmentRepository instance');
+      return new MongoCoachingEnrollmentRepository();
+    });
+
+    Container.registerSingleton(ServiceKeys.COACHING_SESSION_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingSessionRepository instance');
+      return new MongoCoachingSessionRepository();
+    });
+
+    Container.registerSingleton(ServiceKeys.COACHING_ATTENDANCE_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingAttendanceRepository instance');
+      return new MongoCoachingAttendanceRepository();
+    });
   }
 
   /**
@@ -249,6 +288,36 @@ export class AppBootstrap {
       const repo = Container.resolve(ServiceKeys.CREDIT_NOTE_REPOSITORY);
       logger.debug('Creating CreateCreditNoteUseCase instance');
       return new CreateCreditNoteUseCase(repo);
+    });
+
+    Container.registerSingleton(ServiceKeys.CREATE_COACHING_PROGRAM_USE_CASE, () => {
+      const repo = Container.resolve(ServiceKeys.COACHING_PROGRAM_REPOSITORY);
+      logger.debug('Creating CreateCoachingProgramUseCase instance');
+      return new CreateCoachingProgramUseCase(repo);
+    });
+
+    Container.registerSingleton(ServiceKeys.CREATE_COACHING_BATCH_USE_CASE, () => {
+      const repo = Container.resolve(ServiceKeys.COACHING_BATCH_REPOSITORY);
+      logger.debug('Creating CreateCoachingBatchUseCase instance');
+      return new CreateCoachingBatchUseCase(repo);
+    });
+
+    Container.registerSingleton(ServiceKeys.CREATE_COACHING_ENROLLMENT_USE_CASE, () => {
+      const repo = Container.resolve(ServiceKeys.COACHING_ENROLLMENT_REPOSITORY);
+      logger.debug('Creating CreateCoachingEnrollmentUseCase instance');
+      return new CreateCoachingEnrollmentUseCase(repo);
+    });
+
+    Container.registerSingleton(ServiceKeys.CREATE_COACHING_SESSION_USE_CASE, () => {
+      const repo = Container.resolve(ServiceKeys.COACHING_SESSION_REPOSITORY);
+      logger.debug('Creating CreateCoachingSessionUseCase instance');
+      return new CreateCoachingSessionUseCase(repo);
+    });
+
+    Container.registerSingleton(ServiceKeys.MARK_COACHING_ATTENDANCE_USE_CASE, () => {
+      const repo = Container.resolve(ServiceKeys.COACHING_ATTENDANCE_REPOSITORY);
+      logger.debug('Creating MarkCoachingAttendanceUseCase instance');
+      return new MarkCoachingAttendanceUseCase(repo);
     });
   }
 
