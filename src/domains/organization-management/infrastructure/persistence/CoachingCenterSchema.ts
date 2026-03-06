@@ -117,11 +117,8 @@ coachingCenterSchema.index({ organizationId: 1, status: 1 });
 coachingCenterSchema.index({ organizationId: 1, createdAt: -1 });
 
 export const getOrCreateCoachingCenterModel = () => {
-  // @ts-ignore
   if (models.CoachingCenter) return models.CoachingCenter;
-  // @ts-ignore
   return model<ICoachingCenterDocument>('CoachingCenter', coachingCenterSchema);
 };
 
-// @ts-ignore
 export const CoachingCenterModel = getOrCreateCoachingCenterModel();

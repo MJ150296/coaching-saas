@@ -8,7 +8,7 @@ declare module 'next-auth' {
       id: string;
       role: UserRole;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       firstName?: string;
       lastName?: string;
     } & DefaultSession['user'];
@@ -18,7 +18,7 @@ declare module 'next-auth' {
     id: string;
     role: UserRole;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     firstName?: string;
     lastName?: string;
   }
@@ -29,7 +29,7 @@ declare module 'next-auth/jwt' {
     id?: string;
     role?: UserRole;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     firstName?: string;
     lastName?: string;
   }

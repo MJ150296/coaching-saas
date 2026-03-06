@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.ASSIGN_FEE_PLAN);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
 

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   const requestedRole = request.nextUrl.searchParams.get('role') || undefined;
   const requestedOrganizationId =
     request.nextUrl.searchParams.get('organizationId') || undefined;
-  const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+  const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
   const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
   const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
   const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
         phone: row.phone,
         organizationId: row.organizationId,
         schoolId: row.schoolId,
+        coachingCenterId: row.schoolId,
         isActive: row.isActive,
         emailVerified: row.emailVerified,
         createdAt: row.createdAt,
@@ -140,10 +141,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+  const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
   if (actor.getRole() === UserRole.SUPER_ADMIN && targetRole !== UserRole.SUPER_ADMIN) {
     if (!tenant.organizationId || !tenant.schoolId) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
   }
   assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
@@ -169,6 +170,7 @@ export async function POST(request: NextRequest) {
     role: targetRole,
     organizationId: tenant.organizationId,
     schoolId: tenant.schoolId,
+    coachingCenterId: tenant.coachingCenterId,
   });
 
   if (result.getIsFailure()) {
@@ -194,11 +196,11 @@ export async function POST(request: NextRequest) {
       }
       if (
         existingParent.getOrganizationId() !== tenant.organizationId ||
-        existingParent.getSchoolId() !== tenant.schoolId
+        existingParent.getCoachingCenterId() !== tenant.schoolId
       ) {
         await repo.delete(result.getValue().user.id).catch(() => undefined);
         return NextResponse.json(
-          { error: 'Parent email exists outside selected organization/school scope.' },
+          { error: 'Parent email exists outside selected organization/coaching-center scope.' },
           { status: 400 }
         );
       }
@@ -220,6 +222,7 @@ export async function POST(request: NextRequest) {
         role: UserRole.PARENT,
         organizationId: tenant.organizationId,
         schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
       });
 
       if (parentResult.getIsFailure()) {

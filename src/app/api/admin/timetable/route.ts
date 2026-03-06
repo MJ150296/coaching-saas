@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
       assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !classMasterId) {
       return NextResponse.json(
-        { error: 'organizationId, schoolId, academicYearId and classMasterId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
         { status: 400 }
       );
     }
@@ -245,9 +245,9 @@ export async function POST(request: NextRequest) {
     const actor = await requireActorWithPermission(Permission.CREATE_SUBJECT_ALLOCATION);
     const body = (await request.json()) as TimetableGenerationPayload;
 
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
 
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
 
     if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !classMasterId) {
       return NextResponse.json(
-        { error: 'organizationId, schoolId, academicYearId and classMasterId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
         { status: 400 }
       );
     }

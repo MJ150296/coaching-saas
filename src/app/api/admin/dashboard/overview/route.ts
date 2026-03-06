@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
-import { SchoolModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { connectDB } from '@/shared/infrastructure/database';
 import { getLogger } from '@/shared/infrastructure/logger';
@@ -30,7 +30,7 @@ export async function GET() {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
+    const schoolId = actor.getCoachingCenterId();
     const userScopeQuery: Record<string, unknown> = {};
     const schoolScopeQuery: Record<string, unknown> = {};
 
@@ -44,7 +44,7 @@ export async function GET() {
 
     if (role === UserRole.COACHING_ADMIN || role === UserRole.ADMIN) {
       if (!schoolId) {
-        return NextResponse.json({ error: 'Actor school scope missing' }, { status: 400 });
+        return NextResponse.json({ error: 'Actor coaching center scope missing' }, { status: 400 });
       }
       userScopeQuery.schoolId = schoolId;
       schoolScopeQuery._id = schoolId;
@@ -95,7 +95,7 @@ export async function GET() {
       countByRole(UserRole.TEACHER),
       countByRole(UserRole.STUDENT),
       countByRole(UserRole.STAFF),
-      SchoolModel.countDocuments(schoolScopeQuery),
+      CoachingCenterModel.countDocuments(schoolScopeQuery),
     ]);
 
     const recentUsersStart = Date.now();

@@ -4,7 +4,7 @@ export type FeeFrequency = 'ONE_TIME' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
 export interface FeeTypeProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   amount: number;
   frequency: FeeFrequency;
@@ -14,7 +14,7 @@ export interface FeeTypeProps {
 
 export class FeeType extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private name: string;
   private amount: number;
   private frequency: FeeFrequency;
@@ -24,7 +24,7 @@ export class FeeType extends AggregateRoot<string> {
   constructor(id: string, props: FeeTypeProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.name = props.name;
     this.amount = props.amount;
     this.frequency = props.frequency;
@@ -40,8 +40,8 @@ export class FeeType extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getName(): string {

@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = normalizeId(request.nextUrl.searchParams.get('organizationId') || undefined);
-    const requestedSchoolId = normalizeId(request.nextUrl.searchParams.get('schoolId') || undefined);
+    const requestedSchoolId = normalizeId(request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined);
     const academicYearId = normalizeId(request.nextUrl.searchParams.get('academicYearId') || undefined);
     const classMasterId = normalizeId(request.nextUrl.searchParams.get('classMasterId') || undefined);
     const sectionId = normalizeId(request.nextUrl.searchParams.get('sectionId') || undefined);
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!tenant.organizationId || !tenant.schoolId) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
 
     await initializeApp();
@@ -121,9 +121,9 @@ export async function POST(request: NextRequest) {
     const actor = await requireActorWithPermission(Permission.MANAGE_STUDENT_ENROLLMENT);
     const body = await request.json();
 
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
 
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !studentId || !classMasterId || !sectionId) {
       return NextResponse.json(
-        { error: 'organizationId, schoolId, academicYearId, studentId, classMasterId and sectionId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId, studentId, classMasterId and sectionId are required' },
         { status: 400 }
       );
     }
@@ -224,9 +224,9 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     const id = normalizeId(body.id);
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
 
@@ -238,7 +238,7 @@ export async function PUT(request: NextRequest) {
 
     if (!id || !tenant.organizationId || !tenant.schoolId || !academicYearId || !studentId || !classMasterId || !sectionId) {
       return NextResponse.json(
-        { error: 'id, organizationId, schoolId, academicYearId, studentId, classMasterId and sectionId are required' },
+        { error: 'id, organizationId, coachingCenterId, academicYearId, studentId, classMasterId and sectionId are required' },
         { status: 400 }
       );
     }
@@ -345,7 +345,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.MANAGE_STUDENT_ENROLLMENT);
     const requestedOrganizationId = normalizeId(request.nextUrl.searchParams.get('organizationId') || undefined);
-    const requestedSchoolId = normalizeId(request.nextUrl.searchParams.get('schoolId') || undefined);
+    const requestedSchoolId = normalizeId(request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined);
     const id = normalizeId(request.nextUrl.searchParams.get('id') || undefined);
 
     if (!id) {
@@ -354,7 +354,7 @@ export async function DELETE(request: NextRequest) {
 
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
 

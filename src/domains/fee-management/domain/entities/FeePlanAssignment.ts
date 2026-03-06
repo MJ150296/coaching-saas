@@ -2,7 +2,7 @@ import { AggregateRoot } from '@/shared/domain';
 
 export interface FeePlanAssignmentProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   feePlanId: string;
   classMasterId: string;
@@ -11,7 +11,7 @@ export interface FeePlanAssignmentProps {
 
 export class FeePlanAssignment extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private academicYearId: string;
   private feePlanId: string;
   private classMasterId: string;
@@ -20,7 +20,7 @@ export class FeePlanAssignment extends AggregateRoot<string> {
   constructor(id: string, props: FeePlanAssignmentProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.academicYearId = props.academicYearId;
     this.feePlanId = props.feePlanId;
     this.classMasterId = props.classMasterId;
@@ -35,8 +35,8 @@ export class FeePlanAssignment extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getAcademicYearId(): string {

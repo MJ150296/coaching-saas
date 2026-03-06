@@ -22,8 +22,8 @@
 2. **Wrong connection string**
    ```bash
    # Verify in .env.local
-   # For local: mongodb://localhost:27017/school-saas
-   # For Atlas: mongodb+srv://user:password@cluster.mongodb.net/school-saas
+   # For local: mongodb://localhost:27017/coaching-saas
+   # For Atlas: mongodb+srv://user:password@cluster.mongodb.net/coaching-saas
    # (without angle brackets or default values)
    ```
 

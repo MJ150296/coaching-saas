@@ -2,7 +2,7 @@ import { AggregateRoot } from '@/shared/domain';
 
 export interface CoachingBatchProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   name: string;
   facultyId?: string;
@@ -15,7 +15,7 @@ export interface CoachingBatchProps {
 
 export class CoachingBatch extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private programId: string;
   private name: string;
   private facultyId?: string;
@@ -28,7 +28,7 @@ export class CoachingBatch extends AggregateRoot<string> {
   constructor(id: string, props: CoachingBatchProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.programId = props.programId;
     this.name = props.name;
     this.facultyId = props.facultyId;
@@ -65,8 +65,8 @@ export class CoachingBatch extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getProgramId(): string {

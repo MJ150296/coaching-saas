@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
     const requestedProgramId = request.nextUrl.searchParams.get('programId') || undefined;
     const requestedBatchId = request.nextUrl.searchParams.get('batchId') || undefined;
     const sessionDateFrom = parseDate(request.nextUrl.searchParams.get('sessionDateFrom'));
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const items = filtered.map((session) => ({
       id: session.getId(),
       organizationId: session.getOrganizationId(),
-      schoolId: session.getSchoolId(),
+      coachingCenterId: session.getCoachingCenterId(),
       programId: session.getProgramId(),
       batchId: session.getBatchId(),
       topic: session.getTopic(),
@@ -99,10 +99,10 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.MANAGE_COACHING);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
 
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
-      return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+      return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
 
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);

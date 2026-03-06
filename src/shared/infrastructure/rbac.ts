@@ -3,7 +3,7 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 export enum Permission {
   CREATE_USER = 'CREATE_USER',
   CREATE_ORGANIZATION = 'CREATE_ORGANIZATION',
-  CREATE_SCHOOL = 'CREATE_SCHOOL',
+  CREATE_COACHING_CENTER = 'CREATE_COACHING_CENTER',
   CREATE_ACADEMIC_YEAR = 'CREATE_ACADEMIC_YEAR',
   CREATE_CLASS_MASTER = 'CREATE_CLASS_MASTER',
   CREATE_SECTION = 'CREATE_SECTION',
@@ -22,7 +22,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.SUPER_ADMIN]: Object.values(Permission),
   [UserRole.ORGANIZATION_ADMIN]: [
     Permission.CREATE_USER,
-    Permission.CREATE_SCHOOL,
+    Permission.CREATE_COACHING_CENTER,
     Permission.CREATE_ACADEMIC_YEAR,
     Permission.CREATE_CLASS_MASTER,
     Permission.CREATE_SECTION,

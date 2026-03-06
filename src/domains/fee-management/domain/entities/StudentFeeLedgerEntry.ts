@@ -14,7 +14,7 @@ export interface LedgerDiscount {
 
 export interface StudentFeeLedgerEntryProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   feePlanId?: string;
@@ -28,7 +28,7 @@ export interface StudentFeeLedgerEntryProps {
 
 export class StudentFeeLedgerEntry extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private academicYearId: string;
   private studentId: string;
   private feePlanId?: string;
@@ -42,7 +42,7 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
   constructor(id: string, props: StudentFeeLedgerEntryProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.academicYearId = props.academicYearId;
     this.studentId = props.studentId;
     this.feePlanId = props.feePlanId;
@@ -62,8 +62,8 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getAcademicYearId(): string {

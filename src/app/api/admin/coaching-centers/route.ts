@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { CreateSchoolUseCase } from '@/domains/organization-management/application/use-cases';
-import { MongoSchoolRepository } from '@/domains/organization-management/infrastructure/persistence';
+import { CreateCoachingCenterUseCase } from '@/domains/organization-management/application/use-cases';
+import { MongoCoachingCenterRepository } from '@/domains/organization-management/infrastructure/persistence';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { SchoolModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
 
-const SCHOOL_CACHE_TTL_MS = 15_000;
-const SCHOOL_CACHE_PREFIX = 'api:admin:schools:';
+const COACHING_CENTER_CACHE_TTL_MS = 15_000;
+const COACHING_CENTER_CACHE_PREFIX = 'api:admin:coaching-centers:';
 
 export async function GET(request: NextRequest) {
   const logger = getLogger();
@@ -35,10 +35,10 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
-    const cacheKey = `${SCHOOL_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getSchoolId() ?? ''}:${requestedOrganizationId ?? ''}`;
+    const cacheKey = `${COACHING_CENTER_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getCoachingCenterId() ?? ''}:${requestedOrganizationId ?? ''}`;
     const cached = getCachedValue<unknown[]>(cacheKey);
     if (cached) {
-      logger.debug('GET /api/admin/schools cache hit', { durationMs: Date.now() - start, role });
+      logger.debug('GET /api/admin/coaching-centers cache hit', { durationMs: Date.now() - start, role });
       return NextResponse.json(cached, {
         status: 200,
         headers: {
@@ -69,15 +69,15 @@ export async function GET(request: NextRequest) {
     }> = [];
     if (role === UserRole.SUPER_ADMIN) {
       if (requestedOrganizationId) {
-        const rows = await SchoolModel.find({ organizationId: requestedOrganizationId })
+        const rows = await CoachingCenterModel.find({ organizationId: requestedOrganizationId })
           .sort({ createdAt: -1 })
-          .select('_id organizationId schoolName schoolCode status address contactInfo')
+          .select('_id organizationId coachingCenterName coachingCenterCode status address contactInfo')
           .lean<
             Array<{
               _id: string;
               organizationId: string;
-              schoolName: string;
-              schoolCode: string;
+              coachingCenterName: string;
+              coachingCenterCode: string;
               status: 'active' | 'inactive';
               address: {
                 street: string;
@@ -95,22 +95,22 @@ export async function GET(request: NextRequest) {
         data = rows.map((row) => ({
           id: row._id,
           organizationId: row.organizationId,
-          name: row.schoolName,
-          code: row.schoolCode,
+          name: row.coachingCenterName,
+          code: row.coachingCenterCode,
           status: row.status,
           address: row.address,
           contactInfo: row.contactInfo,
         }));
       } else {
-        const rows = await SchoolModel.find({})
+        const rows = await CoachingCenterModel.find({})
           .sort({ createdAt: -1 })
-          .select('_id organizationId schoolName schoolCode status address contactInfo')
+          .select('_id organizationId coachingCenterName coachingCenterCode status address contactInfo')
           .lean<
             Array<{
               _id: string;
               organizationId: string;
-              schoolName: string;
-              schoolCode: string;
+              coachingCenterName: string;
+              coachingCenterCode: string;
               status: 'active' | 'inactive';
               address: {
                 street: string;
@@ -128,8 +128,8 @@ export async function GET(request: NextRequest) {
         data = rows.map((row) => ({
           id: row._id,
           organizationId: row.organizationId,
-          name: row.schoolName,
-          code: row.schoolCode,
+          name: row.coachingCenterName,
+          code: row.coachingCenterCode,
           status: row.status,
           address: row.address,
           contactInfo: row.contactInfo,
@@ -139,15 +139,15 @@ export async function GET(request: NextRequest) {
       if (!actor.getOrganizationId()) {
         return NextResponse.json([], { status: 200 });
       }
-      const rows = await SchoolModel.find({ organizationId: actor.getOrganizationId() })
+      const rows = await CoachingCenterModel.find({ organizationId: actor.getOrganizationId() })
         .sort({ createdAt: -1 })
-        .select('_id organizationId schoolName schoolCode status address contactInfo')
+        .select('_id organizationId coachingCenterName coachingCenterCode status address contactInfo')
         .lean<
           Array<{
             _id: string;
             organizationId: string;
-            schoolName: string;
-            schoolCode: string;
+            coachingCenterName: string;
+            coachingCenterCode: string;
             status: 'active' | 'inactive';
             address: {
               street: string;
@@ -165,23 +165,23 @@ export async function GET(request: NextRequest) {
       data = rows.map((row) => ({
         id: row._id,
         organizationId: row.organizationId,
-        name: row.schoolName,
-        code: row.schoolCode,
+        name: row.coachingCenterName,
+        code: row.coachingCenterCode,
         status: row.status,
         address: row.address,
         contactInfo: row.contactInfo,
       }));
     } else if (role === UserRole.COACHING_ADMIN) {
-      if (!actor.getSchoolId()) {
+      if (!actor.getCoachingCenterId()) {
         return NextResponse.json([], { status: 200 });
       }
-      const row = await SchoolModel.findById(actor.getSchoolId())
-        .select('_id organizationId schoolName schoolCode status address contactInfo')
+      const row = await CoachingCenterModel.findById(actor.getCoachingCenterId())
+        .select('_id organizationId coachingCenterName coachingCenterCode status address contactInfo')
         .lean<{
           _id: string;
           organizationId: string;
-          schoolName: string;
-          schoolCode: string;
+          coachingCenterName: string;
+          coachingCenterCode: string;
           status: 'active' | 'inactive';
           address: {
             street: string;
@@ -199,8 +199,8 @@ export async function GET(request: NextRequest) {
         data = [{
           id: row._id,
           organizationId: row.organizationId,
-          name: row.schoolName,
-          code: row.schoolCode,
+          name: row.coachingCenterName,
+          code: row.coachingCenterCode,
           status: row.status,
           address: row.address,
           contactInfo: row.contactInfo,
@@ -208,8 +208,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    setCachedValue(cacheKey, data, SCHOOL_CACHE_TTL_MS);
-    logger.info('GET /api/admin/schools', {
+    setCachedValue(cacheKey, data, COACHING_CENTER_CACHE_TTL_MS);
+    logger.info('GET /api/admin/coaching-centers', {
       durationMs: Date.now() - start,
       repoResolveMs: repoStart - start,
       queryMs: Date.now() - repoStart,
@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
-    logger.error('GET /api/admin/schools failed', error instanceof Error ? error : undefined, {
+    logger.error('GET /api/admin/coaching-centers failed', error instanceof Error ? error : undefined, {
       durationMs: Date.now() - start,
     });
     return NextResponse.json({ error: message }, { status: 500 });
@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const actor = await requireActorWithPermission(Permission.CREATE_SCHOOL);
+    const actor = await requireActorWithPermission(Permission.CREATE_COACHING_CENTER);
     const body = await request.json();
     const organizationId = body.organizationId ?? actor.getOrganizationId();
 
@@ -248,8 +248,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const useCase = await initializeAppAndGetService<CreateSchoolUseCase>(
-      ServiceKeys.CREATE_SCHOOL_USE_CASE
+    const useCase = await initializeAppAndGetService<CreateCoachingCenterUseCase>(
+      ServiceKeys.CREATE_COACHING_CENTER_USE_CASE
     );
     const result = await useCase.execute({ ...body, organizationId });
 
@@ -260,14 +260,15 @@ export async function POST(request: NextRequest) {
     await logAuditEvent({
       actorId: actor.getId(),
       actorRole: actor.getRole(),
-      action: 'CREATE_SCHOOL',
-      targetId: result.getValue().schoolId,
+      action: 'CREATE_COACHING_CENTER',
+      targetId: result.getValue().coachingCenterId,
       organizationId,
-      schoolId: result.getValue().schoolId,
+      schoolId: result.getValue().coachingCenterId,
+      coachingCenterId: result.getValue().coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
-    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix(COACHING_CENTER_CACHE_PREFIX);
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json(result.getValue(), { status: 201 });
@@ -280,19 +281,19 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const actor = await requireActorWithPermission(Permission.CREATE_SCHOOL);
+    const actor = await requireActorWithPermission(Permission.CREATE_COACHING_CENTER);
     const body = await request.json();
     const id = typeof body.id === 'string' ? body.id.trim() : '';
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const repo = await initializeAppAndGetService<MongoSchoolRepository>(
-      ServiceKeys.SCHOOL_REPOSITORY
+    const repo = await initializeAppAndGetService<MongoCoachingCenterRepository>(
+      ServiceKeys.COACHING_CENTER_REPOSITORY
     );
     const existing = await repo.findById(id);
     if (!existing) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Coaching center not found' }, { status: 404 });
     }
 
     const organizationId = (body.organizationId ?? existing.getOrganizationId()) as string;
@@ -300,8 +301,20 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const schoolName = typeof body.schoolName === 'string' ? body.schoolName.trim() : '';
-    const schoolCode = typeof body.schoolCode === 'string' ? body.schoolCode.trim().toUpperCase() : '';
+    const centerNameRaw =
+      typeof body.coachingCenterName === 'string'
+        ? body.coachingCenterName
+        : typeof body.schoolName === 'string'
+          ? body.schoolName
+          : '';
+    const centerCodeRaw =
+      typeof body.coachingCenterCode === 'string'
+        ? body.coachingCenterCode
+        : typeof body.schoolCode === 'string'
+          ? body.schoolCode
+          : '';
+    const schoolName = centerNameRaw.trim();
+    const schoolCode = centerCodeRaw.trim().toUpperCase();
     const street = typeof body.street === 'string' ? body.street.trim() : '';
     const city = typeof body.city === 'string' ? body.city.trim() : '';
     const state = typeof body.state === 'string' ? body.state.trim() : '';
@@ -313,19 +326,19 @@ export async function PUT(request: NextRequest) {
 
     if (!organizationId || !schoolName || !schoolCode || !street || !city || !state || !zipCode || !contactEmail || !contactPhone) {
       return NextResponse.json(
-        { error: 'organizationId, schoolName, schoolCode, street, city, state, zipCode, contactEmail and contactPhone are required' },
+        { error: 'organizationId, coachingCenterName, coachingCenterCode, street, city, state, zipCode, contactEmail and contactPhone are required' },
         { status: 400 }
       );
     }
 
     try {
-      await SchoolModel.updateOne(
+      await CoachingCenterModel.updateOne(
         { _id: id },
         {
           $set: {
             organizationId,
-            schoolName,
-            schoolCode,
+            coachingCenterName: schoolName,
+            coachingCenterCode: schoolCode,
             address: {
               street,
               city,
@@ -348,7 +361,7 @@ export async function PUT(request: NextRequest) {
         'code' in error &&
         (error as { code?: unknown }).code === 11000;
       if (duplicateCode) {
-        return NextResponse.json({ error: 'School code already exists' }, { status: 409 });
+        return NextResponse.json({ error: 'Coaching center code already exists' }, { status: 409 });
       }
       throw error;
     }
@@ -356,14 +369,15 @@ export async function PUT(request: NextRequest) {
     await logAuditEvent({
       actorId: actor.getId(),
       actorRole: actor.getRole(),
-      action: 'UPDATE_SCHOOL',
+      action: 'UPDATE_COACHING_CENTER',
       targetId: id,
       organizationId,
       schoolId: id,
+      coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
-    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix(COACHING_CENTER_CACHE_PREFIX);
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
@@ -376,18 +390,18 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const actor = await requireActorWithPermission(Permission.CREATE_SCHOOL);
+    const actor = await requireActorWithPermission(Permission.CREATE_COACHING_CENTER);
     const id = request.nextUrl.searchParams.get('id')?.trim();
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const repo = await initializeAppAndGetService<MongoSchoolRepository>(
-      ServiceKeys.SCHOOL_REPOSITORY
+    const repo = await initializeAppAndGetService<MongoCoachingCenterRepository>(
+      ServiceKeys.COACHING_CENTER_REPOSITORY
     );
     const existing = await repo.findById(id);
     if (!existing) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Coaching center not found' }, { status: 404 });
     }
 
     if (
@@ -402,14 +416,15 @@ export async function DELETE(request: NextRequest) {
     await logAuditEvent({
       actorId: actor.getId(),
       actorRole: actor.getRole(),
-      action: 'DELETE_SCHOOL',
+      action: 'DELETE_COACHING_CENTER',
       targetId: id,
       organizationId: existing.getOrganizationId(),
       schoolId: id,
+      coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
-    invalidateCacheByPrefix(SCHOOL_CACHE_PREFIX);
+    invalidateCacheByPrefix(COACHING_CENTER_CACHE_PREFIX);
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });

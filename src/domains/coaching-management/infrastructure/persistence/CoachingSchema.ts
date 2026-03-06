@@ -7,7 +7,7 @@ import { CoachingAttendanceStatus } from '../../domain/entities/CoachingAttendan
 export interface ICoachingProgramDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   name: string;
   code?: string;
@@ -22,7 +22,7 @@ export interface ICoachingProgramDocument {
 export interface ICoachingBatchDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   name: string;
   facultyId?: string;
@@ -38,7 +38,7 @@ export interface ICoachingBatchDocument {
 export interface ICoachingEnrollmentDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   studentId: string;
@@ -51,7 +51,7 @@ export interface ICoachingEnrollmentDocument {
 export interface ICoachingSessionDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   topic: string;
@@ -67,7 +67,7 @@ export interface ICoachingSessionDocument {
 export interface ICoachingAttendanceDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   sessionId: string;
@@ -83,7 +83,7 @@ const coachingProgramSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     academicYearId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     code: { type: String },
@@ -104,7 +104,7 @@ const coachingBatchSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     programId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     facultyId: { type: String },
@@ -121,7 +121,7 @@ const coachingEnrollmentSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     programId: { type: String, required: true, index: true },
     batchId: { type: String, required: true, index: true },
     studentId: { type: String, required: true, index: true },
@@ -140,7 +140,7 @@ const coachingSessionSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     programId: { type: String, required: true, index: true },
     batchId: { type: String, required: true, index: true },
     topic: { type: String, required: true },
@@ -162,7 +162,7 @@ const coachingAttendanceSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     programId: { type: String, required: true, index: true },
     batchId: { type: String, required: true, index: true },
     sessionId: { type: String, required: true, index: true },
@@ -179,17 +179,17 @@ const coachingAttendanceSchema = new Schema(
 );
 
 coachingProgramSchema.index(
-  { organizationId: 1, schoolId: 1, academicYearId: 1, code: 1 },
+  { organizationId: 1, coachingCenterId: 1, academicYearId: 1, code: 1 },
   { unique: true, partialFilterExpression: { code: { $exists: true, $type: 'string' } } }
 );
 
 coachingEnrollmentSchema.index(
-  { organizationId: 1, schoolId: 1, batchId: 1, studentId: 1 },
+  { organizationId: 1, coachingCenterId: 1, batchId: 1, studentId: 1 },
   { unique: true }
 );
 
 coachingAttendanceSchema.index(
-  { organizationId: 1, schoolId: 1, sessionId: 1, studentId: 1 },
+  { organizationId: 1, coachingCenterId: 1, sessionId: 1, studentId: 1 },
   { unique: true }
 );
 

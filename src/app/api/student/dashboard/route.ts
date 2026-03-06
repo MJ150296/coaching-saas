@@ -105,11 +105,11 @@ export async function GET() {
 
     await connectDB();
 
-    const activeYear = await AcademicYearModel.findOne({ organizationId, schoolId, isActive: true })
+    const activeYear = await AcademicYearModel.findOne({ organizationId, coachingCenterId, isActive: true })
       .sort({ startDate: -1 })
       .lean<{ _id: string } | null>();
 
-    const primaryQuery: Record<string, string> = { organizationId, schoolId, studentId };
+    const primaryQuery: Record<string, string> = { organizationId, coachingCenterId, studentId };
     if (activeYear?._id) {
       primaryQuery.academicYearId = activeYear._id;
     }
@@ -118,7 +118,7 @@ export async function GET() {
       (await StudentEnrollmentModel.findOne(primaryQuery)
         .sort({ updatedAt: -1, createdAt: -1 })
         .lean<EnrollmentDoc | null>()) ??
-      (await StudentEnrollmentModel.findOne({ organizationId, schoolId, studentId })
+      (await StudentEnrollmentModel.findOne({ organizationId, coachingCenterId, studentId })
         .sort({ createdAt: -1 })
         .lean<EnrollmentDoc | null>());
 

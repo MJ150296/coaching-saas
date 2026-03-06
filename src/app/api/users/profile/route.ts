@@ -43,6 +43,7 @@ export async function GET() {
       role: user.role,
       organizationId: user.organizationId,
       schoolId: user.schoolId,
+      coachingCenterId: user.schoolId,
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
@@ -116,7 +117,7 @@ export async function PATCH(request: NextRequest) {
       targetId: actor.getId(),
       targetRole: actor.getRole(),
       organizationId: actor.getOrganizationId(),
-      schoolId: actor.getSchoolId(),
+      schoolId: actor.getCoachingCenterId(),
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
@@ -131,6 +132,7 @@ export async function PATCH(request: NextRequest) {
         role: user.role,
         organizationId: user.organizationId,
         schoolId: user.schoolId,
+        coachingCenterId: user.schoolId,
         isActive: user.isActive,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,

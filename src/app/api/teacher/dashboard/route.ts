@@ -68,7 +68,7 @@ export async function GET() {
     await connectDB();
 
     const [activeYear, allocations, todayEntries] = await Promise.all([
-      AcademicYearModel.findOne({ organizationId, schoolId, isActive: true }).sort({ startDate: -1 }).lean(),
+      AcademicYearModel.findOne({ organizationId, coachingCenterId, isActive: true }).sort({ startDate: -1 }).lean(),
       SubjectAllocationModel.find({
         organizationId,
         schoolId,

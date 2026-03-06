@@ -2,7 +2,7 @@
 
 ## DDD (Domain-Driven Design) Architecture
 
-This project follows Domain-Driven Design principles to create a scalable, maintainable enterprise-grade school management system.
+This project follows Domain-Driven Design principles to create a scalable, maintainable enterprise-grade coaching management system.
 
 ### Directory Structure
 
@@ -22,7 +22,7 @@ src/
 │   │   └── infrastructure/           # Infrastructure implementation
 │   │       ├── persistence/         # MongoDB repository implementations
 │   │       └── external-services/   # External service integrations
-│   └── organization-management/      # Organization & school domain
+│   └── organization-management/      # Organization & coaching-center domain
 │   ├── academic-management/          # Academic year, class, section, subjects
 │   └── fee-management/               # Fee types, plans, ledger, payments
 ├── shared/                           # Shared code across domains
@@ -49,7 +49,7 @@ src/
 └── app/                             # Next.js app directory
     ├── api/                         # API routes
     │   ├── auth/                    # Authentication endpoints
-    │   ├── admin/                   # Admin APIs (orgs, schools, users)
+    │   ├── admin/                   # Admin APIs (orgs, coaching-centers, users)
     │   └── users/                   # User profile endpoint
     └── ...                          # UI components and pages
 ```
@@ -222,7 +222,7 @@ Examples you can add later:
 ## Environment Variables
 
 ```
-MONGODB_URI=mongodb://localhost:27017/school-saas
+MONGODB_URI=mongodb://localhost:27017/coaching-saas
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key-here-change-in-production
 ```

@@ -14,7 +14,7 @@ export interface IUserDocument {
   phone?: string;
   role: UserRole;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: Date;
@@ -58,7 +58,7 @@ const userSchema = new Schema<IUserDocument>(
       type: String,
       index: true,
     },
-    schoolId: {
+    coachingCenterId: {
       type: String,
       index: true,
     },
@@ -80,8 +80,8 @@ const userSchema = new Schema<IUserDocument>(
 // Note: email index is created automatically by unique: true
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
-userSchema.index({ organizationId: 1, schoolId: 1, role: 1 });
-userSchema.index({ organizationId: 1, schoolId: 1, createdAt: -1 });
+userSchema.index({ organizationId: 1, coachingCenterId: 1, role: 1 });
+userSchema.index({ organizationId: 1, coachingCenterId: 1, createdAt: -1 });
 userSchema.index({ organizationId: 1, role: 1 });
 
 // Get or create the User model (handles Next.js hot reload)

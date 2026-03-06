@@ -1,6 +1,6 @@
 import type { Repository } from '@/shared/domain';
 import { Organization } from '../entities/Organization';
-import { School } from '../entities/School';
+import { CoachingCenter } from '../entities/CoachingCenter';
 
 export interface OrganizationRepository extends Repository<Organization, string> {
   findByName(name: string): Promise<Organization | null>;
@@ -8,9 +8,9 @@ export interface OrganizationRepository extends Repository<Organization, string>
   findActive(): Promise<Organization[]>;
 }
 
-export interface SchoolRepository extends Repository<School, string> {
-  findByOrganizationId(organizationId: string): Promise<School[]>;
-  findByCode(code: string): Promise<School | null>;
-  findActive(): Promise<School[]>;
-  findByOrganizationIdAndActive(organizationId: string): Promise<School[]>;
+export interface CoachingCenterRepository extends Repository<CoachingCenter, string> {
+  findByOrganizationId(organizationId: string): Promise<CoachingCenter[]>;
+  findByCode(code: string): Promise<CoachingCenter | null>;
+  findActive(): Promise<CoachingCenter[]>;
+  findByOrganizationIdAndActive(organizationId: string): Promise<CoachingCenter[]>;
 }

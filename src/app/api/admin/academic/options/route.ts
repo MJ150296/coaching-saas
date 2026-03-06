@@ -37,14 +37,14 @@ export async function GET(request: NextRequest) {
 
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
     const includeStudents = request.nextUrl.searchParams.get('includeStudents') === 'true';
     const includeFees = request.nextUrl.searchParams.get('includeFees') === 'true';
     const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
 
     if (!tenant.organizationId || !tenant.schoolId) {
       return NextResponse.json(
-        { error: 'organizationId and schoolId are required' },
+        { error: 'organizationId and coachingCenterId are required' },
         { status: 400 }
       );
     }

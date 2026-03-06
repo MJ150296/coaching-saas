@@ -22,7 +22,7 @@ interface NavItem {
 type IconName =
   | 'dashboard'
   | 'organization'
-  | 'school'
+  | 'coaching-center'
   | 'users'
   | 'academic'
   | 'coaching'
@@ -86,7 +86,7 @@ const navItems: NavItem[] = [
   {
     label: 'Manage Coaching Centers',
     href: '/admin-roles/coaching-centers',
-    icon: 'school',
+    icon: 'coaching-center',
     allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN],
     section: 'manage',
   },
@@ -705,10 +705,10 @@ function SidebarIcon({ name, active }: { name: IconName; active: boolean }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 21V7l8-4 8 4v14M9 21v-4h6v4" />
         </svg>
       );
-    case 'school':
+    case 'coaching-center':
       return (
         <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l9 4-9 4-9-4 9-4zm0 8v10M7 21h10" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l9-4-9-4-9 4 9 4zm0 8v10M7 21h10" />
         </svg>
       );
     case 'users':

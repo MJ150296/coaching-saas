@@ -482,7 +482,7 @@ export default function OrganizationsPage() {
               <DialogHeader>
                 <DialogTitle>Delete Organization</DialogTitle>
                 <DialogDescription>
-                  This action cannot be undone. If the organization has schools, deletion will be blocked.
+                  This action cannot be undone. If the organization has coaching centers, deletion will be blocked.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

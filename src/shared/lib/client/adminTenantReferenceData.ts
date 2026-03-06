@@ -3,7 +3,7 @@ export type AdminOrganizationOption = {
   name: string;
 };
 
-export type AdminSchoolOption = {
+export type AdminCoachingCenterOption = {
   id: string;
   name: string;
   organizationId: string;
@@ -19,14 +19,14 @@ const TENANT_CACHE_TTL_MS = 60_000;
 let organizationCache: CacheEntry<AdminOrganizationOption[]> | null = null;
 let organizationPromise: Promise<AdminOrganizationOption[]> | null = null;
 
-const schoolCache = new Map<string, CacheEntry<AdminSchoolOption[]>>();
-const schoolPromises = new Map<string, Promise<AdminSchoolOption[]>>();
+const coachingCenterCache = new Map<string, CacheEntry<AdminCoachingCenterOption[]>>();
+const coachingCenterPromises = new Map<string, Promise<AdminCoachingCenterOption[]>>();
 
 function now(): number {
   return Date.now();
 }
 
-function getSchoolCacheKey(organizationId?: string): string {
+function getCoachingCenterCacheKey(organizationId?: string): string {
   return organizationId?.trim() || '__ALL__';
 }
 
@@ -72,18 +72,18 @@ export async function getAdminOrganizations(options?: {
   return organizationPromise;
 }
 
-export async function getAdminSchools(
+export async function getAdminCoachingCenters(
   organizationId?: string,
   options?: { force?: boolean }
-): Promise<AdminSchoolOption[]> {
+): Promise<AdminCoachingCenterOption[]> {
   const force = Boolean(options?.force);
-  const key = getSchoolCacheKey(organizationId);
-  const current = schoolCache.get(key);
+  const key = getCoachingCenterCacheKey(organizationId);
+  const current = coachingCenterCache.get(key);
   if (!force && current && current.expiresAt > now()) {
     return current.data;
   }
 
-  const inFlight = schoolPromises.get(key);
+  const inFlight = coachingCenterPromises.get(key);
   if (!force && inFlight) {
     return inFlight;
   }
@@ -95,12 +95,12 @@ export async function getAdminSchools(
         params.set('organizationId', organizationId.trim());
       }
 
-      const response = await fetch(`/api/admin/schools?${params.toString()}`);
+      const response = await fetch(`/api/admin/coaching-centers?${params.toString()}`);
       const data = (await response.json()) as
         | Array<{ id?: string; name?: string; organizationId?: string }>
         | { error?: string };
       if (!response.ok || !Array.isArray(data)) {
-        throw new Error((data as { error?: string })?.error || 'Failed to load schools');
+        throw new Error((data as { error?: string })?.error || 'Failed to load coaching centers');
       }
 
       const items = data
@@ -116,18 +116,18 @@ export async function getAdminSchools(
           organizationId: item.organizationId as string,
         }));
 
-      schoolCache.set(key, {
+      coachingCenterCache.set(key, {
         data: items,
         expiresAt: now() + TENANT_CACHE_TTL_MS,
       });
 
       return items;
     } finally {
-      schoolPromises.delete(key);
+      coachingCenterPromises.delete(key);
     }
   })();
 
-  schoolPromises.set(key, request);
+  coachingCenterPromises.set(key, request);
   return request;
 }
 
@@ -136,19 +136,19 @@ export function invalidateAdminOrganizations(): void {
   organizationPromise = null;
 }
 
-export function invalidateAdminSchools(organizationId?: string): void {
+export function invalidateAdminCoachingCenters(organizationId?: string): void {
   if (!organizationId) {
-    schoolCache.clear();
-    schoolPromises.clear();
+    coachingCenterCache.clear();
+    coachingCenterPromises.clear();
     return;
   }
 
-  const key = getSchoolCacheKey(organizationId);
-  schoolCache.delete(key);
-  schoolPromises.delete(key);
+  const key = getCoachingCenterCacheKey(organizationId);
+  coachingCenterCache.delete(key);
+  coachingCenterPromises.delete(key);
 }
 
 export function invalidateAdminTenantReferenceData(): void {
   invalidateAdminOrganizations();
-  invalidateAdminSchools();
+  invalidateAdminCoachingCenters();
 }

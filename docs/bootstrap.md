@@ -2,7 +2,7 @@
 
 ## Overview
 
-The bootstrap system provides dependency injection and application initialization for the School Management System. It uses a singleton Container pattern to manage all application services.
+The bootstrap system provides dependency injection and application initialization for the Coaching Management System. It uses a singleton Container pattern to manage all application services.
 
 ## Architecture
 

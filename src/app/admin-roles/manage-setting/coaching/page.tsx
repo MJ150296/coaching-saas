@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
 import { useToast } from '@/shared/components/ui/ToastProvider';
-import { getAdminOrganizations, getAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
+import { getAdminOrganizations, getAdminCoachingCenters } from '@/shared/lib/client/adminTenantReferenceData';
 import { FormCard, PrimaryButton, TabButton, TableCard } from './components/CoachingUi';
 
 type OrganizationOption = { id: string; name: string };
@@ -319,7 +319,7 @@ export default function CoachingManagementPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const items = await getAdminSchools(organizationId);
+        const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
         setSchools(items);
         setSchoolId((prev) => {

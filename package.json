@@ -1,5 +1,5 @@
 {
-  "name": "school-saas-new",
+  "name": "coaching-saas",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,7 +13,8 @@
     "type-check:api-routes:individual": "node scripts/type-check-api-routes.cjs",
     "type-check:admin-panels": "NODE_OPTIONS=--max-old-space-size=4096 tsc -p tsconfig.typecheck.admin-panels.json --pretty false",
     "type-check:admin-pages:individual": "node scripts/type-check-admin-pages.cjs",
-    "type-check:chunked": "npm run type-check:api && npm run type-check:admin-panels"
+    "type-check:chunked": "npm run type-check:api && npm run type-check:admin-panels",
+    "migrate:coaching-center-id": "node scripts/migrate-school-to-coaching-center.cjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

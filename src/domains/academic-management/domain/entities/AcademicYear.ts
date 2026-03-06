@@ -2,7 +2,7 @@ import { AggregateRoot } from '@/shared/domain';
 
 export interface AcademicYearProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   startDate: Date;
   endDate: Date;
@@ -11,7 +11,7 @@ export interface AcademicYearProps {
 
 export class AcademicYear extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private name: string;
   private startDate: Date;
   private endDate: Date;
@@ -20,7 +20,7 @@ export class AcademicYear extends AggregateRoot<string> {
   constructor(id: string, props: AcademicYearProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.name = props.name;
     this.startDate = props.startDate;
     this.endDate = props.endDate;
@@ -35,8 +35,8 @@ export class AcademicYear extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getName(): string {

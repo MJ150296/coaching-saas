@@ -56,7 +56,7 @@ Save:
 - `organizationId` (from response)
 
 ### 2.2 Create School
-Endpoint: `POST /api/admin/schools`
+Endpoint: `POST /api/admin/coaching-centers`
 
 Example payload:
 ```json

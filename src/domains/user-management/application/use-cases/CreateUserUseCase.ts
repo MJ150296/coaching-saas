@@ -20,6 +20,7 @@ export interface CreateUserUseCaseRequest {
   phone?: string;
   organizationId?: string;
   schoolId?: string;
+  coachingCenterId?: string;
 }
 
 export interface CreateUserUseCaseResponse {
@@ -49,10 +50,11 @@ export class CreateUserUseCase {
       const name = UserName.create(request.firstName, request.lastName);
       const phone = request.phone ? UserPhone.create(request.phone) : undefined;
 
+      const tenantSchoolId = request.coachingCenterId ?? request.schoolId;
       if (request.role !== UserRole.SUPER_ADMIN) {
-        if (!request.organizationId || !request.schoolId) {
+        if (!request.organizationId || !tenantSchoolId) {
           return Result.fail<CreateUserUseCaseResponse>(
-            'organizationId and schoolId are required for non-superadmin users'
+            'organizationId and coachingCenterId are required for non-superadmin users'
           );
         }
       }
@@ -66,7 +68,7 @@ export class CreateUserUseCase {
         name,
         request.role,
         request.organizationId,
-        request.schoolId,
+        tenantSchoolId,
         phone
       );
 

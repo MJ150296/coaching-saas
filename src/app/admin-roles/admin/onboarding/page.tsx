@@ -15,7 +15,7 @@ import {
   NoAccessStep,
   OrganizationStep,
   ParentHandoverStep,
-  SchoolStep,
+  CoachingCenterStep,
   StudentLedgerStep,
   StudentParentStep,
   TeacherClassTeacherStep,
@@ -47,7 +47,7 @@ import {
   TeacherOption,
 } from './lib/onboardingData';
 import { clearDraft, loadDraft, saveDraft } from './lib/draftPersistence';
-import { invalidateAdminOrganizations, invalidateAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
+import { invalidateAdminOrganizations, invalidateAdminCoachingCenters } from '@/shared/lib/client/adminTenantReferenceData';
 
 const initialStatus: StepStatus = { type: 'idle', message: '' };
 const DRAFT_KEY = 'onboarding_wizard_draft_v1';
@@ -140,7 +140,7 @@ export default function OnboardingFlowPage() {
   const [feePlanId, setFeePlanId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [organizations, setOrganizations] = useState<OrgOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<SchoolOption[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
   const [classMasters, setClassMasters] = useState<ClassOption[]>([]);
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
@@ -278,12 +278,12 @@ export default function OnboardingFlowPage() {
 
   const filteredSchools = useMemo(() => {
     const q = schoolSearch.trim().toLowerCase();
-    const scoped = schools.filter((school) => school.organizationId === organizationId);
+    const scoped = coachingCenters.filter((coachingCenter) => coachingCenter.organizationId === organizationId);
     if (!q) return scoped;
     return scoped.filter(
-      (school) => school.name.toLowerCase().includes(q) || school.id.toLowerCase().includes(q)
+      (coachingCenter) => coachingCenter.name.toLowerCase().includes(q) || coachingCenter.id.toLowerCase().includes(q)
     );
-  }, [schools, schoolSearch, organizationId]);
+  }, [coachingCenters, schoolSearch, organizationId]);
 
   const organizationOptions = useMemo(
     () =>
@@ -296,9 +296,9 @@ export default function OnboardingFlowPage() {
 
   const schoolOptions = useMemo(
     () =>
-      filteredSchools.map((school) => ({
-        value: school.id,
-        label: `${school.name} (${school.id})${school.id === recentSchoolId ? ' - Recently Created' : ''}`,
+      filteredSchools.map((coachingCenter) => ({
+        value: coachingCenter.id,
+        label: `${coachingCenter.name} (${coachingCenter.id})${coachingCenter.id === recentSchoolId ? ' - Recently Created' : ''}`,
       })),
     [filteredSchools, recentSchoolId]
   );
@@ -457,7 +457,7 @@ export default function OnboardingFlowPage() {
     if (!schoolId) return schoolOptions;
     const exists = schoolOptions.some((opt) => opt.value === schoolId);
     if (exists) return schoolOptions;
-    return [{ value: schoolId, label: `Current School (${schoolId})` }, ...schoolOptions];
+    return [{ value: schoolId, label: `Current Coaching Center (${schoolId})` }, ...schoolOptions];
   }, [schoolId, schoolOptions]);
 
   const tenantClassMasterOptions = useMemo(() => {
@@ -606,7 +606,7 @@ export default function OnboardingFlowPage() {
     setLoadingSchools(true);
     try {
       const data = await fetchSchools(orgId);
-      setSchools(data);
+      setCoachingCenters(data);
     } finally {
       setLoadingSchools(false);
     }
@@ -734,7 +734,7 @@ export default function OnboardingFlowPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
+      setCoachingCenters([]);
       if (canSelectSchool) {
         setSchoolId('');
       }
@@ -745,13 +745,13 @@ export default function OnboardingFlowPage() {
 
   useEffect(() => {
     if (!canSelectSchool || !organizationId || !schoolId || loadingSchools) return;
-    const existsInCurrentOrganization = schools.some(
+    const existsInCurrentOrganization = coachingCenters.some(
       (item) => item.id === schoolId && item.organizationId === organizationId
     );
     if (!existsInCurrentOrganization) {
       handleSchoolChange('');
     }
-  }, [canSelectSchool, handleSchoolChange, loadingSchools, organizationId, schoolId, schools]);
+  }, [canSelectSchool, handleSchoolChange, loadingSchools, organizationId, schoolId, coachingCenters]);
 
   useEffect(() => {
     if (!organizationId || !schoolId) {
@@ -1063,7 +1063,7 @@ export default function OnboardingFlowPage() {
               setFieldErrors({});
               postStep('organization', '/api/admin/organizations', orgForm, async (d) => {
                 invalidateAdminOrganizations();
-                invalidateAdminSchools();
+                invalidateAdminCoachingCenters();
                 const id = extractId(d);
                 if (id) {
                   setOrganizationId(id);
@@ -1078,7 +1078,7 @@ export default function OnboardingFlowPage() {
         );
       case 2:
         return (
-          <SchoolStep
+          <CoachingCenterStep
             schoolForm={schoolForm}
             setSchoolForm={setSchoolForm}
             organizationId={organizationId}
@@ -1090,13 +1090,13 @@ export default function OnboardingFlowPage() {
               const error = firstError(errors);
               if (error) {
                 setFieldErrors(errors);
-                setStepError('school', error);
+                setStepError('coachingCenter', error);
                 setFocusInvalidNonce((value) => value + 1);
                 return;
               }
               setFieldErrors({});
-              postStep('school', '/api/admin/schools', { ...schoolForm, organizationId }, async (d) => {
-                invalidateAdminSchools(organizationId);
+              postStep('coachingCenter', '/api/admin/coaching-centers', { ...schoolForm, organizationId }, async (d) => {
+                invalidateAdminCoachingCenters(organizationId);
                 const id = extractId(d);
                 if (id) {
                   setSchoolId(id);
@@ -1105,7 +1105,7 @@ export default function OnboardingFlowPage() {
                 await loadSchools(organizationId);
               });
             }}
-            status={statusMap.school ?? initialStatus}
+            status={statusMap.coachingCenter ?? initialStatus}
             errors={fieldErrors}
           />
         );

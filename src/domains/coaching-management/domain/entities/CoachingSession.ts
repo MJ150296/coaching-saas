@@ -8,7 +8,7 @@ export enum CoachingSessionStatus {
 
 export interface CoachingSessionProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   topic: string;
@@ -21,7 +21,7 @@ export interface CoachingSessionProps {
 
 export class CoachingSession extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private programId: string;
   private batchId: string;
   private topic: string;
@@ -34,7 +34,7 @@ export class CoachingSession extends AggregateRoot<string> {
   constructor(id: string, props: CoachingSessionProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.programId = props.programId;
     this.batchId = props.batchId;
     this.topic = props.topic;
@@ -68,8 +68,8 @@ export class CoachingSession extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getProgramId(): string {

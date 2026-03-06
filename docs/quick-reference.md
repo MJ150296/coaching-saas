@@ -16,7 +16,7 @@ npm run lint
 - `/auth/superadmin-bootstrap`
 - `/admin-roles/superadmin`
 - `/admin-roles/organizations`
-- `/admin-roles/schools`
+- `/admin-roles/coaching-centers`
 - `/admin-roles/users`
 - `/admin-roles/admin`
 - `/teacher/dashboard`
@@ -32,7 +32,7 @@ npm run lint
 - `POST /api/auth/superadmin-register`
 - `GET /api/users/me`
 - `POST /api/admin/organizations`
-- `POST /api/admin/schools`
+- `POST /api/admin/coaching-centers`
 - `POST /api/admin/academic-years`
 - `POST /api/admin/class-masters`
 - `POST /api/admin/sections`

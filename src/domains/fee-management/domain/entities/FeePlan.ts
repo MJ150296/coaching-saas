@@ -10,7 +10,7 @@ export interface FeePlanItem {
 
 export interface FeePlanProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   name: string;
   items: FeePlanItem[];
@@ -18,7 +18,7 @@ export interface FeePlanProps {
 
 export class FeePlan extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private academicYearId: string;
   private name: string;
   private items: FeePlanItem[];
@@ -26,7 +26,7 @@ export class FeePlan extends AggregateRoot<string> {
   constructor(id: string, props: FeePlanProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.academicYearId = props.academicYearId;
     this.name = props.name;
     this.items = props.items;
@@ -40,8 +40,8 @@ export class FeePlan extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getAcademicYearId(): string {

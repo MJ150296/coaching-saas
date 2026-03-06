@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     lastName: 'Student',
     role: UserRole.STUDENT,
     organizationId: 'demo-org',
-    schoolId: 'demo-school',
+    coachingCenterId: 'demo-coaching-center',
   });
 
   if (result.getIsFailure() && !String(result.getError()).includes('already exists')) {

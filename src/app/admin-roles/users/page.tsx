@@ -7,7 +7,7 @@ import { SearchableDropdown } from "@/shared/components/ui/SearchableDropdown";
 import { TableLoader } from "@/shared/components/ui/TableLoader";
 import { useToast } from "@/shared/components/ui/ToastProvider";
 import { canCreateRole } from "@/shared/infrastructure/role-policy";
-import { getAdminOrganizations, getAdminSchools } from "@/shared/lib/client/adminTenantReferenceData";
+import { getAdminOrganizations, getAdminCoachingCenters } from "@/shared/lib/client/adminTenantReferenceData";
 
 type OrganizationOption = {
   id: string;
@@ -93,10 +93,10 @@ export default function AdminUsersPage() {
   const schoolOptions = useMemo(
     () =>
       schools
-        .filter((school) => !organizationId || school.organizationId === organizationId)
-        .map((school) => ({
-          value: school.id,
-          label: `${school.name} (${school.id})`,
+        .filter((coachingCenter) => !organizationId || coachingCenter.organizationId === organizationId)
+        .map((coachingCenter) => ({
+          value: coachingCenter.id,
+          label: `${coachingCenter.name} (${coachingCenter.id})`,
         })),
     [schools, organizationId]
   );
@@ -138,7 +138,7 @@ export default function AdminUsersPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const items = await getAdminSchools(organizationId);
+        const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
         setSchools(items);
         setSchoolId((prev) => {

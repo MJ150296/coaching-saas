@@ -8,7 +8,7 @@ import { Permission } from '@/shared/infrastructure/rbac';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { OrganizationModel, SchoolModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { OrganizationModel, CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
 
@@ -34,7 +34,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const cacheKey = `${ORG_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getSchoolId() ?? ''}`;
+    const cacheKey = `${ORG_CACHE_PREFIX}${actor.getId()}:${role}:${actor.getOrganizationId() ?? ''}:${actor.getCoachingCenterId() ?? ''}`;
     const cached = getCachedValue<unknown[]>(cacheKey);
     if (cached) {
       logger.debug('GET /api/admin/organizations cache hit', { durationMs: Date.now() - start, role });
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     });
 
     invalidateCacheByPrefix(ORG_CACHE_PREFIX);
-    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:coaching-centers:');
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json(result.getValue(), { status: 201 });
@@ -266,7 +266,7 @@ export async function PUT(request: NextRequest) {
     });
 
     invalidateCacheByPrefix(ORG_CACHE_PREFIX);
-    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:coaching-centers:');
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });
@@ -297,10 +297,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const linkedSchoolCount = await SchoolModel.countDocuments({ organizationId: id });
+    const linkedSchoolCount = await CoachingCenterModel.countDocuments({ organizationId: id });
     if (linkedSchoolCount > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete organization with existing schools. Delete schools first.' },
+        { error: 'Cannot delete organization with existing coaching centers. Delete coaching centers first.' },
         { status: 409 }
       );
     }
@@ -317,7 +317,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     invalidateCacheByPrefix(ORG_CACHE_PREFIX);
-    invalidateCacheByPrefix('api:admin:schools:');
+    invalidateCacheByPrefix('api:admin:coaching-centers:');
     invalidateCacheByPrefix('api:admin:dashboard:overview:');
     invalidateCacheByPrefix('api:admin:academic-options:');
     return NextResponse.json({ success: true });

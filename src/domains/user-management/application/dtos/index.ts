@@ -9,6 +9,7 @@ export interface CreateUserDTO {
   phone?: string;
   organizationId?: string;
   schoolId?: string;
+  coachingCenterId?: string;
 }
 
 export interface UserResponseDTO {
@@ -20,6 +21,7 @@ export interface UserResponseDTO {
   phone?: string;
   organizationId?: string;
   schoolId?: string;
+  coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: Date;

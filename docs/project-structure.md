@@ -3,13 +3,13 @@
 ## Directory Map
 
 ```
-school-saas/
+coaching-saas/
 ├── src/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── admin/
 │   │   │   │   ├── organizations/route.ts
-│   │   │   │   ├── schools/route.ts
+│   │   │   │   ├── coaching-centers/route.ts
 │   │   │   │   ├── academic-years/route.ts
 │   │   │   │   ├── class-masters/route.ts
 │   │   │   │   ├── sections/route.ts
@@ -33,8 +33,8 @@ school-saas/
 │   │   │   ├── admin/page.tsx
 │   │   │   ├── organizations/page.tsx
 │   │   │   ├── organizations/create/page.tsx
-│   │   │   ├── schools/page.tsx
-│   │   │   ├── schools/create/page.tsx
+│   │   │   ├── coaching-centers/page.tsx
+│   │   │   ├── coaching-centers/create/page.tsx
 │   │   │   ├── superadmin/page.tsx
 │   │   │   └── users/page.tsx
 │   │   ├── auth/
@@ -73,13 +73,13 @@ school-saas/
 │   │   ├── organization-management/
 │   │       ├── domain/
 │   │       │   ├── entities/Organization.ts
-│   │       │   ├── entities/School.ts
+│   │       │   ├── entities/CoachingCenter.ts
 │   │       │   ├── value-objects/index.ts
 │   │       │   └── repositories/index.ts
 │   │       ├── application/
 │   │       │   └── use-cases/
 │   │       │       ├── CreateOrganizationUseCase.ts
-│   │       │       ├── CreateSchoolUseCase.ts
+│   │       │       ├── CreateCoachingCenterUseCase.ts
 │   │       │       └── index.ts
 │   │       └── infrastructure/
 │   │           └── persistence/
@@ -181,12 +181,12 @@ school-saas/
 - `src/domains/user-management/application/use-cases/CreateUserUseCase.ts`
 - `src/domains/user-management/infrastructure/persistence/MongoUserRepository.ts`
 
-### Organization & School Domain
+### Organization & Coaching Center Domain
 
 - `src/domains/organization-management/domain/entities/Organization.ts`
-- `src/domains/organization-management/domain/entities/School.ts`
+- `src/domains/organization-management/domain/entities/CoachingCenter.ts`
 - `src/domains/organization-management/application/use-cases/CreateOrganizationUseCase.ts`
-- `src/domains/organization-management/application/use-cases/CreateSchoolUseCase.ts`
+- `src/domains/organization-management/application/use-cases/CreateCoachingCenterUseCase.ts`
 
 ### Academic Management Domain
 
@@ -218,14 +218,14 @@ school-saas/
 
 - `src/app/admin-roles/superadmin/page.tsx`
 - `src/app/admin-roles/organizations/page.tsx`
-- `src/app/admin-roles/schools/page.tsx`
+- `src/app/admin-roles/coaching-centers/page.tsx`
 - `src/app/admin-roles/users/page.tsx`
 - `src/app/admin-roles/admin/page.tsx`
 
 ### API Routes
 
 - `src/app/api/admin/organizations/route.ts`
-- `src/app/api/admin/schools/route.ts`
+- `src/app/api/admin/coaching-centers/route.ts`
 - `src/app/api/admin/academic-years/route.ts`
 - `src/app/api/admin/class-masters/route.ts`
 - `src/app/api/admin/sections/route.ts`

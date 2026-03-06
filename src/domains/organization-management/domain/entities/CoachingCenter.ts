@@ -1,14 +1,14 @@
 /**
- * School Entity (Aggregate Root)
+ * Coaching Center Entity (Aggregate Root)
  */
 
 import { AggregateRoot } from '@/shared/domain';
-import { SchoolName, SchoolCode, Address, ContactInfo } from '../value-objects';
+import { CoachingCenterName, CoachingCenterCode, Address, ContactInfo } from '../value-objects';
 
-export interface SchoolProps {
+export interface CoachingCenterProps {
   organizationId: string;
-  schoolName: SchoolName;
-  schoolCode: SchoolCode;
+  coachingCenterName: CoachingCenterName;
+  coachingCenterCode: CoachingCenterCode;
   address: Address;
   contactInfo: ContactInfo;
   principalId?: string;
@@ -18,10 +18,10 @@ export interface SchoolProps {
   metadata?: Record<string, unknown>;
 }
 
-export class School extends AggregateRoot<string> {
+export class CoachingCenter extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolName: SchoolName;
-  private schoolCode: SchoolCode;
+  private coachingCenterName: CoachingCenterName;
+  private coachingCenterCode: CoachingCenterCode;
   private address: Address;
   private contactInfo: ContactInfo;
   private principalId?: string;
@@ -30,16 +30,11 @@ export class School extends AggregateRoot<string> {
   private teacherCount: number;
   private metadata?: Record<string, unknown>;
 
-  constructor(
-    id: string,
-    props: SchoolProps,
-    createdAt?: Date,
-    updatedAt?: Date
-  ) {
+  constructor(id: string, props: CoachingCenterProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolName = props.schoolName;
-    this.schoolCode = props.schoolCode;
+    this.coachingCenterName = props.coachingCenterName;
+    this.coachingCenterCode = props.coachingCenterCode;
     this.address = props.address;
     this.contactInfo = props.contactInfo;
     this.principalId = props.principalId;
@@ -52,15 +47,15 @@ export class School extends AggregateRoot<string> {
   static create(
     id: string,
     organizationId: string,
-    schoolName: SchoolName,
-    schoolCode: SchoolCode,
+    coachingCenterName: CoachingCenterName,
+    coachingCenterCode: CoachingCenterCode,
     address: Address,
     contactInfo: ContactInfo
-  ): School {
-    return new School(id, {
+  ): CoachingCenter {
+    return new CoachingCenter(id, {
       organizationId,
-      schoolName,
-      schoolCode,
+      coachingCenterName,
+      coachingCenterCode,
       address,
       contactInfo,
       status: 'active',
@@ -73,12 +68,12 @@ export class School extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolName(): SchoolName {
-    return this.schoolName;
+  getCoachingCenterName(): CoachingCenterName {
+    return this.coachingCenterName;
   }
 
-  getSchoolCode(): SchoolCode {
-    return this.schoolCode;
+  getCoachingCenterCode(): CoachingCenterCode {
+    return this.coachingCenterCode;
   }
 
   getAddress(): Address {

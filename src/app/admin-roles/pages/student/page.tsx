@@ -62,8 +62,8 @@ export default function StudentAnalyticsPage() {
   const analytics = useMemo(() => {
     const activeCount = students.filter((item) => item.isActive).length;
     const verifiedCount = students.filter((item) => item.emailVerified).length;
-    const schools = new Set(students.map((item) => item.schoolId).filter(Boolean));
-    return { activeCount, verifiedCount, schoolsCount: schools.size };
+    const coachingCenters = new Set(students.map((item) => item.schoolId).filter(Boolean));
+    return { activeCount, verifiedCount, coachingCentersCount: coachingCenters.size };
   }, [students]);
 
   return (
@@ -125,7 +125,7 @@ export default function StudentAnalyticsPage() {
         </table>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500">Distinct coaching centers in dataset: {analytics.schoolsCount}</p>
+      <p className="mt-3 text-xs text-slate-500">Distinct coaching centers in dataset: {analytics.coachingCentersCount}</p>
     </div>
   );
 }

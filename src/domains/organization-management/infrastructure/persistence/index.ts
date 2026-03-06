@@ -2,4 +2,4 @@
  * Organization Management - Repositories
  */
 
-export { MongoOrganizationRepository, MongoSchoolRepository } from './OrganizationSchoolRepository';
+export { MongoOrganizationRepository, MongoCoachingCenterRepository } from './OrganizationSchoolRepository';

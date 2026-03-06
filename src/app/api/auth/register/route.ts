@@ -37,10 +37,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const tenant = resolveTenantScope(actor, body.organizationId, body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && targetRole !== UserRole.SUPER_ADMIN) {
       if (!tenant.organizationId || !tenant.schoolId) {
-        return NextResponse.json({ error: 'organizationId and schoolId are required' }, { status: 400 });
+        return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
       }
     }
     assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       role: targetRole,
       organizationId: tenant.organizationId,
       schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
     });
 
     if (result.getIsFailure()) {

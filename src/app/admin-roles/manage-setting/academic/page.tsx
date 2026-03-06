@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SingleSelect } from "@/shared/components/ui/SingleSelect";
 import { useToast } from "@/shared/components/ui/ToastProvider";
-import { getAdminOrganizations, getAdminSchools } from "@/shared/lib/client/adminTenantReferenceData";
+import { getAdminOrganizations, getAdminCoachingCenters } from "@/shared/lib/client/adminTenantReferenceData";
 
 const CLASS_LEVEL_OPTIONS = [
   { value: "LOWER_PRIMARY", label: "Lower Primary (Classes 1-5)" },
@@ -314,7 +314,7 @@ export default function AcademicManagementPage() {
     async function loadSchools() {
       setTenantLoading(true);
       try {
-        const items = await getAdminSchools(organizationId);
+        const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
         setSchools(items);
 

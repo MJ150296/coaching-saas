@@ -2,21 +2,21 @@ import { AggregateRoot } from '@/shared/domain';
 
 export interface ClassMasterProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   level?: string;
 }
 
 export class ClassMaster extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private name: string;
   private level?: string;
 
   constructor(id: string, props: ClassMasterProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.name = props.name;
     this.level = props.level;
   }
@@ -29,8 +29,8 @@ export class ClassMaster extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getName(): string {

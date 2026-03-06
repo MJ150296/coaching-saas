@@ -4,7 +4,7 @@ export type PaymentMethod = 'CASH' | 'ONLINE' | 'UPI' | 'BANK_TRANSFER';
 
 export interface PaymentProps {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   amount: number;
@@ -15,7 +15,7 @@ export interface PaymentProps {
 
 export class Payment extends AggregateRoot<string> {
   private organizationId: string;
-  private schoolId: string;
+  private coachingCenterId: string;
   private academicYearId: string;
   private studentId: string;
   private amount: number;
@@ -26,7 +26,7 @@ export class Payment extends AggregateRoot<string> {
   constructor(id: string, props: PaymentProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
     this.organizationId = props.organizationId;
-    this.schoolId = props.schoolId;
+    this.coachingCenterId = props.coachingCenterId;
     this.academicYearId = props.academicYearId;
     this.studentId = props.studentId;
     this.amount = props.amount;
@@ -43,8 +43,8 @@ export class Payment extends AggregateRoot<string> {
     return this.organizationId;
   }
 
-  getSchoolId(): string {
-    return this.schoolId;
+  getCoachingCenterId(): string {
+    return this.coachingCenterId;
   }
 
   getAcademicYearId(): string {

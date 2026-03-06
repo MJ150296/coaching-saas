@@ -1,5 +1,5 @@
 import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { getAdminOrganizations, getAdminSchools } from '@/shared/lib/client/adminTenantReferenceData';
+import { getAdminOrganizations, getAdminCoachingCenters } from '@/shared/lib/client/adminTenantReferenceData';
 import { StepMeta } from '../components/types';
 
 export type JsonRecord = Record<string, unknown>;
@@ -83,7 +83,7 @@ export async function fetchOrganizations(): Promise<OrgOption[]> {
 
 export async function fetchSchools(orgId?: string): Promise<SchoolOption[]> {
   try {
-    const data = await getAdminSchools(orgId);
+    const data = await getAdminCoachingCenters(orgId);
     return data.map((row) => ({
       id: row.id,
       name: row.name,

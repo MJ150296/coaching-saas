@@ -1,5 +1,5 @@
 /**
- * Organization & School Management Domain - Value Objects
+ * Organization & Coaching Center Management Domain - Value Objects
  */
 
 import { ValueObject } from '@/shared/domain';
@@ -98,21 +98,21 @@ export class ContactInfo extends ValueObject<ContactInfoProps> {
   }
 }
 
-// ============ School Value Objects ============
+// ============ Coaching Center Value Objects ============
 
-export interface SchoolCodeProps {
+export interface CoachingCenterCodeProps {
   value: string;
 }
 
-export class SchoolCode extends ValueObject<SchoolCodeProps> {
+export class CoachingCenterCode extends ValueObject<CoachingCenterCodeProps> {
   constructor(value: string) {
-    Guard.isEmptyString(value, 'School code');
-    Guard.lengthIsBetween(value, 2, 20, 'School code');
+    Guard.isEmptyString(value, 'Coaching center code');
+    Guard.lengthIsBetween(value, 2, 20, 'Coaching center code');
     super({ value: value.toUpperCase() });
   }
 
-  static create(value: string): SchoolCode {
-    return new SchoolCode(value);
+  static create(value: string): CoachingCenterCode {
+    return new CoachingCenterCode(value);
   }
 
   getValue(): string {
@@ -120,19 +120,19 @@ export class SchoolCode extends ValueObject<SchoolCodeProps> {
   }
 }
 
-export interface SchoolNameProps {
+export interface CoachingCenterNameProps {
   value: string;
 }
 
-export class SchoolName extends ValueObject<SchoolNameProps> {
+export class CoachingCenterName extends ValueObject<CoachingCenterNameProps> {
   constructor(value: string) {
-    Guard.isEmptyString(value, 'School name');
-    Guard.lengthIsBetween(value, 2, 100, 'School name');
+    Guard.isEmptyString(value, 'Coaching center name');
+    Guard.lengthIsBetween(value, 2, 100, 'Coaching center name');
     super({ value: value.trim() });
   }
 
-  static create(value: string): SchoolName {
-    return new SchoolName(value);
+  static create(value: string): CoachingCenterName {
+    return new CoachingCenterName(value);
   }
 
   getValue(): string {

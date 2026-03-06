@@ -16,6 +16,7 @@ interface UserPersistence {
   role: ReturnType<User['getRole']>;
   organizationId?: string;
   schoolId?: string;
+  coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: Date;
@@ -33,7 +34,7 @@ export class UserMapper {
       phone: user.getPhone()?.getValue() || null,
       role: user.getRole(),
       organizationId: user.getOrganizationId(),
-      schoolId: user.getSchoolId(),
+      coachingCenterId: user.getCoachingCenterId(),
       isActive: user.isUserActive(),
       emailVerified: user.isEmailVerified(),
       createdAt: user.getCreatedAt(),
@@ -56,7 +57,8 @@ export class UserMapper {
         phone,
         role: raw.role,
         organizationId: raw.organizationId,
-        schoolId: raw.schoolId,
+        schoolId: raw.coachingCenterId ?? raw.schoolId,
+        coachingCenterId: raw.coachingCenterId ?? raw.schoolId,
         isActive: raw.isActive,
         emailVerified: raw.emailVerified,
       },
@@ -76,7 +78,7 @@ export class UserMapper {
       role: user.getRole(),
       phone: user.getPhone()?.getValue(),
       organizationId: user.getOrganizationId(),
-      schoolId: user.getSchoolId(),
+      coachingCenterId: user.getCoachingCenterId(),
       isActive: user.isUserActive(),
       emailVerified: user.isEmailVerified(),
       createdAt: user.getCreatedAt(),

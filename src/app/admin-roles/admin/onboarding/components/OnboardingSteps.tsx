@@ -108,7 +108,7 @@ export function OrganizationStep({
   );
 }
 
-export function SchoolStep({
+export function CoachingCenterStep({
   schoolForm,
   setSchoolForm,
   organizationId,

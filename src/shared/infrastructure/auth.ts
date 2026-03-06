@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
             name: user.getName().getFullName(),
             role: user.getRole(),
             organizationId: user.getOrganizationId(),
-            schoolId: user.getSchoolId(),
+            coachingCenterId: user.getCoachingCenterId(),
             emailVerified: user.isEmailVerified() ? new Date() : null,
           };
         } catch (error) {
@@ -69,7 +69,8 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = normalizeUserRole(user.role) ?? undefined;
         token.organizationId = user.organizationId;
-        token.schoolId = user.schoolId;
+        token.schoolId = user.coachingCenterId ?? user.schoolId;
+        token.coachingCenterId = user.coachingCenterId ?? user.schoolId;
       } else if (token.role) {
         token.role = normalizeUserRole(token.role) ?? undefined;
       }
@@ -82,7 +83,8 @@ export const authOptions: NextAuthOptions = {
           session.user.role = token.role;
         }
         session.user.organizationId = token.organizationId;
-        session.user.schoolId = token.schoolId;
+        session.user.schoolId = token.coachingCenterId ?? token.schoolId;
+        session.user.coachingCenterId = token.coachingCenterId ?? token.schoolId;
       }
       return session;
     },

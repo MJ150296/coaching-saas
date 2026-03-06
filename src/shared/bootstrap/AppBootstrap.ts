@@ -10,8 +10,8 @@ import {
   GetUserByEmailUseCase,
   VerifyUserEmailUseCase,
 } from '@/domains/user-management/application/use-cases';
-import { MongoOrganizationRepository, MongoSchoolRepository } from '@/domains/organization-management/infrastructure/persistence';
-import { CreateOrganizationUseCase, CreateSchoolUseCase } from '@/domains/organization-management/application/use-cases';
+import { MongoOrganizationRepository, MongoCoachingCenterRepository } from '@/domains/organization-management/infrastructure/persistence';
+import { CreateOrganizationUseCase, CreateCoachingCenterUseCase } from '@/domains/organization-management/application/use-cases';
 import { MongoAcademicYearRepository, MongoClassMasterRepository, MongoSectionRepository, MongoSubjectAllocationRepository } from '@/domains/academic-management/infrastructure/persistence/MongoAcademicRepository';
 import { CreateAcademicYearUseCase, CreateClassMasterUseCase, CreateSectionUseCase, CreateSubjectAllocationUseCase } from '@/domains/academic-management/application/use-cases';
 import { MongoFeeTypeRepository, MongoFeePlanRepository, MongoFeePlanAssignmentRepository, MongoStudentFeeLedgerRepository, MongoPaymentRepository, MongoCreditNoteRepository } from '@/domains/fee-management/infrastructure/persistence/MongoFeeRepository';
@@ -106,10 +106,10 @@ export class AppBootstrap {
       return new MongoOrganizationRepository();
     });
 
-    // Create and register school repository as singleton
-    Container.registerSingleton(ServiceKeys.SCHOOL_REPOSITORY, () => {
-      logger.debug('Creating MongoSchoolRepository instance');
-      return new MongoSchoolRepository();
+    // Create and register coaching center repository as singleton
+    Container.registerSingleton(ServiceKeys.COACHING_CENTER_REPOSITORY, () => {
+      logger.debug('Creating MongoCoachingCenterRepository instance');
+      return new MongoCoachingCenterRepository();
     });
 
     Container.registerSingleton(ServiceKeys.ACADEMIC_YEAR_REPOSITORY, () => {
@@ -223,11 +223,11 @@ export class AppBootstrap {
       return new CreateOrganizationUseCase(organizationRepository);
     });
 
-    // Create School Use Case
-    Container.registerSingleton(ServiceKeys.CREATE_SCHOOL_USE_CASE, () => {
-      const schoolRepository = Container.resolve(ServiceKeys.SCHOOL_REPOSITORY);
-      logger.debug('Creating CreateSchoolUseCase instance');
-      return new CreateSchoolUseCase(schoolRepository);
+    // Create Coaching Center Use Case
+    Container.registerSingleton(ServiceKeys.CREATE_COACHING_CENTER_USE_CASE, () => {
+      const centerRepository = Container.resolve(ServiceKeys.COACHING_CENTER_REPOSITORY);
+      logger.debug('Creating CreateCoachingCenterUseCase instance');
+      return new CreateCoachingCenterUseCase(centerRepository);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_ACADEMIC_YEAR_USE_CASE, () => {

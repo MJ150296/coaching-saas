@@ -10,12 +10,12 @@ The system now supports comprehensive role-based access control with the followi
 SUPER_ADMIN (Highest)
   ├─ System-wide access
   ├─ Manage all organizations
-  ├─ Manage all schools
+  ├─ Manage all coaching centers
   └─ View all data
 
 ORGANIZATION_ADMIN
   ├─ Manage organization
-  ├─ Manage schools within organization
+  ├─ Manage coaching centers within organization
   ├─ Manage staff & admins
   └─ View organization data
 

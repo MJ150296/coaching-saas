@@ -11,7 +11,7 @@ cp .env.example .env.local
 Set values in `.env.local`:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/school-saas
+MONGODB_URI=mongodb://localhost:27017/coaching-saas
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-here
 ```

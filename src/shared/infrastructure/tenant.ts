@@ -10,21 +10,22 @@ function normalizeTenantId(value?: string): string | undefined {
 export function assertTenantScope(
   actor: User,
   organizationId?: string,
-  schoolId?: string
+  schoolIdOrCoachingCenterId?: string
 ): void {
+  const tenantId = schoolIdOrCoachingCenterId;
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
     return;
   }
 
-  if (!actor.getOrganizationId() || !actor.getSchoolId()) {
+  if (!actor.getOrganizationId() || !actor.getCoachingCenterId()) {
     throw new Error('Actor tenant scope is missing');
   }
 
-  if (!organizationId || !schoolId) {
-    throw new Error('organizationId and schoolId are required');
+  if (!organizationId || !tenantId) {
+    throw new Error('organizationId and coachingCenterId are required');
   }
 
-  if (actor.getOrganizationId() !== organizationId || actor.getSchoolId() !== schoolId) {
+  if (actor.getOrganizationId() !== organizationId || actor.getCoachingCenterId() !== tenantId) {
     throw new Error('Tenant scope mismatch');
   }
 }
@@ -33,16 +34,23 @@ export function resolveTenantScope(
   actor: User,
   organizationId?: string,
   schoolId?: string
-): { organizationId?: string; schoolId?: string } {
+): { organizationId?: string; schoolId?: string; coachingCenterId?: string } {
   const normalizedOrganizationId = normalizeTenantId(organizationId);
   const normalizedSchoolId = normalizeTenantId(schoolId);
 
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
-    return { organizationId: normalizedOrganizationId, schoolId: normalizedSchoolId };
+    return {
+      organizationId: normalizedOrganizationId,
+      schoolId: normalizedSchoolId,
+      coachingCenterId: normalizedSchoolId,
+    };
   }
 
+  const actorTenantId = actor.getCoachingCenterId();
+  const resolvedTenantId = normalizedSchoolId ?? actorTenantId;
   return {
     organizationId: normalizedOrganizationId ?? actor.getOrganizationId(),
-    schoolId: normalizedSchoolId ?? actor.getSchoolId(),
+    schoolId: resolvedTenantId,
+    coachingCenterId: resolvedTenantId,
   };
 }

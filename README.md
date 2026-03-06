@@ -1,6 +1,6 @@
-# School Management System - Enterprise DDD Application
+# Coaching Management System - Enterprise DDD Application
 
-A modern, enterprise-grade school management application built with Next.js App Router, TypeScript, and Domain-Driven Design (DDD).
+A modern, enterprise-grade coaching management application built with Next.js App Router, TypeScript, and Domain-Driven Design (DDD).
 
 ## Architecture
 
@@ -27,7 +27,7 @@ cp .env.example .env.local
 Update `.env.local`:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/school-saas
+MONGODB_URI=mongodb://localhost:27017/coaching-saas
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=generate-a-secure-secret-key
 ```
@@ -61,7 +61,7 @@ Visit `http://localhost:3000`.
 - `POST /api/auth/superadmin-register` - Create first superadmin
 - `GET /api/users/me` - Current user profile
 - `POST /api/admin/organizations` - Create organization
-- `POST /api/admin/schools` - Create school
+- `POST /api/admin/coaching-centers` - Create coaching center
 - `GET /api/admin/users` - List users
 - `POST /api/bootstrap/init` - Initialize DI/bootstrap
 - `POST /api/dev/seed-test-user` - Seed a test user
@@ -75,8 +75,8 @@ Visit `http://localhost:3000`.
 - `/admin-roles/superadmin` - Superadmin dashboard
 - `/admin-roles/organizations` - Org admin dashboard
 - `/admin-roles/organizations/create` - Create organization
-- `/admin-roles/schools` - School admin dashboard
-- `/admin-roles/schools/create` - Create school
+- `/admin-roles/coaching-centers` - Coaching admin dashboard
+- `/admin-roles/coaching-centers/create` - Create coaching center
 - `/admin-roles/users` - User management view
 - `/admin-roles/admin` - Admin dashboard
 - `/teacher/dashboard`

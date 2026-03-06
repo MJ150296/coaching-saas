@@ -3,4 +3,8 @@
  */
 
 export { CreateOrganizationUseCase, type CreateOrganizationRequest, type CreateOrganizationResponse } from './CreateOrganizationUseCase';
-export { CreateSchoolUseCase, type CreateSchoolRequest, type CreateSchoolResponse } from './CreateSchoolUseCase';
+export {
+  CreateCoachingCenterUseCase,
+  type CreateCoachingCenterRequest,
+  type CreateCoachingCenterResponse,
+} from './CreateCoachingCenterUseCase';

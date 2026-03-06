@@ -3,7 +3,7 @@ import { Schema, model, models, Model } from 'mongoose';
 export interface IAcademicYearDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   startDate: Date;
   endDate: Date;
@@ -15,7 +15,7 @@ export interface IAcademicYearDocument {
 export interface IClassMasterDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   level?: string;
   createdAt: Date;
@@ -25,7 +25,7 @@ export interface IClassMasterDocument {
 export interface ISectionDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   classMasterId: string;
   name: string;
   capacity?: number;
@@ -39,7 +39,7 @@ export interface ISectionDocument {
 export interface ISubjectAllocationDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   classMasterId: string;
   sectionId?: string;
@@ -53,7 +53,7 @@ export interface ISubjectAllocationDocument {
 export interface ITimetableEntryDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   classMasterId: string;
   sectionId?: string;
@@ -69,7 +69,7 @@ export interface ITimetableEntryDocument {
 export interface IStudentEnrollmentDocument {
   _id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   classMasterId: string;
@@ -83,7 +83,7 @@ const academicYearSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     name: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
@@ -96,7 +96,7 @@ const classMasterSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     name: { type: String, required: true },
     level: { type: String },
   },
@@ -107,7 +107,7 @@ const sectionSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     classMasterId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     capacity: { type: Number },
@@ -122,7 +122,7 @@ const subjectAllocationSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     academicYearId: { type: String, required: true, index: true },
     classMasterId: { type: String, required: true, index: true },
     sectionId: { type: String },
@@ -137,7 +137,7 @@ const timetableEntrySchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     academicYearId: { type: String, required: true, index: true },
     classMasterId: { type: String, required: true, index: true },
     sectionId: { type: String, index: true },
@@ -154,7 +154,7 @@ const studentEnrollmentSchema = new Schema(
   {
     _id: { type: String, required: true },
     organizationId: { type: String, required: true, index: true },
-    schoolId: { type: String, required: true, index: true },
+    coachingCenterId: { type: String, index: true },
     academicYearId: { type: String, required: true, index: true },
     studentId: { type: String, required: true, index: true },
     classMasterId: { type: String, required: true, index: true },
@@ -167,7 +167,7 @@ const studentEnrollmentSchema = new Schema(
 timetableEntrySchema.index(
   {
     organizationId: 1,
-    schoolId: 1,
+    coachingCenterId: 1,
     academicYearId: 1,
     classMasterId: 1,
     sectionId: 1,
@@ -180,7 +180,7 @@ timetableEntrySchema.index(
 studentEnrollmentSchema.index(
   {
     organizationId: 1,
-    schoolId: 1,
+    coachingCenterId: 1,
     academicYearId: 1,
     studentId: 1,
   },
