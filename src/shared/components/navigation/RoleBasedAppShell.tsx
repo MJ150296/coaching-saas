@@ -410,9 +410,9 @@ function SidebarContent({
   const [generalOpen, setGeneralOpen] = useState(true);
   const [pagesOpen, setPagesOpen] = useState(true);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {showHeader && (
-        <div className="border-b border-gray-200 px-3 py-4">
+        <div className="shrink-0 border-b border-gray-200 px-3 py-4">
           <div className="flex items-center justify-between">
             {!collapsed ? (
               <div>
@@ -443,7 +443,7 @@ function SidebarContent({
         </div>
       )}
 
-      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
           {primaryItems.map((item) => {
             const active = isItemActive(pathname, item.href);
@@ -671,7 +671,7 @@ function SidebarContent({
         
       </nav>
 
-      <div className="border-t border-gray-200 p-4">
+      <div className="shrink-0 border-t border-gray-200 bg-white p-4">
         {!collapsed && <p className="truncate text-sm font-medium text-gray-900">{userName}</p>}
         <button
           type="button"
