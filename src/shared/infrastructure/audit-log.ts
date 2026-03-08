@@ -10,7 +10,6 @@ export interface AuditLogEvent {
   targetRole?: UserRole;
   organizationId?: string;
   coachingCenterId?: string;
-  coachingCenterId?: string;
   ip?: string;
   metadata?: Record<string, unknown>;
 }
@@ -30,7 +29,6 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
     targetId: { type: String },
     targetRole: { type: String },
     organizationId: { type: String },
-    coachingCenterId: { type: String },
     coachingCenterId: { type: String },
     ip: { type: String },
     metadata: { type: Schema.Types.Mixed },

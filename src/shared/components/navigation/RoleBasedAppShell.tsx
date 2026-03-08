@@ -229,33 +229,28 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
 
   // Track viewport size to show mobile header/drawer on mobile + medium screens (<=1023px)
   // Treat screens <= 1023px as "mobile-like" where the topbar/drawer should be used.
-  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean | null>(() =>
+    typeof window === 'undefined' ? null : window.matchMedia('(max-width: 1023px)').matches
+  );
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
-    setIsMobile(mq.matches);
-    const handle = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const handle = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setMobileOpen(false);
+    };
     if ('addEventListener' in mq) {
       mq.addEventListener('change', handle);
       return () => mq.removeEventListener('change', handle);
     }
-    // legacy
-    // @ts-expect-error
-    mq.addListener(handle);
+    const legacyMq = mq as MediaQueryList & {
+      addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+    };
+    legacyMq.addListener?.(handle);
     return () => {
-      // @ts-expect-error
-      mq.removeListener(handle);
+      legacyMq.removeListener?.(handle);
     };
   }, []);
-
-  // Close mobile drawer on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  // Close mobile drawer when switching away from mobile-like screens
-  useEffect(() => {
-    if (isMobile === false) setMobileOpen(false);
-  }, [isMobile]);
 
   // Prevent body scroll when mobile drawer is open
   useEffect(() => {
@@ -312,7 +307,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
       {/* ── Mobile drawer ── */}
       {isMobile === true && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -344,6 +339,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
             pathname={pathname}
             userName={session?.user?.name ?? 'User'}
             collapsed={false}
+            showHeader={false}
             onNavigate={() => setMobileOpen(false)}
           />
         </aside>
@@ -363,6 +359,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
           pathname={pathname}
           userName={session?.user?.name ?? 'User'}
           collapsed={isCollapsed}
+          showHeader={true}
           onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
         />
       </aside>
@@ -393,6 +390,7 @@ function SidebarContent({
   pathname,
   userName,
   collapsed = false,
+  showHeader = true,
   onToggleCollapse,
   onNavigate,
 }: {
@@ -404,6 +402,7 @@ function SidebarContent({
   pathname: string;
   userName: string;
   collapsed?: boolean;
+  showHeader?: boolean;
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
 }) {
@@ -412,36 +411,37 @@ function SidebarContent({
   const [pagesOpen, setPagesOpen] = useState(true);
   return (
     <div className="flex h-full flex-col">
-      {/* Header – only shown on desktop sidebar (mobile has its own header above) */}
-      <div className="border-b border-gray-200 px-3 py-4">
-        <div className="flex items-center justify-between">
-          {!collapsed ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Coaching SaaS</p>
-              <h2 className="mt-1 text-lg font-semibold text-gray-900">Control Center</h2>
-              <p className="mt-1 text-xs text-gray-600">{roleLabels[role]}</p>
-            </div>
-          ) : (
-            <p className="mx-auto text-xs font-semibold text-gray-500">SMS</p>
-          )}
-          {onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {collapsed ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                )}
-              </svg>
-            </button>
-          )}
+      {showHeader && (
+        <div className="border-b border-gray-200 px-3 py-4">
+          <div className="flex items-center justify-between">
+            {!collapsed ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Coaching SaaS</p>
+                <h2 className="mt-1 text-lg font-semibold text-gray-900">Control Center</h2>
+                <p className="mt-1 text-xs text-gray-600">{roleLabels[role]}</p>
+              </div>
+            ) : (
+              <p className="mx-auto text-xs font-semibold text-gray-500">SMS</p>
+            )}
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {collapsed ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  )}
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         <ul className="space-y-1">
@@ -526,7 +526,7 @@ function SidebarContent({
               <button
                 type="button"
                 onClick={() => {
-                  onToggleCollapse && onToggleCollapse();
+                  onToggleCollapse?.();
                   setManageOpen(true);
                 }}
                 title="Manage"
@@ -539,7 +539,7 @@ function SidebarContent({
               <button
                 type="button"
                 onClick={() => {
-                  onToggleCollapse && onToggleCollapse();
+                  onToggleCollapse?.();
                   setGeneralOpen(true);
                 }}
                 title="General"
@@ -552,7 +552,7 @@ function SidebarContent({
               <button
                 type="button"
                 onClick={() => {
-                  onToggleCollapse && onToggleCollapse();
+                  onToggleCollapse?.();
                   setPagesOpen(true);
                 }}
                 title="Pages"

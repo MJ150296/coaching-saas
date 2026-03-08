@@ -197,125 +197,125 @@ export class AppBootstrap {
 
     // Create User Use Case
     Container.registerSingleton(ServiceKeys.CREATE_USER_USE_CASE, () => {
-      const userRepository = Container.resolve(ServiceKeys.USER_REPOSITORY);
+      const userRepository = Container.resolve<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
       logger.debug('Creating CreateUserUseCase instance');
       return new CreateUserUseCase(userRepository);
     });
 
     // Get User By Email Use Case
     Container.registerSingleton(ServiceKeys.GET_USER_BY_EMAIL_USE_CASE, () => {
-      const userRepository = Container.resolve(ServiceKeys.USER_REPOSITORY);
+      const userRepository = Container.resolve<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
       logger.debug('Creating GetUserByEmailUseCase instance');
       return new GetUserByEmailUseCase(userRepository);
     });
 
     // Verify User Email Use Case
     Container.registerSingleton(ServiceKeys.VERIFY_USER_EMAIL_USE_CASE, () => {
-      const userRepository = Container.resolve(ServiceKeys.USER_REPOSITORY);
+      const userRepository = Container.resolve<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
       logger.debug('Creating VerifyUserEmailUseCase instance');
       return new VerifyUserEmailUseCase(userRepository);
     });
 
     // Create Organization Use Case
     Container.registerSingleton(ServiceKeys.CREATE_ORGANIZATION_USE_CASE, () => {
-      const organizationRepository = Container.resolve(ServiceKeys.ORGANIZATION_REPOSITORY);
+      const organizationRepository = Container.resolve<MongoOrganizationRepository>(ServiceKeys.ORGANIZATION_REPOSITORY);
       logger.debug('Creating CreateOrganizationUseCase instance');
       return new CreateOrganizationUseCase(organizationRepository);
     });
 
     // Create Coaching Center Use Case
     Container.registerSingleton(ServiceKeys.CREATE_COACHING_CENTER_USE_CASE, () => {
-      const centerRepository = Container.resolve(ServiceKeys.COACHING_CENTER_REPOSITORY);
+      const centerRepository = Container.resolve<MongoCoachingCenterRepository>(ServiceKeys.COACHING_CENTER_REPOSITORY);
       logger.debug('Creating CreateCoachingCenterUseCase instance');
       return new CreateCoachingCenterUseCase(centerRepository);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_ACADEMIC_YEAR_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.ACADEMIC_YEAR_REPOSITORY);
+      const repo = Container.resolve<MongoAcademicYearRepository>(ServiceKeys.ACADEMIC_YEAR_REPOSITORY);
       logger.debug('Creating CreateAcademicYearUseCase instance');
       return new CreateAcademicYearUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_CLASS_MASTER_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.CLASS_MASTER_REPOSITORY);
+      const repo = Container.resolve<MongoClassMasterRepository>(ServiceKeys.CLASS_MASTER_REPOSITORY);
       logger.debug('Creating CreateClassMasterUseCase instance');
       return new CreateClassMasterUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_SECTION_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.SECTION_REPOSITORY);
+      const repo = Container.resolve<MongoSectionRepository>(ServiceKeys.SECTION_REPOSITORY);
       logger.debug('Creating CreateSectionUseCase instance');
       return new CreateSectionUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_SUBJECT_ALLOCATION_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.SUBJECT_ALLOCATION_REPOSITORY);
+      const repo = Container.resolve<MongoSubjectAllocationRepository>(ServiceKeys.SUBJECT_ALLOCATION_REPOSITORY);
       logger.debug('Creating CreateSubjectAllocationUseCase instance');
       return new CreateSubjectAllocationUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_FEE_TYPE_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.FEE_TYPE_REPOSITORY);
+      const repo = Container.resolve<MongoFeeTypeRepository>(ServiceKeys.FEE_TYPE_REPOSITORY);
       logger.debug('Creating CreateFeeTypeUseCase instance');
       return new CreateFeeTypeUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_FEE_PLAN_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.FEE_PLAN_REPOSITORY);
+      const repo = Container.resolve<MongoFeePlanRepository>(ServiceKeys.FEE_PLAN_REPOSITORY);
       logger.debug('Creating CreateFeePlanUseCase instance');
       return new CreateFeePlanUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.ASSIGN_FEE_PLAN_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.FEE_PLAN_ASSIGNMENT_REPOSITORY);
+      const repo = Container.resolve<MongoFeePlanAssignmentRepository>(ServiceKeys.FEE_PLAN_ASSIGNMENT_REPOSITORY);
       logger.debug('Creating AssignFeePlanUseCase instance');
       return new AssignFeePlanUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_STUDENT_FEE_LEDGER_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.STUDENT_FEE_LEDGER_REPOSITORY);
+      const repo = Container.resolve<MongoStudentFeeLedgerRepository>(ServiceKeys.STUDENT_FEE_LEDGER_REPOSITORY);
       logger.debug('Creating CreateStudentFeeLedgerUseCase instance');
       return new CreateStudentFeeLedgerUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_PAYMENT_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.PAYMENT_REPOSITORY);
+      const repo = Container.resolve<MongoPaymentRepository>(ServiceKeys.PAYMENT_REPOSITORY);
       logger.debug('Creating CreatePaymentUseCase instance');
       return new CreatePaymentUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_CREDIT_NOTE_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.CREDIT_NOTE_REPOSITORY);
+      const repo = Container.resolve<MongoCreditNoteRepository>(ServiceKeys.CREDIT_NOTE_REPOSITORY);
       logger.debug('Creating CreateCreditNoteUseCase instance');
       return new CreateCreditNoteUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_COACHING_PROGRAM_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.COACHING_PROGRAM_REPOSITORY);
+      const repo = Container.resolve<MongoCoachingProgramRepository>(ServiceKeys.COACHING_PROGRAM_REPOSITORY);
       logger.debug('Creating CreateCoachingProgramUseCase instance');
       return new CreateCoachingProgramUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_COACHING_BATCH_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.COACHING_BATCH_REPOSITORY);
+      const repo = Container.resolve<MongoCoachingBatchRepository>(ServiceKeys.COACHING_BATCH_REPOSITORY);
       logger.debug('Creating CreateCoachingBatchUseCase instance');
       return new CreateCoachingBatchUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_COACHING_ENROLLMENT_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.COACHING_ENROLLMENT_REPOSITORY);
+      const repo = Container.resolve<MongoCoachingEnrollmentRepository>(ServiceKeys.COACHING_ENROLLMENT_REPOSITORY);
       logger.debug('Creating CreateCoachingEnrollmentUseCase instance');
       return new CreateCoachingEnrollmentUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.CREATE_COACHING_SESSION_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.COACHING_SESSION_REPOSITORY);
+      const repo = Container.resolve<MongoCoachingSessionRepository>(ServiceKeys.COACHING_SESSION_REPOSITORY);
       logger.debug('Creating CreateCoachingSessionUseCase instance');
       return new CreateCoachingSessionUseCase(repo);
     });
 
     Container.registerSingleton(ServiceKeys.MARK_COACHING_ATTENDANCE_USE_CASE, () => {
-      const repo = Container.resolve(ServiceKeys.COACHING_ATTENDANCE_REPOSITORY);
+      const repo = Container.resolve<MongoCoachingAttendanceRepository>(ServiceKeys.COACHING_ATTENDANCE_REPOSITORY);
       logger.debug('Creating MarkCoachingAttendanceUseCase instance');
       return new MarkCoachingAttendanceUseCase(repo);
     });
