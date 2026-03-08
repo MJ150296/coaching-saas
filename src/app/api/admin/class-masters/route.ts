@@ -29,14 +29,14 @@ export async function GET(request: NextRequest) {
 
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
     const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
     const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
 
-    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
-      assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+      assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
     const repo = await initializeAppAndGetService<MongoClassMasterRepository>(
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     );
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       limit,
       offset,
     });
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     const total = await repo.countByFilters({
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
     });
     return NextResponse.json({
       items,
@@ -82,11 +82,11 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.CREATE_CLASS_MASTER);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
-    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
+    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const useCase = await initializeAppAndGetService<CreateClassMasterUseCase>(
       ServiceKeys.CREATE_CLASS_MASTER_USE_CASE
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       actorRole: actor.getRole(),
       action: 'CREATE_CLASS_MASTER',
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 

@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && targetRole !== UserRole.SUPER_ADMIN) {
-      if (!tenant.organizationId || !tenant.schoolId) {
+      if (!tenant.organizationId || !tenant.coachingCenterId) {
         return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
       }
     }
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const result = await useCase.execute({
       email: body.email,
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       phone: body.phone,
       role: targetRole,
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       coachingCenterId: tenant.coachingCenterId,
     });
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       targetId: result.getValue().user.id,
       targetRole: result.getValue().user.role,
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 

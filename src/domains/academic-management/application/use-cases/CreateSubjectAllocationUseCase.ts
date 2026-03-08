@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateSubjectAllocationRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   classMasterId: string;
   sectionId?: string;
@@ -21,7 +21,7 @@ export class CreateSubjectAllocationUseCase {
     try {
       const entity = SubjectAllocation.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         academicYearId: request.academicYearId,
         classMasterId: request.classMasterId,
         sectionId: request.sectionId,

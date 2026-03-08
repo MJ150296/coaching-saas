@@ -14,7 +14,7 @@ type OrganizationOption = {
   name: string;
 };
 
-type SchoolOption = {
+type CoachingCenterOption = {
   id: string;
   name: string;
   organizationId: string;
@@ -41,13 +41,13 @@ export default function AdminUsersPage() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [organizationId, setOrganizationId] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [coachingCenterId, setCoachingCenterId] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.TEACHER);
   const [roleSearch, setRoleSearch] = useState("");
   const [organizationSearch, setOrganizationSearch] = useState("");
-  const [schoolSearch, setSchoolSearch] = useState("");
+  const [coachingCenterSearch, setCoachingCenterSearch] = useState("");
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [tenantLoading, setTenantLoading] = useState(false);
   const [parentEmail, setParentEmail] = useState("");
   const [parentPassword, setParentPassword] = useState("");
@@ -90,15 +90,15 @@ export default function AdminUsersPage() {
       })),
     [organizations]
   );
-  const schoolOptions = useMemo(
+  const coachingCenterOptions = useMemo(
     () =>
-      schools
+      coachingCenters
         .filter((coachingCenter) => !organizationId || coachingCenter.organizationId === organizationId)
         .map((coachingCenter) => ({
           value: coachingCenter.id,
           label: `${coachingCenter.name} (${coachingCenter.id})`,
         })),
-    [schools, organizationId]
+    [coachingCenters, organizationId]
   );
 
   useEffect(() => {
@@ -129,19 +129,19 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
-      setSchoolId("");
+      setCoachingCenters([]);
+      setCoachingCenterId("");
       return;
     }
 
     let active = true;
-    async function loadSchools() {
+    async function loadCoachingCenters() {
       setTenantLoading(true);
       try {
         const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
-        setSchools(items);
-        setSchoolId((prev) => {
+        setCoachingCenters(items);
+        setCoachingCenterId((prev) => {
           if (items.length === 1) return items[0].id;
           if (!items.some((item) => item.id === prev)) return "";
           return prev;
@@ -154,14 +154,14 @@ export default function AdminUsersPage() {
       }
     }
 
-    loadSchools();
+    loadCoachingCenters();
     return () => {
       active = false;
     };
   }, [organizationId]);
 
   const loadUsers = useCallback(async () => {
-    if (!organizationId || !schoolId) {
+    if (!organizationId || !coachingCenterId) {
       setUsers([]);
       setUsersTotal(0);
       return;
@@ -171,7 +171,7 @@ export default function AdminUsersPage() {
     try {
       const params = new URLSearchParams();
       params.set("organizationId", organizationId);
-      params.set("schoolId", schoolId);
+      params.set("coachingCenterId", coachingCenterId);
       params.set("withMeta", "true");
       params.set("limit", "200");
       if (listRoleFilter) params.set("role", listRoleFilter);
@@ -194,7 +194,7 @@ export default function AdminUsersPage() {
     } finally {
       setUsersLoading(false);
     }
-  }, [organizationId, schoolId, listRoleFilter]);
+  }, [organizationId, coachingCenterId, listRoleFilter]);
 
   useEffect(() => {
     loadUsers();
@@ -250,7 +250,7 @@ export default function AdminUsersPage() {
           phone,
           role,
           organizationId: organizationId || undefined,
-          schoolId: schoolId || undefined,
+          coachingCenterId: coachingCenterId || undefined,
           parent: role === UserRole.STUDENT ? {
             email: parentEmail,
             password: parentPassword,
@@ -321,8 +321,8 @@ export default function AdminUsersPage() {
                 value={organizationId}
                 onChange={(value) => {
                   setOrganizationId(value);
-                  setSchoolId("");
-                  setSchoolSearch("");
+                  setCoachingCenterId("");
+                  setCoachingCenterSearch("");
                 }}
                 search={organizationSearch}
                 onSearchChange={setOrganizationSearch}
@@ -332,11 +332,11 @@ export default function AdminUsersPage() {
                 label="Organization"
               />
               <SearchableDropdown
-                options={schoolOptions}
-                value={schoolId}
-                onChange={setSchoolId}
-                search={schoolSearch}
-                onSearchChange={setSchoolSearch}
+                options={coachingCenterOptions}
+                value={coachingCenterId}
+                onChange={setCoachingCenterId}
+                search={coachingCenterSearch}
+                onSearchChange={setCoachingCenterSearch}
                 placeholder={!organizationId ? "Select organization first" : "Select coaching center"}
                 searchPlaceholder="Search coaching center"
                 disabled={tenantLoading || !organizationId}
@@ -523,7 +523,7 @@ export default function AdminUsersPage() {
               placeholder="Filter by role"
               searchPlaceholder="Search role filter"
               label="Role Filter"
-              disabled={!organizationId || !schoolId}
+              disabled={!organizationId || !coachingCenterId}
             />
           </div>
 
@@ -531,7 +531,7 @@ export default function AdminUsersPage() {
             <button
               type="button"
               onClick={() => loadUsers()}
-              disabled={usersLoading || !organizationId || !schoolId}
+              disabled={usersLoading || !organizationId || !coachingCenterId}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {usersLoading ? "Refreshing..." : "Refresh"}
@@ -597,7 +597,7 @@ export default function AdminUsersPage() {
                 {filteredUsers.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-3 py-4 text-center text-sm text-gray-500">
-                      {!organizationId || !schoolId
+                      {!organizationId || !coachingCenterId
                         ? "Select organization and coaching center to view users."
                         : "No users found for selected filters."}
                     </td>

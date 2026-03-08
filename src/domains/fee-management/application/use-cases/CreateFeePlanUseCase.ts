@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateFeePlanRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   name: string;
   items: FeePlanItem[];

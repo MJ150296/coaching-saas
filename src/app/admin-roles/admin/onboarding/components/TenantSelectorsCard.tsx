@@ -8,52 +8,52 @@ interface TenantSelectorsCardProps {
   status: 'loading' | 'authenticated' | 'unauthenticated';
   actorRole?: UserRole;
   isLoadingOrganizations?: boolean;
-  isLoadingSchools?: boolean;
+  isLoadingCoachingCenters?: boolean;
   canSelectOrganization: boolean;
-  canSelectSchool: boolean;
+  canSelectCoachingCenter: boolean;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   organizationSearch: string;
-  schoolSearch: string;
+  coachingCenterSearch: string;
   tenantOrganizationOptions: Option[];
-  tenantSchoolOptions: Option[];
+  tenantCoachingCenterOptions: Option[];
   recentOrganizationId: string;
-  recentSchoolId: string;
+  recentCoachingCenterId: string;
   onOrganizationChange: (value: string) => void;
-  onSchoolChange: (value: string) => void;
+  onCoachingCenterChange: (value: string) => void;
   onOrganizationSearchChange: (value: string) => void;
-  onSchoolSearchChange: (value: string) => void;
+  onCoachingCenterSearchChange: (value: string) => void;
   onRefreshOrganizations: () => void;
-  onRefreshSchools: () => void;
+  onRefreshCoachingCenters: () => void;
 }
 
 export function TenantSelectorsCard({
   status,
   actorRole,
   isLoadingOrganizations = false,
-  isLoadingSchools = false,
+  isLoadingCoachingCenters = false,
   canSelectOrganization,
-  canSelectSchool,
+  canSelectCoachingCenter,
   organizationId,
-  schoolId,
+  coachingCenterId,
   organizationSearch,
-  schoolSearch,
+  coachingCenterSearch,
   tenantOrganizationOptions,
-  tenantSchoolOptions,
+  tenantCoachingCenterOptions,
   recentOrganizationId,
-  recentSchoolId,
+  recentCoachingCenterId,
   onOrganizationChange,
-  onSchoolChange,
+  onCoachingCenterChange,
   onOrganizationSearchChange,
-  onSchoolSearchChange,
+  onCoachingCenterSearchChange,
   onRefreshOrganizations,
-  onRefreshSchools,
+  onRefreshCoachingCenters,
 }: TenantSelectorsCardProps) {
   const showOrganizationSkeleton = isLoadingOrganizations && tenantOrganizationOptions.length === 0;
-  const showSchoolSkeleton = isLoadingSchools && tenantSchoolOptions.length === 0;
+  const showCoachingCenterSkeleton = isLoadingCoachingCenters && tenantCoachingCenterOptions.length === 0;
 
   return (
-    <section className="rounded-lg bg-white p-4 shadow" aria-busy={showOrganizationSkeleton || showSchoolSkeleton}>
+    <section className="rounded-lg bg-white p-4 shadow" aria-busy={showOrganizationSkeleton || showCoachingCenterSkeleton}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Tenant Context</h2>
@@ -63,9 +63,9 @@ export function TenantSelectorsCard({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {!canSelectOrganization && <Badge variant="gray">Organization locked by role</Badge>}
-        {!canSelectSchool && <Badge variant="gray">Coaching center locked by role</Badge>}
+        {!canSelectCoachingCenter && <Badge variant="gray">Coaching center locked by role</Badge>}
         {recentOrganizationId && <Badge variant="green">Recent Org: {recentOrganizationId}</Badge>}
-        {recentSchoolId && <Badge variant="green">Recent Coaching Center: {recentSchoolId}</Badge>}
+        {recentCoachingCenterId && <Badge variant="green">Recent Coaching Center: {recentCoachingCenterId}</Badge>}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
@@ -89,7 +89,7 @@ export function TenantSelectorsCard({
           />
         )}
 
-        {showSchoolSkeleton ? (
+        {showCoachingCenterSkeleton ? (
           <div className="space-y-2" aria-hidden="true">
             <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
             <div className="h-10 w-full animate-pulse rounded-lg bg-gray-100" />
@@ -97,20 +97,20 @@ export function TenantSelectorsCard({
           </div>
         ) : (
           <SearchableDropdown
-            options={tenantSchoolOptions}
-            value={schoolId}
-            onChange={onSchoolChange}
-            search={schoolSearch}
-            onSearchChange={onSchoolSearchChange}
+            options={tenantCoachingCenterOptions}
+            value={coachingCenterId}
+            onChange={onCoachingCenterChange}
+            search={coachingCenterSearch}
+            onSearchChange={onCoachingCenterSearchChange}
             placeholder={
               !organizationId
                 ? 'Select organization first'
-                : canSelectSchool
+                : canSelectCoachingCenter
                   ? 'Select coaching center'
                   : 'Coaching center prefilled'
             }
             searchPlaceholder="Search coaching center by name or ID"
-            disabled={!organizationId || !canSelectSchool}
+            disabled={!organizationId || !canSelectCoachingCenter}
             label="Coaching Center"
           />
         )}
@@ -126,13 +126,13 @@ export function TenantSelectorsCard({
             {isLoadingOrganizations ? 'Refreshing...' : 'Refresh Organizations'}
           </button>
         )}
-        {canSelectSchool && (
+        {canSelectCoachingCenter && (
           <button
-            onClick={onRefreshSchools}
-            disabled={!organizationId || isLoadingSchools}
+            onClick={onRefreshCoachingCenters}
+            disabled={!organizationId || isLoadingCoachingCenters}
             className="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoadingSchools ? 'Refreshing...' : 'Refresh Coaching Centers'}
+            {isLoadingCoachingCenters ? 'Refreshing...' : 'Refresh Coaching Centers'}
           </button>
         )}
       </div>

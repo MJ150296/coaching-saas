@@ -5,7 +5,7 @@ import { CoachingEnrollment } from '../../domain/entities/CoachingEnrollment';
 
 export interface CreateCoachingEnrollmentRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   studentId: string;
@@ -20,7 +20,7 @@ export class CreateCoachingEnrollmentUseCase {
     try {
       const duplicate = await this.repo.existsByStudentInBatch(
         request.organizationId,
-        request.schoolId,
+        request.coachingCenterId,
         request.batchId,
         request.studentId
       );

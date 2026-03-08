@@ -17,7 +17,7 @@ const DEFAULT_WORKING_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRI
 
 interface TimetableGenerationPayload {
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   academicYearId?: string;
   classMasterId?: string;
   sectionId?: string;
@@ -175,10 +175,10 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
-    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+    const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
-      assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+      assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
     const academicYearId = normalizeId(request.nextUrl.searchParams.get('academicYearId') || undefined);
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
     const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
 
-    if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !classMasterId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !classMasterId) {
       return NextResponse.json(
         { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
         { status: 400 }
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
 
     const baseQuery = {
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       academicYearId,
       classMasterId,
     };
@@ -245,11 +245,11 @@ export async function POST(request: NextRequest) {
     const actor = await requireActorWithPermission(Permission.CREATE_SUBJECT_ALLOCATION);
     const body = (await request.json()) as TimetableGenerationPayload;
 
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
-    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
+    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const academicYearId = normalizeId(body.academicYearId);
     const classMasterId = normalizeId(body.classMasterId);
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
         : 8;
     const workingDays = normalizeWorkingDays(body.workingDays);
 
-    if (!tenant.organizationId || !tenant.schoolId || !academicYearId || !classMasterId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !classMasterId) {
       return NextResponse.json(
         { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
         { status: 400 }
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
 
     const baseAllocationQuery = {
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       academicYearId,
       classMasterId,
     };
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
     if (sectionId) {
       await TimetableEntryModel.deleteMany({
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
         academicYearId,
         classMasterId,
         sectionId,
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
     } else {
       await TimetableEntryModel.deleteMany({
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
         academicYearId,
         classMasterId,
         sectionId: { $exists: false },
@@ -314,7 +314,7 @@ export async function POST(request: NextRequest) {
       timetable.map((slot) => ({
         _id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
         academicYearId,
         classMasterId,
         sectionId,
@@ -331,7 +331,7 @@ export async function POST(request: NextRequest) {
       actorRole: actor.getRole(),
       action: 'GENERATE_TIMETABLE',
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 

@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateCreditNoteRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   amount: number;
@@ -20,7 +20,7 @@ export class CreateCreditNoteUseCase {
     try {
       const entity = CreditNote.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         academicYearId: request.academicYearId,
         studentId: request.studentId,
         amount: request.amount,

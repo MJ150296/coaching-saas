@@ -56,8 +56,8 @@ export async function GET() {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
-    if (!organizationId || !schoolId) {
+    const coachingCenterId = actor.getCoachingCenterId();
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({
         summary: { totalClasses: 0, totalStudents: 0, pendingTasks: 0, completedTasks: 0 },
         todayClasses: [],
@@ -71,14 +71,14 @@ export async function GET() {
       AcademicYearModel.findOne({ organizationId, coachingCenterId, isActive: true }).sort({ startDate: -1 }).lean(),
       SubjectAllocationModel.find({
         organizationId,
-        schoolId,
+        coachingCenterId,
         teacherId: actor.getId(),
       })
         .sort({ createdAt: -1 })
         .lean<Array<AllocationDoc>>(),
       TimetableEntryModel.find({
         organizationId,
-        schoolId,
+        coachingCenterId,
         teacherId: actor.getId(),
         dayOfWeek: WEEK_DAYS[new Date().getDay()],
       })
@@ -107,7 +107,7 @@ export async function GET() {
 
     const enrollmentQuery: Record<string, unknown> = {
       organizationId,
-      schoolId,
+      coachingCenterId,
       classMasterId: { $in: classMasterIds },
     };
     if (activeYear?._id) {

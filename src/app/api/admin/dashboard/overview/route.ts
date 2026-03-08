@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
-import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationCoachingCenterSchema';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { connectDB } from '@/shared/infrastructure/database';
 import { getLogger } from '@/shared/infrastructure/logger';
@@ -30,27 +30,27 @@ export async function GET() {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getCoachingCenterId();
+    const coachingCenterId = actor.getCoachingCenterId();
     const userScopeQuery: Record<string, unknown> = {};
-    const schoolScopeQuery: Record<string, unknown> = {};
+    const coachingCenterScopeQuery: Record<string, unknown> = {};
 
     if (role !== UserRole.SUPER_ADMIN) {
       if (!organizationId) {
         return NextResponse.json({ error: 'Actor organization scope missing' }, { status: 400 });
       }
       userScopeQuery.organizationId = organizationId;
-      schoolScopeQuery.organizationId = organizationId;
+      coachingCenterScopeQuery.organizationId = organizationId;
     }
 
     if (role === UserRole.COACHING_ADMIN || role === UserRole.ADMIN) {
-      if (!schoolId) {
+      if (!coachingCenterId) {
         return NextResponse.json({ error: 'Actor coaching center scope missing' }, { status: 400 });
       }
-      userScopeQuery.schoolId = schoolId;
-      schoolScopeQuery._id = schoolId;
+      userScopeQuery.coachingCenterId = coachingCenterId;
+      coachingCenterScopeQuery._id = coachingCenterId;
     }
 
-    const cacheKey = `${DASHBOARD_OVERVIEW_CACHE_PREFIX}${actor.getId()}:${role}:${organizationId ?? ''}:${schoolId ?? ''}`;
+    const cacheKey = `${DASHBOARD_OVERVIEW_CACHE_PREFIX}${actor.getId()}:${role}:${organizationId ?? ''}:${coachingCenterId ?? ''}`;
     const cached = getCachedValue<unknown>(cacheKey);
     if (cached) {
       logger.debug('GET /api/admin/dashboard/overview cache hit', {
@@ -80,12 +80,12 @@ export async function GET() {
       totalUsers,
       totalSuperAdmins,
       totalOrganizationAdmins,
-      totalSchoolAdmins,
+      totalCoachingCenterAdmins,
       totalAdminsOnly,
       totalTeachers,
       totalStudents,
       totalStaff,
-      totalSchools,
+      totalCoachingCenters,
     ] = await Promise.all([
       UserModel.countDocuments(userScopeQuery),
       countByRole(UserRole.SUPER_ADMIN),
@@ -95,7 +95,7 @@ export async function GET() {
       countByRole(UserRole.TEACHER),
       countByRole(UserRole.STUDENT),
       countByRole(UserRole.STAFF),
-      CoachingCenterModel.countDocuments(schoolScopeQuery),
+      CoachingCenterModel.countDocuments(coachingCenterScopeQuery),
     ]);
 
     const recentUsersStart = Date.now();
@@ -108,12 +108,12 @@ export async function GET() {
     const totalAdmins =
       totalSuperAdmins +
       totalOrganizationAdmins +
-      totalSchoolAdmins +
+      totalCoachingCenterAdmins +
       totalAdminsOnly;
 
     const payload = {
       summary: {
-        totalSchools,
+        totalCoachingCenters,
         totalUsers,
         totalAdmins,
         totalTeachers,
@@ -131,7 +131,7 @@ export async function GET() {
       scope: {
         role,
         organizationId: organizationId ?? null,
-        schoolId: schoolId ?? null,
+        coachingCenterId: coachingCenterId ?? null,
       },
     };
     setCachedValue(cacheKey, payload, DASHBOARD_OVERVIEW_CACHE_TTL_MS);

@@ -5,7 +5,7 @@ import { CoachingBatch } from '../../domain/entities/CoachingBatch';
 
 export interface CreateCoachingBatchRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   name: string;
   facultyId?: string;

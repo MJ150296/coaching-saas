@@ -109,16 +109,16 @@ export function OrganizationStep({
 }
 
 export function CoachingCenterStep({
-  schoolForm,
-  setSchoolForm,
+  coachingCenterForm,
+  setCoachingCenterForm,
   organizationId,
   onCreate,
   status,
   errors,
 }: {
-  schoolForm: {
-    schoolName: string;
-    schoolCode: string;
+  coachingCenterForm: {
+    coachingCenterName: string;
+    coachingCenterCode: string;
     street: string;
     city: string;
     state: string;
@@ -127,9 +127,9 @@ export function CoachingCenterStep({
     contactEmail: string;
     contactPhone: string;
   };
-  setSchoolForm: (value: {
-    schoolName: string;
-    schoolCode: string;
+  setCoachingCenterForm: (value: {
+    coachingCenterName: string;
+    coachingCenterCode: string;
     street: string;
     city: string;
     state: string;
@@ -149,20 +149,20 @@ export function CoachingCenterStep({
       <FieldError message={errors?.organizationId} />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <input value={schoolForm.schoolName} onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })} placeholder="Coaching Center Name" className={inputClass(errors?.schoolName)} />
-          <FieldError message={errors?.schoolName} />
+          <input value={coachingCenterForm.coachingCenterName} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, coachingCenterName: e.target.value })} placeholder="Coaching Center Name" className={inputClass(errors?.coachingCenterName)} />
+          <FieldError message={errors?.coachingCenterName} />
         </div>
         <div>
-          <input value={schoolForm.schoolCode} onChange={(e) => setSchoolForm({ ...schoolForm, schoolCode: e.target.value })} placeholder="Coaching Center Code" className={inputClass(errors?.schoolCode)} />
-          <FieldError message={errors?.schoolCode} />
+          <input value={coachingCenterForm.coachingCenterCode} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, coachingCenterCode: e.target.value })} placeholder="Coaching Center Code" className={inputClass(errors?.coachingCenterCode)} />
+          <FieldError message={errors?.coachingCenterCode} />
         </div>
-        <input value={schoolForm.street} onChange={(e) => setSchoolForm({ ...schoolForm, street: e.target.value })} placeholder="Street" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.city} onChange={(e) => setSchoolForm({ ...schoolForm, city: e.target.value })} placeholder="City" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.state} onChange={(e) => setSchoolForm({ ...schoolForm, state: e.target.value })} placeholder="State" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.zipCode} onChange={(e) => setSchoolForm({ ...schoolForm, zipCode: e.target.value })} placeholder="Zip Code" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.country} onChange={(e) => setSchoolForm({ ...schoolForm, country: e.target.value })} placeholder="Country" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.contactEmail} onChange={(e) => setSchoolForm({ ...schoolForm, contactEmail: e.target.value })} placeholder="Contact Email" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={schoolForm.contactPhone} onChange={(e) => setSchoolForm({ ...schoolForm, contactPhone: e.target.value })} placeholder="Contact Phone" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.street} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, street: e.target.value })} placeholder="Street" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.city} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, city: e.target.value })} placeholder="City" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.state} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, state: e.target.value })} placeholder="State" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.zipCode} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, zipCode: e.target.value })} placeholder="Zip Code" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.country} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, country: e.target.value })} placeholder="Country" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.contactEmail} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, contactEmail: e.target.value })} placeholder="Contact Email" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+        <input value={coachingCenterForm.contactPhone} onChange={(e) => setCoachingCenterForm({ ...coachingCenterForm, contactPhone: e.target.value })} placeholder="Contact Phone" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
       </div>
       <button onClick={onCreate} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Coaching Center</button>
       <StatusBanner status={status} />
@@ -244,7 +244,7 @@ export function AdminUserStep({
 
 export function AcademicSetupStep({
   organizationId,
-  schoolId,
+  coachingCenterId,
   academicYearId,
   classMasterId,
   setAcademicYearId,
@@ -272,7 +272,7 @@ export function AcademicSetupStep({
   errors,
 }: {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   classMasterId: string;
   setAcademicYearId: (value: string) => void;
@@ -313,7 +313,7 @@ export function AcademicSetupStep({
             onSearchChange={setAcademicYearSearch}
             placeholder="Select academic year"
             searchPlaceholder="Search academic year by name or ID"
-            disabled={!organizationId || !schoolId}
+            disabled={!organizationId || !coachingCenterId}
           />
           <SearchableDropdown
             options={tenantClassMasterOptions}
@@ -323,12 +323,12 @@ export function AcademicSetupStep({
             onSearchChange={setClassMasterSearch}
             placeholder="Select class master"
             searchPlaceholder="Search class by name, level or ID"
-            disabled={!organizationId || !schoolId}
+            disabled={!organizationId || !coachingCenterId}
           />
         </div>
         <div className="mt-3 flex gap-2">
-          <button onClick={onRefreshAcademicYears} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Academic Years</button>
-          <button onClick={onRefreshClasses} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Classes</button>
+          <button onClick={onRefreshAcademicYears} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Academic Years</button>
+          <button onClick={onRefreshClasses} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Classes</button>
         </div>
       </div>
 
@@ -386,7 +386,7 @@ export function AcademicSetupStep({
 
 export function TeacherClassTeacherStep({
   organizationId,
-  schoolId,
+  coachingCenterId,
   teacherForm,
   setTeacherForm,
   classMasterId,
@@ -418,10 +418,11 @@ export function TeacherClassTeacherStep({
   statusTeacherUser,
   statusSection,
   statusSubjectAllocation,
+  showAdvancedAcademicFields,
   errors,
 }: {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   teacherForm: { email: string; password: string; firstName: string; lastName: string; phone: string };
   setTeacherForm: (value: { email: string; password: string; firstName: string; lastName: string; phone: string }) => void;
   classMasterId: string;
@@ -453,6 +454,7 @@ export function TeacherClassTeacherStep({
   statusTeacherUser: StepStatus;
   statusSection: StepStatus;
   statusSubjectAllocation: StepStatus;
+  showAdvancedAcademicFields: boolean;
   errors?: FieldErrors;
 }) {
   return (
@@ -487,16 +489,9 @@ export function TeacherClassTeacherStep({
           onSearchChange={setClassMasterSearch}
           placeholder="Select class"
           searchPlaceholder="Search class by name, level or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
         <FieldError message={errors?.classMasterId} />
-        <div>
-          <input value={sectionForm.name} onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })} placeholder="Section Name" className={inputClass(errors?.sectionName)} />
-          <FieldError message={errors?.sectionName} />
-        </div>
-        <input value={sectionForm.capacity} onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })} type="number" placeholder="Capacity" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={sectionForm.roomNumber} onChange={(e) => setSectionForm({ ...sectionForm, roomNumber: e.target.value })} placeholder="Room Number" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
-        <input value={sectionForm.shift} onChange={(e) => setSectionForm({ ...sectionForm, shift: e.target.value })} placeholder="Shift" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
         <SearchableDropdown
           options={tenantTeacherOptions}
           value={teacherId}
@@ -505,15 +500,30 @@ export function TeacherClassTeacherStep({
           onSearchChange={setTeacherSearch}
           placeholder="Select class teacher"
           searchPlaceholder="Search teacher by name, email or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
+        {showAdvancedAcademicFields && (
+          <>
+            <div>
+              <input value={sectionForm.name} onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })} placeholder="Section Name" className={inputClass(errors?.sectionName)} />
+              <FieldError message={errors?.sectionName} />
+            </div>
+            <input value={sectionForm.capacity} onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })} type="number" placeholder="Capacity" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+            <input value={sectionForm.roomNumber} onChange={(e) => setSectionForm({ ...sectionForm, roomNumber: e.target.value })} placeholder="Room Number" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+            <input value={sectionForm.shift} onChange={(e) => setSectionForm({ ...sectionForm, shift: e.target.value })} placeholder="Shift" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100" />
+          </>
+        )}
       </div>
       <div className="mt-3 flex gap-2">
-        <button onClick={onRefreshClasses} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Classes</button>
-        <button onClick={onRefreshTeachers} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Teachers</button>
+        <button onClick={onRefreshClasses} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Classes</button>
+        <button onClick={onRefreshTeachers} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Teachers</button>
       </div>
-      <button onClick={onCreateSectionAssignTeacher} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Section + Assign Class Teacher</button>
-      <StatusBanner status={statusSection} />
+      {showAdvancedAcademicFields && (
+        <>
+          <button onClick={onCreateSectionAssignTeacher} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Section + Assign Class Teacher</button>
+          <StatusBanner status={statusSection} />
+        </>
+      )}
       <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={skipSubjectAllocation} onChange={(e) => setSkipSubjectAllocation(e.target.checked)} />
         Skip subject allocation (optional)
@@ -531,7 +541,7 @@ export function TeacherClassTeacherStep({
           onSearchChange={setAcademicYearSearch}
           placeholder="Select academic year"
           searchPlaceholder="Search academic year by name or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
         <FieldError message={errors?.academicYearId} />
       </div>
@@ -619,7 +629,7 @@ export function FeesSetupStep({
         <input type="checkbox" checked={skipAssignFeePlan} onChange={(e) => setSkipAssignFeePlan(e.target.checked)} />
         Skip fee plan assignment (optional)
       </label>
-      <button disabled={skipAssignFeePlan} onClick={onAssignFeePlan} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50">Assign Fee Plan to Class/Section</button>
+      <button disabled={skipAssignFeePlan} onClick={onAssignFeePlan} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50">Assign Fee Plan to Class (or Section)</button>
       <StatusBanner status={statusAssignFeePlan} />
     </section>
   );
@@ -627,7 +637,7 @@ export function FeesSetupStep({
 
 export function StudentLedgerStep({
   organizationId,
-  schoolId,
+  coachingCenterId,
   tenantStudentOptions,
   studentId,
   setStudentId,
@@ -653,7 +663,7 @@ export function StudentLedgerStep({
   errors,
 }: {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   tenantStudentOptions: Array<{ value: string; label: string }>;
   studentId: string;
   setStudentId: (value: string) => void;
@@ -690,7 +700,7 @@ export function StudentLedgerStep({
           onSearchChange={setStudentSearch}
           placeholder="Select student"
           searchPlaceholder="Search student by name, email or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
         <FieldError message={errors?.studentId} />
         <SearchableDropdown
@@ -701,7 +711,7 @@ export function StudentLedgerStep({
           onSearchChange={setFeePlanSearch}
           placeholder="Select fee plan"
           searchPlaceholder="Search fee plan by name or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
         <SearchableDropdown
           options={tenantFeeTypeOptions}
@@ -711,7 +721,7 @@ export function StudentLedgerStep({
           onSearchChange={setFeeTypeSearch}
           placeholder="Select fee type (optional)"
           searchPlaceholder="Search fee type by name or ID"
-          disabled={!organizationId || !schoolId}
+          disabled={!organizationId || !coachingCenterId}
         />
         <div>
           <input value={ledgerForm.amount} onChange={(e) => setLedgerForm({ ...ledgerForm, amount: e.target.value })} type="number" placeholder="Amount" className={inputClass(errors?.ledgerAmount)} />
@@ -723,9 +733,9 @@ export function StudentLedgerStep({
         </div>
       </div>
       <div className="mt-3 flex gap-2">
-        <button onClick={onRefreshStudents} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Students</button>
-        <button onClick={onRefreshFeePlans} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Fee Plans</button>
-        <button onClick={onRefreshFeeTypes} disabled={!organizationId || !schoolId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Fee Types</button>
+        <button onClick={onRefreshStudents} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Students</button>
+        <button onClick={onRefreshFeePlans} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Fee Plans</button>
+        <button onClick={onRefreshFeeTypes} disabled={!organizationId || !coachingCenterId} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Refresh Fee Types</button>
       </div>
       <button onClick={onCreateLedger} className="mt-3 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Fee Ledger Entry</button>
       <StatusBanner status={status} />
@@ -823,7 +833,7 @@ export function ParentHandoverStep({
 }: {
   summary: {
     organizationId: string;
-    schoolId: string;
+    coachingCenterId: string;
     academicYearId: string;
     classMasterId: string;
     sectionId: string;

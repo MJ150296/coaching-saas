@@ -12,8 +12,8 @@ export interface CreateCoachingCenterRequest {
   organizationId: string;
   coachingCenterName?: string;
   coachingCenterCode?: string;
-  schoolName?: string;
-  schoolCode?: string;
+  coachingCenterName?: string;
+  coachingCenterCode?: string;
   street: string;
   city: string;
   state: string;
@@ -27,9 +27,9 @@ export interface CreateCoachingCenterResponse {
   coachingCenterId: string;
   coachingCenterName: string;
   coachingCenterCode: string;
-  schoolId: string;
-  schoolName: string;
-  schoolCode: string;
+  coachingCenterId: string;
+  coachingCenterName: string;
+  coachingCenterCode: string;
 }
 
 export class CreateCoachingCenterUseCase {
@@ -39,8 +39,8 @@ export class CreateCoachingCenterUseCase {
     request: CreateCoachingCenterRequest
   ): Promise<Result<CreateCoachingCenterResponse, string>> {
     try {
-      const rawName = request.coachingCenterName ?? request.schoolName;
-      const rawCode = request.coachingCenterCode ?? request.schoolCode;
+      const rawName = request.coachingCenterName ?? request.coachingCenterName;
+      const rawCode = request.coachingCenterCode ?? request.coachingCenterCode;
       if (!rawName || !rawCode) {
         return Result.fail<CreateCoachingCenterResponse>('coachingCenterName and coachingCenterCode are required');
       }
@@ -74,9 +74,9 @@ export class CreateCoachingCenterUseCase {
         coachingCenterId: centerId,
         coachingCenterName: centerName.getValue(),
         coachingCenterCode: centerCode.getValue(),
-        schoolId: centerId,
-        schoolName: centerName.getValue(),
-        schoolCode: centerCode.getValue(),
+        coachingCenterId: centerId,
+        coachingCenterName: centerName.getValue(),
+        coachingCenterCode: centerCode.getValue(),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';

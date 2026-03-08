@@ -21,6 +21,10 @@ This index reflects the current `src` structure and runtime flows.
 - `project-summary.md` - Current implementation summary
 - `docs-roadmap.md` - How to read the docs
 
+## Operations Docs
+
+- `operations/coaching-operations-handbook.md` - End-to-end operating guide (how app works, onboarding, daily activities)
+
 ## Suggested Reading Order
 
 1. `README.md`

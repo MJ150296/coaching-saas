@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateStudentFeeLedgerRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   feePlanId?: string;
@@ -66,7 +66,7 @@ export class CreateStudentFeeLedgerUseCase {
       const netAmount = Number((grossAmount - discountAmount).toFixed(2));
       const entity = StudentFeeLedgerEntry.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         academicYearId: request.academicYearId,
         studentId: request.studentId,
         feePlanId: request.feePlanId,

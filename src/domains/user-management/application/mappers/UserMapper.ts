@@ -15,7 +15,7 @@ interface UserPersistence {
   phone: string | null;
   role: ReturnType<User['getRole']>;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
@@ -57,8 +57,8 @@ export class UserMapper {
         phone,
         role: raw.role,
         organizationId: raw.organizationId,
-        schoolId: raw.coachingCenterId ?? raw.schoolId,
-        coachingCenterId: raw.coachingCenterId ?? raw.schoolId,
+        coachingCenterId: raw.coachingCenterId ?? raw.coachingCenterId,
+        coachingCenterId: raw.coachingCenterId ?? raw.coachingCenterId,
         isActive: raw.isActive,
         emailVerified: raw.emailVerified,
       },

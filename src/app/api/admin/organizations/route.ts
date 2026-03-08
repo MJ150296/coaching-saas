@@ -8,7 +8,7 @@ import { Permission } from '@/shared/infrastructure/rbac';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { OrganizationModel, CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { OrganizationModel, CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationCoachingCenterSchema';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
 
@@ -297,8 +297,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const linkedSchoolCount = await CoachingCenterModel.countDocuments({ organizationId: id });
-    if (linkedSchoolCount > 0) {
+    const linkedCoachingCenterCount = await CoachingCenterModel.countDocuments({ organizationId: id });
+    if (linkedCoachingCenterCount > 0) {
       return NextResponse.json(
         { error: 'Cannot delete organization with existing coaching centers. Delete coaching centers first.' },
         { status: 409 }

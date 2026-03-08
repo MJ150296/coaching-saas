@@ -14,7 +14,7 @@ export async function GET() {
 
     await connectDB();
     const user = await UserModel.findById(actor.getId())
-      .select('_id email firstName lastName phone role organizationId schoolId isActive emailVerified createdAt updatedAt')
+      .select('_id email firstName lastName phone role organizationId coachingCenterId isActive emailVerified createdAt updatedAt')
       .lean<{
         _id: string;
         email: string;
@@ -23,7 +23,7 @@ export async function GET() {
         phone?: string;
         role: string;
         organizationId?: string;
-        schoolId?: string;
+        coachingCenterId?: string;
         isActive: boolean;
         emailVerified: boolean;
         createdAt: Date;
@@ -42,8 +42,8 @@ export async function GET() {
       phone: user.phone || '',
       role: user.role,
       organizationId: user.organizationId,
-      schoolId: user.schoolId,
-      coachingCenterId: user.schoolId,
+      coachingCenterId: user.coachingCenterId,
+      coachingCenterId: user.coachingCenterId,
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest) {
       targetId: actor.getId(),
       targetRole: actor.getRole(),
       organizationId: actor.getOrganizationId(),
-      schoolId: actor.getCoachingCenterId(),
+      coachingCenterId: actor.getCoachingCenterId(),
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
@@ -131,8 +131,8 @@ export async function PATCH(request: NextRequest) {
         phone: user.phone || '',
         role: user.role,
         organizationId: user.organizationId,
-        schoolId: user.schoolId,
-        coachingCenterId: user.schoolId,
+        coachingCenterId: user.coachingCenterId,
+        coachingCenterId: user.coachingCenterId,
         isActive: user.isActive,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,

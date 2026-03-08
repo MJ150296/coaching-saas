@@ -4,13 +4,13 @@ import { StepMeta } from '../components/types';
 
 export type JsonRecord = Record<string, unknown>;
 export type OrgOption = { id: string; name: string };
-export type SchoolOption = { id: string; name: string; organizationId: string };
-export type AcademicYearOption = { id: string; name: string; startDate?: string; endDate?: string; organizationId: string; schoolId: string };
-export type ClassOption = { id: string; name: string; level?: string; organizationId: string; schoolId: string };
-export type TeacherOption = { id: string; name: string; email: string; organizationId?: string; schoolId?: string };
-export type StudentOption = { id: string; name: string; email: string; organizationId?: string; schoolId?: string };
-export type FeeTypeOption = { id: string; name: string; amount: number; frequency: string; organizationId: string; schoolId: string };
-export type FeePlanOption = { id: string; name: string; academicYearId: string; organizationId: string; schoolId: string };
+export type CoachingCenterOption = { id: string; name: string; organizationId: string };
+export type AcademicYearOption = { id: string; name: string; startDate?: string; endDate?: string; organizationId: string; coachingCenterId: string };
+export type ClassOption = { id: string; name: string; level?: string; organizationId: string; coachingCenterId: string };
+export type TeacherOption = { id: string; name: string; email: string; organizationId?: string; coachingCenterId?: string };
+export type StudentOption = { id: string; name: string; email: string; organizationId?: string; coachingCenterId?: string };
+export type FeeTypeOption = { id: string; name: string; amount: number; frequency: string; organizationId: string; coachingCenterId: string };
+export type FeePlanOption = { id: string; name: string; academicYearId: string; organizationId: string; coachingCenterId: string };
 export type ClassLevelOption = { value: string; label: string };
 
 export const STEP_META: StepMeta[] = [
@@ -61,7 +61,7 @@ export function extractId(data: JsonRecord): string {
   if (typeof data.id === 'string') return data.id;
   if (typeof data._id === 'string') return data._id;
   if (typeof data.organizationId === 'string') return data.organizationId;
-  if (typeof data.schoolId === 'string') return data.schoolId;
+  if (typeof data.coachingCenterId === 'string') return data.coachingCenterId;
   if (typeof data.feeTypeId === 'string') return data.feeTypeId;
   if (typeof data.feePlanId === 'string') return data.feePlanId;
   if (typeof data.studentId === 'string') return data.studentId;
@@ -81,7 +81,7 @@ export async function fetchOrganizations(): Promise<OrgOption[]> {
   }
 }
 
-export async function fetchSchools(orgId?: string): Promise<SchoolOption[]> {
+export async function fetchCoachingCenters(orgId?: string): Promise<CoachingCenterOption[]> {
   try {
     const data = await getAdminCoachingCenters(orgId);
     return data.map((row) => ({
@@ -98,7 +98,7 @@ export async function fetchAcademicYears(orgId?: string, schId?: string): Promis
   try {
     const params = new URLSearchParams();
     if (orgId) params.set('organizationId', orgId);
-    if (schId) params.set('schoolId', schId);
+    if (schId) params.set('coachingCenterId', schId);
     const query = params.toString();
     const response = await fetch(`/api/admin/academic-years${query ? `?${query}` : ''}`);
     const data = (await response.json()) as Array<{
@@ -107,7 +107,7 @@ export async function fetchAcademicYears(orgId?: string, schId?: string): Promis
       startDate?: string;
       endDate?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     }>;
     if (!response.ok || !Array.isArray(data)) return [];
     return data
@@ -116,7 +116,7 @@ export async function fetchAcademicYears(orgId?: string, schId?: string): Promis
           typeof row.id === 'string' &&
           typeof row.name === 'string' &&
           typeof row.organizationId === 'string' &&
-          typeof row.schoolId === 'string'
+          typeof row.coachingCenterId === 'string'
       )
       .map((row) => ({
         id: row.id as string,
@@ -124,7 +124,7 @@ export async function fetchAcademicYears(orgId?: string, schId?: string): Promis
         startDate: typeof row.startDate === 'string' ? row.startDate : undefined,
         endDate: typeof row.endDate === 'string' ? row.endDate : undefined,
         organizationId: row.organizationId as string,
-        schoolId: row.schoolId as string,
+        coachingCenterId: row.coachingCenterId as string,
       }));
   } catch {
     return [];
@@ -135,7 +135,7 @@ export async function fetchClassMasters(orgId?: string, schId?: string): Promise
   try {
     const params = new URLSearchParams();
     if (orgId) params.set('organizationId', orgId);
-    if (schId) params.set('schoolId', schId);
+    if (schId) params.set('coachingCenterId', schId);
     const query = params.toString();
     const response = await fetch(`/api/admin/class-masters${query ? `?${query}` : ''}`);
     const data = (await response.json()) as Array<{
@@ -143,7 +143,7 @@ export async function fetchClassMasters(orgId?: string, schId?: string): Promise
       name?: string;
       level?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     }>;
     if (!response.ok || !Array.isArray(data)) return [];
     return data
@@ -152,14 +152,14 @@ export async function fetchClassMasters(orgId?: string, schId?: string): Promise
           typeof row.id === 'string' &&
           typeof row.name === 'string' &&
           typeof row.organizationId === 'string' &&
-          typeof row.schoolId === 'string'
+          typeof row.coachingCenterId === 'string'
       )
       .map((row) => ({
         id: row.id as string,
         name: row.name as string,
         level: typeof row.level === 'string' ? row.level : undefined,
         organizationId: row.organizationId as string,
-        schoolId: row.schoolId as string,
+        coachingCenterId: row.coachingCenterId as string,
       }));
   } catch {
     return [];
@@ -172,12 +172,12 @@ async function fetchUsersByRole(role: UserRole, orgId?: string, schId?: string):
   lastName: string;
   email: string;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
 }>> {
   try {
     const params = new URLSearchParams({ role });
     if (orgId) params.set('organizationId', orgId);
-    if (schId) params.set('schoolId', schId);
+    if (schId) params.set('coachingCenterId', schId);
     const response = await fetch(`/api/admin/users?${params.toString()}`);
     const data = (await response.json()) as Array<{
       id?: string;
@@ -185,7 +185,7 @@ async function fetchUsersByRole(role: UserRole, orgId?: string, schId?: string):
       lastName?: string;
       email?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     }>;
     if (!response.ok || !Array.isArray(data)) return [];
     return data
@@ -202,7 +202,7 @@ async function fetchUsersByRole(role: UserRole, orgId?: string, schId?: string):
         lastName: row.lastName as string,
         email: row.email as string,
         organizationId: typeof row.organizationId === 'string' ? row.organizationId : undefined,
-        schoolId: typeof row.schoolId === 'string' ? row.schoolId : undefined,
+        coachingCenterId: typeof row.coachingCenterId === 'string' ? row.coachingCenterId : undefined,
       }));
   } catch {
     return [];
@@ -216,7 +216,7 @@ export async function fetchTeachers(orgId?: string, schId?: string): Promise<Tea
     name: `${row.firstName} ${row.lastName}`.trim(),
     email: row.email,
     organizationId: row.organizationId,
-    schoolId: row.schoolId,
+    coachingCenterId: row.coachingCenterId,
   }));
 }
 
@@ -227,7 +227,7 @@ export async function fetchStudents(orgId?: string, schId?: string): Promise<Stu
     name: `${row.firstName} ${row.lastName}`.trim(),
     email: row.email,
     organizationId: row.organizationId,
-    schoolId: row.schoolId,
+    coachingCenterId: row.coachingCenterId,
   }));
 }
 
@@ -235,7 +235,7 @@ export async function fetchFeeTypes(orgId?: string, schId?: string): Promise<Fee
   try {
     const params = new URLSearchParams();
     if (orgId) params.set('organizationId', orgId);
-    if (schId) params.set('schoolId', schId);
+    if (schId) params.set('coachingCenterId', schId);
     const query = params.toString();
     const response = await fetch(`/api/admin/fee-types${query ? `?${query}` : ''}`);
     const data = (await response.json()) as Array<{
@@ -244,7 +244,7 @@ export async function fetchFeeTypes(orgId?: string, schId?: string): Promise<Fee
       amount?: number;
       frequency?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     }>;
     if (!response.ok || !Array.isArray(data)) return [];
     return data
@@ -255,7 +255,7 @@ export async function fetchFeeTypes(orgId?: string, schId?: string): Promise<Fee
           typeof row.amount === 'number' &&
           typeof row.frequency === 'string' &&
           typeof row.organizationId === 'string' &&
-          typeof row.schoolId === 'string'
+          typeof row.coachingCenterId === 'string'
       )
       .map((row) => ({
         id: row.id as string,
@@ -263,7 +263,7 @@ export async function fetchFeeTypes(orgId?: string, schId?: string): Promise<Fee
         amount: row.amount as number,
         frequency: row.frequency as string,
         organizationId: row.organizationId as string,
-        schoolId: row.schoolId as string,
+        coachingCenterId: row.coachingCenterId as string,
       }));
   } catch {
     return [];
@@ -274,7 +274,7 @@ export async function fetchFeePlans(orgId?: string, schId?: string): Promise<Fee
   try {
     const params = new URLSearchParams();
     if (orgId) params.set('organizationId', orgId);
-    if (schId) params.set('schoolId', schId);
+    if (schId) params.set('coachingCenterId', schId);
     const query = params.toString();
     const response = await fetch(`/api/admin/fee-plans${query ? `?${query}` : ''}`);
     const data = (await response.json()) as Array<{
@@ -282,7 +282,7 @@ export async function fetchFeePlans(orgId?: string, schId?: string): Promise<Fee
       name?: string;
       academicYearId?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     }>;
     if (!response.ok || !Array.isArray(data)) return [];
     return data
@@ -292,14 +292,14 @@ export async function fetchFeePlans(orgId?: string, schId?: string): Promise<Fee
           typeof row.name === 'string' &&
           typeof row.academicYearId === 'string' &&
           typeof row.organizationId === 'string' &&
-          typeof row.schoolId === 'string'
+          typeof row.coachingCenterId === 'string'
       )
       .map((row) => ({
         id: row.id as string,
         name: row.name as string,
         academicYearId: row.academicYearId as string,
         organizationId: row.organizationId as string,
-        schoolId: row.schoolId as string,
+        coachingCenterId: row.coachingCenterId as string,
       }));
   } catch {
     return [];

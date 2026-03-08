@@ -7,7 +7,7 @@ import { getAdminOrganizations, getAdminCoachingCenters } from '@/shared/lib/cli
 import { FormCard, PrimaryButton, TabButton, TableCard } from './components/CoachingUi';
 
 type OrganizationOption = { id: string; name: string };
-type SchoolOption = { id: string; name: string; organizationId: string };
+type CoachingCenterOption = { id: string; name: string; organizationId: string };
 type AcademicYearOption = { id: string; name: string };
 type TeacherOption = { id: string; name: string; email: string };
 type StudentOption = { id: string; firstName?: string; lastName?: string; email: string };
@@ -84,11 +84,11 @@ export default function CoachingManagementPage() {
   const [optionLoading, setOptionLoading] = useState(false);
 
   const [organizationId, setOrganizationId] = useState('');
-  const [schoolId, setSchoolId] = useState('');
+  const [coachingCenterId, setCoachingCenterId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
 
   const [organizationSearch, setOrganizationSearch] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
+  const [coachingCenterSearch, setCoachingCenterSearch] = useState('');
   const [academicYearSearch, setAcademicYearSearch] = useState('');
 
   const [programName, setProgramName] = useState('');
@@ -134,7 +134,7 @@ export default function CoachingManagementPage() {
   const [attendanceRemarks, setAttendanceRemarks] = useState('');
 
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [students, setStudents] = useState<StudentOption[]>([]);
@@ -150,12 +150,12 @@ export default function CoachingManagementPage() {
     [organizations]
   );
 
-  const schoolOptions = useMemo(
+  const coachingCenterOptions = useMemo(
     () =>
-      schools
+      coachingCenters
         .filter((item) => !organizationId || item.organizationId === organizationId)
         .map((item) => ({ value: item.id, label: `${item.name} (${item.id})` })),
-    [organizationId, schools]
+    [organizationId, coachingCenters]
   );
 
   const academicYearOptions = useMemo(
@@ -220,14 +220,14 @@ export default function CoachingManagementPage() {
   async function loadCoachingData(orgId: string, schId: string, yearId?: string) {
     const params = new URLSearchParams();
     params.set('organizationId', orgId);
-    params.set('schoolId', schId);
+    params.set('coachingCenterId', schId);
     params.set('withMeta', 'true');
     if (yearId) params.set('academicYearId', yearId);
     const programParams = params.toString();
 
     const shared = new URLSearchParams();
     shared.set('organizationId', orgId);
-    shared.set('schoolId', schId);
+    shared.set('coachingCenterId', schId);
     shared.set('withMeta', 'true');
     const commonParams = shared.toString();
 
@@ -275,8 +275,8 @@ export default function CoachingManagementPage() {
       }
       setMessage(successMessage);
       toastMessage(successMessage);
-      if (organizationId && schoolId) {
-        await loadCoachingData(organizationId, schoolId, academicYearId || undefined);
+      if (organizationId && coachingCenterId) {
+        await loadCoachingData(organizationId, coachingCenterId, academicYearId || undefined);
       }
     } catch (error) {
       const text = String(error);
@@ -310,19 +310,19 @@ export default function CoachingManagementPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
-      setSchoolId('');
+      setCoachingCenters([]);
+      setCoachingCenterId('');
       return;
     }
 
     let active = true;
-    async function loadSchools() {
+    async function loadCoachingCenters() {
       setTenantLoading(true);
       try {
         const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
-        setSchools(items);
-        setSchoolId((prev) => {
+        setCoachingCenters(items);
+        setCoachingCenterId((prev) => {
           if (items.length === 1) return items[0].id;
           if (!items.some((item) => item.id === prev)) return '';
           return prev;
@@ -331,14 +331,14 @@ export default function CoachingManagementPage() {
         if (active) setTenantLoading(false);
       }
     }
-    loadSchools();
+    loadCoachingCenters();
     return () => {
       active = false;
     };
   }, [organizationId]);
 
   useEffect(() => {
-    if (!(organizationId && schoolId)) {
+    if (!(organizationId && coachingCenterId)) {
       setAcademicYears([]);
       setTeachers([]);
       setStudents([]);
@@ -356,7 +356,7 @@ export default function CoachingManagementPage() {
       try {
         const params = new URLSearchParams();
         params.set('organizationId', organizationId);
-        params.set('schoolId', schoolId);
+        params.set('coachingCenterId', coachingCenterId);
         params.set('includeStudents', 'true');
         const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
         const data = await response.json();
@@ -369,7 +369,7 @@ export default function CoachingManagementPage() {
         setTeachers((data?.teachers as TeacherOption[] | undefined) ?? []);
         setStudents((data?.students as StudentOption[] | undefined) ?? []);
 
-        await loadCoachingData(organizationId, schoolId, academicYearId || undefined);
+        await loadCoachingData(organizationId, coachingCenterId, academicYearId || undefined);
       } catch (error) {
         toastMessage(`Error: ${String(error)}`);
       } finally {
@@ -380,7 +380,7 @@ export default function CoachingManagementPage() {
     return () => {
       active = false;
     };
-  }, [organizationId, schoolId, academicYearId, toastMessage]);
+  }, [organizationId, coachingCenterId, academicYearId, toastMessage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/50 to-cyan-50/30 p-6">
@@ -410,11 +410,11 @@ export default function CoachingManagementPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Coaching Center</label>
             <SearchableDropdown
-              options={schoolOptions}
-              value={schoolId}
-              onChange={setSchoolId}
-              search={schoolSearch}
-              onSearchChange={setSchoolSearch}
+              options={coachingCenterOptions}
+              value={coachingCenterId}
+              onChange={setCoachingCenterId}
+              search={coachingCenterSearch}
+              onSearchChange={setCoachingCenterSearch}
               placeholder={!organizationId ? 'Select organization first' : 'Select coaching center'}
               searchPlaceholder="Search coaching center"
               disabled={tenantLoading || !organizationId}
@@ -430,7 +430,7 @@ export default function CoachingManagementPage() {
               onSearchChange={setAcademicYearSearch}
               placeholder="Select academic year"
               searchPlaceholder="Search academic year"
-              disabled={optionLoading || !schoolId}
+              disabled={optionLoading || !coachingCenterId}
             />
           </div>
         </section>
@@ -453,13 +453,13 @@ export default function CoachingManagementPage() {
                 <input value={programBoard} onChange={(e) => setProgramBoard(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Board (optional)" />
                 <textarea value={programDescription} onChange={(e) => setProgramDescription(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Description (optional)" rows={2} />
                 <PrimaryButton
-                  disabled={loading || !organizationId || !schoolId || !academicYearId || !programName.trim()}
+                  disabled={loading || !organizationId || !coachingCenterId || !academicYearId || !programName.trim()}
                   onClick={() =>
                     postJson(
                       '/api/admin/coaching-programs',
                       {
                         organizationId,
-                        schoolId,
+                        coachingCenterId,
                         academicYearId,
                         name: programName,
                         code: programCode || undefined,
@@ -502,13 +502,13 @@ export default function CoachingManagementPage() {
                   <input value={batchEndsOn} onChange={(e) => setBatchEndsOn(e.target.value)} type="date" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                 </div>
                 <PrimaryButton
-                  disabled={loading || !organizationId || !schoolId || !batchProgramId || !batchName.trim() || !batchCapacity}
+                  disabled={loading || !organizationId || !coachingCenterId || !batchProgramId || !batchName.trim() || !batchCapacity}
                   onClick={() =>
                     postJson(
                       '/api/admin/coaching-batches',
                       {
                         organizationId,
-                        schoolId,
+                        coachingCenterId,
                         programId: batchProgramId,
                         name: batchName,
                         facultyId: batchFacultyId || undefined,
@@ -621,13 +621,13 @@ export default function CoachingManagementPage() {
                   searchPlaceholder="Search student"
                 />
                 <PrimaryButton
-                  disabled={loading || !organizationId || !schoolId || !enrollmentProgramId || !enrollmentBatchId || !enrollmentStudentId}
+                  disabled={loading || !organizationId || !coachingCenterId || !enrollmentProgramId || !enrollmentBatchId || !enrollmentStudentId}
                   onClick={() =>
                     postJson(
                       '/api/admin/coaching-enrollments',
                       {
                         organizationId,
-                        schoolId,
+                        coachingCenterId,
                         programId: enrollmentProgramId,
                         batchId: enrollmentBatchId,
                         studentId: enrollmentStudentId,
@@ -678,13 +678,13 @@ export default function CoachingManagementPage() {
                   searchPlaceholder="Search faculty"
                 />
                 <PrimaryButton
-                  disabled={loading || !organizationId || !schoolId || !sessionProgramId || !sessionBatchId || !sessionTopic.trim() || !sessionDate}
+                  disabled={loading || !organizationId || !coachingCenterId || !sessionProgramId || !sessionBatchId || !sessionTopic.trim() || !sessionDate}
                   onClick={() =>
                     postJson(
                       '/api/admin/coaching-sessions',
                       {
                         organizationId,
-                        schoolId,
+                        coachingCenterId,
                         programId: sessionProgramId,
                         batchId: sessionBatchId,
                         topic: sessionTopic,
@@ -795,7 +795,7 @@ export default function CoachingManagementPage() {
                 />
                 <input value={attendanceRemarks} onChange={(e) => setAttendanceRemarks(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Remarks (optional)" />
                 <PrimaryButton
-                  disabled={loading || !organizationId || !schoolId || !attendanceSessionId || !attendanceStudentId}
+                  disabled={loading || !organizationId || !coachingCenterId || !attendanceSessionId || !attendanceStudentId}
                   onClick={() => {
                     const selectedSession = sessions.find((item) => item.id === attendanceSessionId);
                     if (!selectedSession) {
@@ -806,7 +806,7 @@ export default function CoachingManagementPage() {
                       '/api/admin/coaching-attendance',
                       {
                         organizationId,
-                        schoolId,
+                        coachingCenterId,
                         programId: selectedSession.programId,
                         batchId: selectedSession.batchId,
                         sessionId: attendanceSessionId,

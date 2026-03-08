@@ -8,7 +8,7 @@ import { Permission } from '@/shared/infrastructure/rbac';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationSchoolSchema';
+import { CoachingCenterModel } from '@/domains/organization-management/infrastructure/persistence/OrganizationCoachingCenterSchema';
 import { getLogger } from '@/shared/infrastructure/logger';
 import { getCachedValue, invalidateCacheByPrefix, setCachedValue } from '@/shared/infrastructure/api-response-cache';
 
@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
       action: 'CREATE_COACHING_CENTER',
       targetId: result.getValue().coachingCenterId,
       organizationId,
-      schoolId: result.getValue().coachingCenterId,
+      coachingCenterId: result.getValue().coachingCenterId,
       coachingCenterId: result.getValue().coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
@@ -304,17 +304,17 @@ export async function PUT(request: NextRequest) {
     const centerNameRaw =
       typeof body.coachingCenterName === 'string'
         ? body.coachingCenterName
-        : typeof body.schoolName === 'string'
-          ? body.schoolName
+        : typeof body.coachingCenterName === 'string'
+          ? body.coachingCenterName
           : '';
     const centerCodeRaw =
       typeof body.coachingCenterCode === 'string'
         ? body.coachingCenterCode
-        : typeof body.schoolCode === 'string'
-          ? body.schoolCode
+        : typeof body.coachingCenterCode === 'string'
+          ? body.coachingCenterCode
           : '';
-    const schoolName = centerNameRaw.trim();
-    const schoolCode = centerCodeRaw.trim().toUpperCase();
+    const coachingCenterName = centerNameRaw.trim();
+    const coachingCenterCode = centerCodeRaw.trim().toUpperCase();
     const street = typeof body.street === 'string' ? body.street.trim() : '';
     const city = typeof body.city === 'string' ? body.city.trim() : '';
     const state = typeof body.state === 'string' ? body.state.trim() : '';
@@ -324,7 +324,7 @@ export async function PUT(request: NextRequest) {
     const contactPhone = typeof body.contactPhone === 'string' ? body.contactPhone.trim() : '';
     const status = body.status === 'inactive' ? 'inactive' : 'active';
 
-    if (!organizationId || !schoolName || !schoolCode || !street || !city || !state || !zipCode || !contactEmail || !contactPhone) {
+    if (!organizationId || !coachingCenterName || !coachingCenterCode || !street || !city || !state || !zipCode || !contactEmail || !contactPhone) {
       return NextResponse.json(
         { error: 'organizationId, coachingCenterName, coachingCenterCode, street, city, state, zipCode, contactEmail and contactPhone are required' },
         { status: 400 }
@@ -337,8 +337,8 @@ export async function PUT(request: NextRequest) {
         {
           $set: {
             organizationId,
-            coachingCenterName: schoolName,
-            coachingCenterCode: schoolCode,
+            coachingCenterName: coachingCenterName,
+            coachingCenterCode: coachingCenterCode,
             address: {
               street,
               city,
@@ -372,7 +372,7 @@ export async function PUT(request: NextRequest) {
       action: 'UPDATE_COACHING_CENTER',
       targetId: id,
       organizationId,
-      schoolId: id,
+      coachingCenterId: id,
       coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
@@ -419,7 +419,7 @@ export async function DELETE(request: NextRequest) {
       action: 'DELETE_COACHING_CENTER',
       targetId: id,
       organizationId: existing.getOrganizationId(),
-      schoolId: id,
+      coachingCenterId: id,
       coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });

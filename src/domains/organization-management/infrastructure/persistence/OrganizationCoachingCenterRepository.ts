@@ -17,7 +17,7 @@ import {
   IOrganizationDocument,
   CoachingCenterModel,
   ICoachingCenterDocument,
-} from './OrganizationSchoolSchema';
+} from './OrganizationCoachingCenterSchema';
 import { connectDB } from '@/shared/infrastructure/database';
 
 export class MongoOrganizationRepository implements OrganizationRepository {

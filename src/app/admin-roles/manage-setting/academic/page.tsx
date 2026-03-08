@@ -56,7 +56,7 @@ type OrganizationOption = {
   name: string;
 };
 
-type SchoolOption = {
+type CoachingCenterOption = {
   id: string;
   name: string;
   organizationId: string;
@@ -76,7 +76,7 @@ function inferClassLevelFromName(className: string): string | undefined {
 export default function AcademicManagementPage() {
   const { toastMessage } = useToast();
   const [organizationId, setOrganizationId] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [coachingCenterId, setCoachingCenterId] = useState("");
   const [academicYearId, setAcademicYearId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,8 +113,9 @@ export default function AcademicManagementPage() {
   const [teacherOptions, setTeacherOptions] = useState<TeacherOption[]>([]);
   const [optionLoading, setOptionLoading] = useState(false);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [tenantLoading, setTenantLoading] = useState(false);
+  const [showAdvancedAcademicFields, setShowAdvancedAcademicFields] = useState(false);
 
   const effectiveClassMasterId = timetableClassMasterId || subjectClassMasterId;
   const effectiveAcademicYearId = timetableAcademicYearId || academicYearId;
@@ -260,21 +261,33 @@ export default function AcademicManagementPage() {
     [organizations]
   );
 
-  const schoolDropdownOptions = useMemo(
+  const coachingCenterDropdownOptions = useMemo(
     () =>
-      schools
+      coachingCenters
         .filter((item) => !organizationId || item.organizationId === organizationId)
         .map((item) => ({
           value: item.id,
           label: `${item.name} (${item.id})`,
         })),
-    [schools, organizationId]
+    [coachingCenters, organizationId]
   );
 
   useEffect(() => {
     if (!message) return;
     toastMessage(message);
   }, [message, toastMessage]);
+
+  useEffect(() => {
+    if (showAdvancedAcademicFields) return;
+    setSectionClassMasterId("");
+    setSectionName("");
+    setSectionCapacity("");
+    setSectionRoom("");
+    setSectionShift("");
+    setSectionTeacherId("");
+    setSubjectSectionId("");
+    setTimetableSectionId("");
+  }, [showAdvancedAcademicFields]);
 
   useEffect(() => {
     let active = true;
@@ -304,21 +317,21 @@ export default function AcademicManagementPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
-      setSchoolId("");
+      setCoachingCenters([]);
+      setCoachingCenterId("");
       return;
     }
 
     let active = true;
 
-    async function loadSchools() {
+    async function loadCoachingCenters() {
       setTenantLoading(true);
       try {
         const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
-        setSchools(items);
+        setCoachingCenters(items);
 
-        setSchoolId((prev) => {
+        setCoachingCenterId((prev) => {
           if (items.length === 1) return items[0].id;
           if (!items.some((item) => item.id === prev)) return "";
           return prev;
@@ -331,14 +344,14 @@ export default function AcademicManagementPage() {
       }
     }
 
-    loadSchools();
+    loadCoachingCenters();
     return () => {
       active = false;
     };
   }, [organizationId]);
 
   useEffect(() => {
-    const canLoadOptions = Boolean(organizationId && schoolId);
+    const canLoadOptions = Boolean(organizationId && coachingCenterId);
     if (!canLoadOptions) {
       setAcademicYearOptions([]);
       setClassMasterOptions([]);
@@ -354,7 +367,7 @@ export default function AcademicManagementPage() {
       try {
         const params = new URLSearchParams();
         params.set("organizationId", organizationId);
-        params.set("schoolId", schoolId);
+        params.set("coachingCenterId", coachingCenterId);
         const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
         const data = await response.json();
 
@@ -401,7 +414,7 @@ export default function AcademicManagementPage() {
     return () => {
       active = false;
     };
-  }, [organizationId, schoolId]);
+  }, [organizationId, coachingCenterId]);
 
   async function postJson(url: string, payload: Record<string, unknown>) {
     setLoading(true);
@@ -438,7 +451,7 @@ export default function AcademicManagementPage() {
     try {
       const params = new URLSearchParams();
       if (organizationId) params.set("organizationId", organizationId);
-      if (schoolId) params.set("schoolId", schoolId);
+      if (coachingCenterId) params.set("coachingCenterId", coachingCenterId);
       params.set("academicYearId", yearId);
       params.set("classMasterId", classMasterId);
       if (timetableSectionId) params.set("sectionId", timetableSectionId);
@@ -499,7 +512,7 @@ export default function AcademicManagementPage() {
   function tenantPayload() {
     return {
       organizationId: organizationId || undefined,
-      schoolId: schoolId || undefined,
+      coachingCenterId: coachingCenterId || undefined,
       academicYearId: academicYearId || undefined,
     };
   }
@@ -513,7 +526,7 @@ export default function AcademicManagementPage() {
               <div>
                 <CardTitle className="text-2xl font-bold text-white">Academic Management</CardTitle>
                 <CardDescription className="mt-2 text-indigo-50">
-                  Create academic years, classes, sections, subject allocations, and timetables.
+                  Create academic years, classes, subject allocations, and timetables. Section fields are optional advanced controls.
                 </CardDescription>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -534,7 +547,7 @@ export default function AcademicManagementPage() {
                 value={organizationId}
                 onValueChange={(value) => {
                   setOrganizationId(value || "");
-                  setSchoolId("");
+                  setCoachingCenterId("");
                 }}
                 placeholder="Select organization"
                 disabled={tenantLoading} />
@@ -542,10 +555,10 @@ export default function AcademicManagementPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Coaching Center</label>
-              <SingleSelect options={schoolDropdownOptions}
-                value={schoolId}
+              <SingleSelect options={coachingCenterDropdownOptions}
+                value={coachingCenterId}
                 onValueChange={(value) => {
-                  setSchoolId(value || "");
+                  setCoachingCenterId(value || "");
                 }}
                 placeholder="Select coaching center"
                 disabled={tenantLoading}
@@ -564,6 +577,16 @@ export default function AcademicManagementPage() {
             disabled={tenantLoading}
           />
         </div>
+
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            checked={showAdvancedAcademicFields}
+            onChange={(e) => setShowAdvancedAcademicFields(e.target.checked)}
+          />
+          Enable advanced academic fields (section)
+        </label>
       </div>
 
       <div className="rounded-2xl mx-10 border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
@@ -640,67 +663,69 @@ export default function AcademicManagementPage() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
-        <h3 className="text-lg font-semibold">Create Section</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Class Master</label>
+      {showAdvancedAcademicFields && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
+          <h3 className="text-lg font-semibold">Create Section</h3>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Class Master</label>
 
-            <SingleSelect options={sectionClassMasterDropdownOptions}
-              value={sectionClassMasterId}
-              onValueChange={(value) => {
-                setSectionClassMasterId(value || "");
-              }}
-              placeholder="Select class master"
-              disabled={optionLoading || !schoolId}
-            />
+              <SingleSelect options={sectionClassMasterDropdownOptions}
+                value={sectionClassMasterId}
+                onValueChange={(value) => {
+                  setSectionClassMasterId(value || "");
+                }}
+                placeholder="Select class master"
+                disabled={optionLoading || !coachingCenterId}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Section Name</label>
+              <input value={sectionName} onChange={(e) => setSectionName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Capacity</label>
+              <input value={sectionCapacity} onChange={(e) => setSectionCapacity(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Room Number</label>
+              <input value={sectionRoom} onChange={(e) => setSectionRoom(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Shift</label>
+              <input value={sectionShift} onChange={(e) => setSectionShift(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Class Teacher</label>
+              <SingleSelect options={sectionTeacherDropdownOptions}
+                value={sectionTeacherId}
+                onValueChange={(value) => {
+                  setSectionTeacherId(value || "");
+                }}
+                placeholder="Select class teacher (optional)"
+                disabled={optionLoading || !coachingCenterId}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Section Name</label>
-            <input value={sectionName} onChange={(e) => setSectionName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Capacity</label>
-            <input value={sectionCapacity} onChange={(e) => setSectionCapacity(e.target.value)} type="number" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Room Number</label>
-            <input value={sectionRoom} onChange={(e) => setSectionRoom(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Shift</label>
-            <input value={sectionShift} onChange={(e) => setSectionShift(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Class Teacher</label>
-            <SingleSelect options={sectionTeacherDropdownOptions}
-              value={sectionTeacherId}
-              onValueChange={(value) => {
-                setSectionTeacherId(value || "");
-              }}
-              placeholder="Select class teacher (optional)"
-              disabled={optionLoading || !schoolId}
-            />
-          </div>
+          <button
+            disabled={loading}
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() =>
+              postJson("/api/admin/sections", {
+                ...tenantPayload(),
+                classMasterId: sectionClassMasterId,
+                name: sectionName,
+                capacity: sectionCapacity ? Number(sectionCapacity) : undefined,
+                roomNumber: sectionRoom || undefined,
+                shift: sectionShift || undefined,
+                classTeacherId: sectionTeacherId || undefined,
+              })
+            }
+          >
+            {loading ? "Saving..." : "Create Section"}
+          </button>
         </div>
-        <button
-          disabled={loading}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-          onClick={() =>
-            postJson("/api/admin/sections", {
-              ...tenantPayload(),
-              classMasterId: sectionClassMasterId,
-              name: sectionName,
-              capacity: sectionCapacity ? Number(sectionCapacity) : undefined,
-              roomNumber: sectionRoom || undefined,
-              shift: sectionShift || undefined,
-              classTeacherId: sectionTeacherId || undefined,
-            })
-          }
-        >
-          {loading ? "Saving..." : "Create Section"}
-        </button>
-      </div>
+      )}
 
       <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 space-y-4">
         <h3 className="text-lg font-semibold">Create Subject Allocation</h3>
@@ -713,7 +738,7 @@ export default function AcademicManagementPage() {
                 setAcademicYearId(value || "");
               }}
               placeholder="Select academic year"
-              disabled={optionLoading || !schoolId}
+              disabled={optionLoading || !coachingCenterId}
             />
           </div>
           <div>
@@ -725,21 +750,22 @@ export default function AcademicManagementPage() {
                 setSubjectSectionId("");
               }}
               placeholder="Select class master"
-              disabled={optionLoading || !schoolId}
+              disabled={optionLoading || !coachingCenterId}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Section</label>
-            <SingleSelect options={subjectSectionDropdownOptions}
-              value={subjectSectionId}
-              onValueChange={(value) => {
-                setSubjectSectionId(value || "");
-              }}
-              placeholder="Select section (optional)"
-              disabled={optionLoading || !subjectClassMasterId}
-            />
-
-          </div>
+          {showAdvancedAcademicFields && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Section</label>
+              <SingleSelect options={subjectSectionDropdownOptions}
+                value={subjectSectionId}
+                onValueChange={(value) => {
+                  setSubjectSectionId(value || "");
+                }}
+                placeholder="Select section (optional)"
+                disabled={optionLoading || !subjectClassMasterId}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700">Subject Name</label>
             <input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />
@@ -752,7 +778,7 @@ export default function AcademicManagementPage() {
                 setSubjectTeacherId(value || "");
               }}
               placeholder="Select teacher (optional)"
-              disabled={optionLoading || !schoolId}
+              disabled={optionLoading || !coachingCenterId}
             />
           </div>
           <div>
@@ -808,17 +834,19 @@ export default function AcademicManagementPage() {
               disabled={optionLoading}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Section (optional)</label>
-            <SingleSelect options={timetableSectionDropdownOptions}
-              value={timetableSectionId}
-              onValueChange={(value) => {
-                setTimetableSectionId(value || "");
-              }}
-              placeholder="All sections / class-level"
-              disabled={optionLoading || !effectiveClassMasterId}
-            />
-          </div>
+          {showAdvancedAcademicFields && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Section (optional)</label>
+              <SingleSelect options={timetableSectionDropdownOptions}
+                value={timetableSectionId}
+                onValueChange={(value) => {
+                  setTimetableSectionId(value || "");
+                }}
+                placeholder="All sections / class-level"
+                disabled={optionLoading || !effectiveClassMasterId}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700">Periods Per Day</label>
             <input value={timetablePeriodsPerDay} onChange={(e) => setTimetablePeriodsPerDay(e.target.value)} type="number" min={1} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" />

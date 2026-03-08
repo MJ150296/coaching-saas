@@ -8,7 +8,7 @@ export interface CreateUserDTO {
   role?: UserRole;
   phone?: string;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   coachingCenterId?: string;
 }
 
@@ -20,7 +20,7 @@ export interface UserResponseDTO {
   role: UserRole;
   phone?: string;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;

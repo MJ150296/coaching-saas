@@ -29,15 +29,15 @@ export async function GET(request: NextRequest) {
     }
 
     const requestedOrganizationId = request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
     const requestedProgramId = request.nextUrl.searchParams.get('programId') || undefined;
     const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
     const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
 
-    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
-      assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+      assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
     const repo = await initializeAppAndGetService<MongoCoachingBatchRepository>(
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       programId: requestedProgramId,
       limit,
       offset,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     const total = await repo.countByFilters({
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       programId: requestedProgramId,
     });
 
@@ -90,13 +90,13 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.MANAGE_COACHING);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
 
-    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
+    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
 
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const useCase = await initializeAppAndGetService<CreateCoachingBatchUseCase>(
       ServiceKeys.CREATE_COACHING_BATCH_USE_CASE
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       action: 'CREATE_COACHING_BATCH',
       targetId: created.getId(),
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
       metadata: {
         programId: created.getProgramId(),

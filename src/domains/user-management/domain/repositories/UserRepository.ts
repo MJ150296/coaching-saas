@@ -8,14 +8,14 @@ export interface UserRepository extends Repository<User, string> {
   findByFilters(filters: {
     role?: UserRole | string;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     limit?: number;
     offset?: number;
   }): Promise<User[]>;
   countByFilters(filters: {
     role?: UserRole | string;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
   }): Promise<number>;
   findAllActive(): Promise<User[]>;
 }

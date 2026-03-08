@@ -19,7 +19,7 @@ export default function Register() {
     confirmPassword: '',
     phone: '',
     organizationId: '',
-    schoolId: '',
+    coachingCenterId: '',
     role: UserRole.STUDENT,
     parentEmail: '',
     parentPassword: '',
@@ -71,7 +71,7 @@ export default function Register() {
           lastName: formData.lastName,
           phone: formData.phone || undefined,
           organizationId: formData.organizationId || undefined,
-          schoolId: formData.schoolId || undefined,
+          coachingCenterId: formData.coachingCenterId || undefined,
           role: formData.role,
           parent: formData.role === UserRole.STUDENT ? {
             email: formData.parentEmail,
@@ -98,7 +98,7 @@ export default function Register() {
         confirmPassword: '',
         phone: '',
         organizationId: '',
-        schoolId: '',
+        coachingCenterId: '',
         role: UserRole.STUDENT,
         parentEmail: '',
         parentPassword: '',
@@ -174,9 +174,9 @@ export default function Register() {
               />
               <input
                 type="text"
-                name="schoolId"
+                name="coachingCenterId"
                 placeholder="Coaching Center ID (optional)"
-                value={formData.schoolId}
+                value={formData.coachingCenterId}
                 onChange={handleChange}
                 disabled={isLoading || !canRegister}
                 className="flex-1 appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"

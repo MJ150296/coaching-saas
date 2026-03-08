@@ -37,8 +37,8 @@ export async function GET() {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
-    if (!organizationId || !schoolId) {
+    const coachingCenterId = actor.getCoachingCenterId();
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({
         summary: { pendingRequests: 0, completedToday: 0, highPriority: 0, scheduledBlocks: 0 },
         requests: [],
@@ -53,7 +53,7 @@ export async function GET() {
     const [dueLedgers, paymentsToday, recentPayments] = await Promise.all([
       StudentFeeLedgerModel.find({
         organizationId,
-        schoolId,
+        coachingCenterId,
         status: { $ne: 'PAID' },
       })
         .sort({ dueDate: 1 })
@@ -61,10 +61,10 @@ export async function GET() {
         .lean<Array<LedgerDoc>>(),
       PaymentModel.countDocuments({
         organizationId,
-        schoolId,
+        coachingCenterId,
         paidAt: { $gte: todayStart },
       }),
-      PaymentModel.find({ organizationId, schoolId })
+      PaymentModel.find({ organizationId, coachingCenterId })
         .sort({ paidAt: -1 })
         .limit(4)
         .lean<Array<PaymentDoc>>(),

@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Badge } from '@/shared/components/ui/Badge';
 import { TableLoader } from '@/shared/components/ui/TableLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
 import { getAdminCoachingCenters } from '@/shared/lib/client/adminTenantReferenceData';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 type UserListItem = {
   id: string;
@@ -51,6 +52,9 @@ export default function CoachingAdminDashboardPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalAdmins: 0,
@@ -62,16 +66,51 @@ export default function CoachingAdminDashboardPage() {
   const [coachingCenterName, setCoachingCenterName] = useState('');
 
   const organizationId = (session?.user as { organizationId?: string } | undefined)?.organizationId;
-  const schoolId = (session?.user as { schoolId?: string } | undefined)?.schoolId;
+  const coachingCenterId = (session?.user as { coachingCenterId?: string } | undefined)?.coachingCenterId;
+
+  const loadDashboardData = useCallback(async () => {
+    if (status !== 'authenticated' || !organizationId || !coachingCenterId) return;
+    setLoading(true);
+    try {
+      const [overviewResponse, coachingCenters] = await Promise.all([
+        fetch('/api/admin/dashboard/overview'),
+        getAdminCoachingCenters(organizationId),
+      ]);
+      const overviewData = (await overviewResponse.json()) as DashboardOverviewResponse & {
+        error?: string;
+      };
+      if (!overviewResponse.ok) {
+        throw new Error(overviewData?.error || 'Failed to load dashboard data');
+      }
+
+      const currentCoachingCenter = coachingCenters.find((item) => item.id === coachingCenterId);
+
+      setStats({
+        totalUsers: Number(overviewData.summary?.totalUsers ?? 0),
+        totalAdmins: Number(overviewData.summary?.totalAdmins ?? 0),
+        totalTeachers: Number(overviewData.summary?.totalTeachers ?? 0),
+        totalStudents: Number(overviewData.summary?.totalStudents ?? 0),
+        totalStaff: Number(overviewData.summary?.totalStaff ?? 0),
+      });
+      setRecentUsers(Array.isArray(overviewData.recentUsers) ? overviewData.recentUsers : []);
+      setCoachingCenterName(
+        currentCoachingCenter?.name ?? coachingCenterId ?? ''
+      );
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, organizationId, coachingCenterId, toastMessage]);
 
   useEffect(() => {
-    if (status !== 'authenticated' || !organizationId || !schoolId) return;
+    if (status !== 'authenticated' || !organizationId || !coachingCenterId) return;
     let active = true;
 
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const [overviewResponse, schools] = await Promise.all([
+        const [overviewResponse, coachingCenters] = await Promise.all([
           fetch('/api/admin/dashboard/overview'),
           getAdminCoachingCenters(organizationId),
         ]);
@@ -84,7 +123,7 @@ export default function CoachingAdminDashboardPage() {
 
         if (!active) return;
 
-        const currentCoachingCenter = schools.find((item) => item.id === schoolId);
+        const currentCoachingCenter = coachingCenters.find((item) => item.id === coachingCenterId);
 
         setStats({
           totalUsers: Number(overviewData.summary?.totalUsers ?? 0),
@@ -95,7 +134,7 @@ export default function CoachingAdminDashboardPage() {
         });
         setRecentUsers(Array.isArray(overviewData.recentUsers) ? overviewData.recentUsers : []);
         setCoachingCenterName(
-          currentCoachingCenter?.name ?? schoolId ?? ''
+          currentCoachingCenter?.name ?? coachingCenterId ?? ''
         );
       } catch (error) {
         toastMessage(`Error: ${String(error)}`);
@@ -109,7 +148,19 @@ export default function CoachingAdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [status, organizationId, schoolId, toastMessage]);
+  }, [status, organizationId, coachingCenterId, toastMessage]);
+
+  const filteredRecentUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return recentUsers.filter((item) => {
+      const matchesQuery = !q || [item.firstName, item.lastName, item.email, item.role]
+        .join(' ')
+        .toLowerCase()
+        .includes(q);
+      const matchesDate = isWithinDateRange(item.createdAt, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    });
+  }, [recentUsers, query, dateFrom, dateTo]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/25 to-lime-50/45 py-8">
@@ -124,7 +175,7 @@ export default function CoachingAdminDashboardPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {organizationId ? <Badge variant="blue">Org: {organizationId}</Badge> : null}
-              {schoolId ? <Badge variant="green">Coaching Center: {coachingCenterName || schoolId}</Badge> : null}
+              {coachingCenterId ? <Badge variant="green">Coaching Center: {coachingCenterName || coachingCenterId}</Badge> : null}
             </div>
           </div>
         </section>
@@ -140,6 +191,19 @@ export default function CoachingAdminDashboardPage() {
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
+            <div className="mt-4">
+              <DashboardControls
+                query={query}
+                onQueryChange={setQuery}
+                dateFrom={dateFrom}
+                onDateFromChange={setDateFrom}
+                dateTo={dateTo}
+                onDateToChange={setDateTo}
+                onRefresh={loadDashboardData}
+                loading={loading}
+                searchPlaceholder="Search recent users"
+              />
+            </div>
             <div className="mt-4 grid grid-cols-1 gap-2">
               <QuickLink href="/admin-roles/manage-setting/academic" label="Manage Academic" />
               <QuickLink href="/admin-roles/manage-setting/enrollments" label="Manage Enrollments" />
@@ -151,7 +215,7 @@ export default function CoachingAdminDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-900">Recent Users</h2>
-              <span className="text-xs font-medium text-slate-500">Latest {recentUsers.length}</span>
+              <span className="text-xs font-medium text-slate-500">Latest {filteredRecentUsers.length}</span>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -167,7 +231,7 @@ export default function CoachingAdminDashboardPage() {
                   <TableLoader columns={4} rows={6} />
                 ) : (
                   <tbody className="divide-y divide-slate-200 bg-white">
-                    {recentUsers.map((item) => (
+                    {filteredRecentUsers.map((item) => (
                       <tr key={item.id}>
                         <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
                         <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
@@ -177,7 +241,7 @@ export default function CoachingAdminDashboardPage() {
                         <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                       </tr>
                     ))}
-                    {recentUsers.length === 0 && (
+                    {filteredRecentUsers.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
                           No users found for your coaching center scope.

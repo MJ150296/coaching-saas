@@ -5,7 +5,7 @@ import { CoachingProgram } from '../../domain/entities/CoachingProgram';
 
 export interface CreateCoachingProgramRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   name: string;
   code?: string;

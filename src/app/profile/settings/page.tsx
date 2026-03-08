@@ -14,7 +14,7 @@ type ProfileResponse = {
   phone?: string;
   role: string;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: string | Date;
@@ -38,7 +38,7 @@ export default function ProfileSettingsPage() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [organizationId, setOrganizationId] = useState('');
-  const [schoolId, setSchoolId] = useState('');
+  const [coachingCenterId, setCoachingCenterId] = useState('');
   const [emailVerified, setEmailVerified] = useState(false);
   const [createdAt, setCreatedAt] = useState('');
 
@@ -70,7 +70,7 @@ export default function ProfileSettingsPage() {
         setEmail(profile.email || '');
         setRole(profile.role || '');
         setOrganizationId(profile.organizationId || '');
-        setSchoolId(profile.schoolId || '');
+        setCoachingCenterId(profile.coachingCenterId || '');
         setEmailVerified(Boolean(profile.emailVerified));
         setCreatedAt(new Date(profile.createdAt).toLocaleDateString());
         setFirstName(profile.firstName || '');
@@ -190,7 +190,7 @@ export default function ProfileSettingsPage() {
               <p><span className="font-semibold">Email:</span> {email || '-'}</p>
               <p><span className="font-semibold">Role:</span> {role ? formatRoleLabel(role) : '-'}</p>
               <p><span className="font-semibold">Organization:</span> {organizationId || '-'}</p>
-              <p><span className="font-semibold">Coaching Center:</span> {schoolId || '-'}</p>
+              <p><span className="font-semibold">Coaching Center:</span> {coachingCenterId || '-'}</p>
               <p><span className="font-semibold">Email Verified:</span> {emailVerified ? 'Yes' : 'No'}</p>
               <p><span className="font-semibold">Account Created:</span> {createdAt || '-'}</p>
             </div>

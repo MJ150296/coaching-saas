@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge } from '@/shared/components/ui/Badge';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 type ChildOverview = {
   id: string;
@@ -57,12 +58,44 @@ export default function ParentDashboardPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [data, setData] = useState<ParentDashboardResponse>({
     summary: { childCount: 0, pendingFees: 0, activeEnrollments: 0, overdueItems: 0 },
     children: [],
     notices: [],
     homework: [],
   });
+
+  const loadDashboard = useCallback(async () => {
+    if (status !== 'authenticated') return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/parent/dashboard');
+      const body = await response.json();
+      if (!response.ok) {
+        toastMessage(body?.error || 'Failed to load parent dashboard');
+        return;
+      }
+
+      setData({
+        summary: {
+          childCount: Number(body?.summary?.childCount ?? 0),
+          pendingFees: Number(body?.summary?.pendingFees ?? 0),
+          activeEnrollments: Number(body?.summary?.activeEnrollments ?? 0),
+          overdueItems: Number(body?.summary?.overdueItems ?? 0),
+        },
+        children: Array.isArray(body?.children) ? body.children : [],
+        notices: Array.isArray(body?.notices) ? body.notices : [],
+        homework: Array.isArray(body?.homework) ? body.homework : [],
+      });
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, toastMessage]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -105,6 +138,27 @@ export default function ParentDashboardPage() {
   }, [status, toastMessage]);
 
   const summary = useMemo(() => data.summary, [data.summary]);
+  const q = query.trim().toLowerCase();
+  const filteredChildren = useMemo(
+    () => data.children.filter((item) => !q || [item.name, item.classLabel].join(' ').toLowerCase().includes(q)),
+    [data.children, q]
+  );
+  const filteredNotices = useMemo(
+    () => data.notices.filter((item) => {
+      const matchesQuery = !q || [item.title, item.category].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.date, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    }),
+    [data.notices, q, dateFrom, dateTo]
+  );
+  const filteredHomework = useMemo(
+    () => data.homework.filter((item) => {
+      const matchesQuery = !q || [item.childName, item.subject, item.status].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.dueDate, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    }),
+    [data.homework, q, dateFrom, dateTo]
+  );
 
   if (status === 'loading') {
     return (
@@ -127,6 +181,19 @@ export default function ParentDashboardPage() {
           <p className="mt-2 text-sm text-indigo-50">
             Track attendance, fee dues, recent payments, and coaching notices for your children.
           </p>
+          <div className="mt-4">
+            <DashboardControls
+              query={query}
+              onQueryChange={setQuery}
+              dateFrom={dateFrom}
+              onDateFromChange={setDateFrom}
+              dateTo={dateTo}
+              onDateToChange={setDateTo}
+              onRefresh={loadDashboard}
+              loading={loading}
+              searchPlaceholder="Search children, notices, payments"
+            />
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -140,7 +207,7 @@ export default function ParentDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Children Overview</h2>
             <div className="mt-4 space-y-3">
-              {data.children.map((child) => (
+              {filteredChildren.map((child) => (
                 <div key={child.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <p className="font-medium text-slate-900">{child.name}</p>
                   <p className="mt-1 text-sm text-slate-600">Class: {child.classLabel}</p>
@@ -149,7 +216,7 @@ export default function ParentDashboardPage() {
                   </p>
                 </div>
               ))}
-              {data.children.length === 0 && (
+              {filteredChildren.length === 0 && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   {loading ? 'Loading children...' : 'No linked children found.'}
                 </div>
@@ -162,7 +229,7 @@ export default function ParentDashboardPage() {
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-3">
                 <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Latest Notices</p>
-                {data.notices.map((item) => (
+                {filteredNotices.map((item) => (
                   <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{item.title}</p>
@@ -171,7 +238,7 @@ export default function ParentDashboardPage() {
                     <p className="mt-1 text-sm text-slate-600">{new Date(item.date).toLocaleDateString()}</p>
                   </div>
                 ))}
-                {data.notices.length === 0 && (
+                {filteredNotices.length === 0 && (
                   <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                     {loading ? 'Loading notices...' : 'No notices available.'}
                   </div>
@@ -179,7 +246,7 @@ export default function ParentDashboardPage() {
               </div>
               <div className="space-y-3">
                 <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Recent Payments</p>
-                {data.homework.map((item) => (
+                {filteredHomework.map((item) => (
                   <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium text-slate-900">{item.subject}</p>
@@ -189,7 +256,7 @@ export default function ParentDashboardPage() {
                     <p className="mt-1 text-sm text-slate-600">Date: {new Date(item.dueDate).toLocaleDateString()}</p>
                   </div>
                 ))}
-                {data.homework.length === 0 && (
+                {filteredHomework.length === 0 && (
                   <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                     {loading ? 'Loading payments...' : 'No recent payments found.'}
                   </div>

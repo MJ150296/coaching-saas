@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateAcademicYearRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   startDate: string;
   endDate: string;
@@ -18,7 +18,7 @@ export class CreateAcademicYearUseCase {
     try {
       const year = AcademicYear.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         name: request.name,
         startDate: new Date(request.startDate),
         endDate: new Date(request.endDate),

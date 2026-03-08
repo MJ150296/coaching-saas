@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
-    if (!organizationId || !schoolId) {
+    const coachingCenterId = actor.getCoachingCenterId();
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({ items: [], total: 0, limit: 0, offset: 0 });
     }
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const filtered = await repo.findByFilters({
       organizationId,
-      schoolId,
+      coachingCenterId,
       programId: requestedProgramId,
       batchId: requestedBatchId,
       facultyId: actor.getId(),
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const items = filtered.map((session) => ({
       id: session.getId(),
       organizationId: session.getOrganizationId(),
-      schoolId: session.getSchoolId(),
+      coachingCenterId: session.getCoachingCenterId(),
       programId: session.getProgramId(),
       batchId: session.getBatchId(),
       topic: session.getTopic(),
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     const total = await repo.countByFilters({
       organizationId,
-      schoolId,
+      coachingCenterId,
       programId: requestedProgramId,
       batchId: requestedBatchId,
       facultyId: actor.getId(),

@@ -2,7 +2,7 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { RoleBasedAppShell } from '@/shared/components/navigation/RoleBasedAppShell';
 import { requireRole } from '@/shared/lib/requireRole';
 
-export default async function SchoolAdminLayout({
+export default async function CoachingCenterAdminLayout({
   children,
 }: {
   children: React.ReactNode;

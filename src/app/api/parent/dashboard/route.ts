@@ -51,7 +51,7 @@ export async function GET() {
 
     const linkQuery: Record<string, unknown> = { parentId: actor.getId() };
     if (actor.getOrganizationId()) linkQuery.organizationId = actor.getOrganizationId();
-    if (actor.getSchoolId()) linkQuery.schoolId = actor.getSchoolId();
+    if (actor.getCoachingCenterId()) linkQuery.coachingCenterId = actor.getCoachingCenterId();
 
     const links = await ParentStudentLinkModel.find(linkQuery)
       .lean<Array<{ studentId: string }>>();

@@ -9,7 +9,7 @@ export interface AuditLogEvent {
   targetId?: string;
   targetRole?: UserRole;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   coachingCenterId?: string;
   ip?: string;
   metadata?: Record<string, unknown>;
@@ -30,7 +30,7 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
     targetId: { type: String },
     targetRole: { type: String },
     organizationId: { type: String },
-    schoolId: { type: String },
+    coachingCenterId: { type: String },
     coachingCenterId: { type: String },
     ip: { type: String },
     metadata: { type: Schema.Types.Mixed },
@@ -40,7 +40,7 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
 
 auditLogSchema.index({ actorId: 1, action: 1, createdAt: -1 });
 
-auditLogSchema.index({ organizationId: 1, schoolId: 1, createdAt: -1 });
+auditLogSchema.index({ organizationId: 1, coachingCenterId: 1, createdAt: -1 });
 auditLogSchema.index({ organizationId: 1, coachingCenterId: 1, createdAt: -1 });
 
 const getOrCreateAuditLogModel = (): Model<IAuditLogDocument> => {

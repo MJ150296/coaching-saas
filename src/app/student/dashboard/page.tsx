@@ -7,10 +7,11 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 interface SubjectItem {
   id: string;
@@ -63,6 +64,9 @@ export default function StudentDashboard() {
   const { toastMessage } = useToast();
   const userRole = (session?.user as { role?: UserRole } | undefined)?.role;
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [data, setData] = useState<StudentDashboardResponse>({
     summary: { totalSubjects: 0, todayClasses: 0, pendingDues: 0, feeClearance: 0 },
     classLabel: '',
@@ -81,6 +85,37 @@ export default function StudentDashboard() {
       router.push('/auth/signin');
     }
   }, [router, status, userRole]);
+
+  const loadDashboard = useCallback(async () => {
+    if (status !== 'authenticated' || userRole !== UserRole.STUDENT) return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/student/dashboard');
+      const body = (await response.json()) as StudentDashboardResponse & { error?: string };
+      if (!response.ok) {
+        toastMessage(body?.error || 'Failed to load student dashboard');
+        return;
+      }
+
+      setData({
+        summary: {
+          totalSubjects: Number(body?.summary?.totalSubjects ?? 0),
+          todayClasses: Number(body?.summary?.todayClasses ?? 0),
+          pendingDues: Number(body?.summary?.pendingDues ?? 0),
+          feeClearance: Number(body?.summary?.feeClearance ?? 0),
+        },
+        classLabel: String(body?.classLabel ?? ''),
+        subjects: Array.isArray(body?.subjects) ? body.subjects : [],
+        todaySchedule: Array.isArray(body?.todaySchedule) ? body.todaySchedule : [],
+        dueItems: Array.isArray(body?.dueItems) ? body.dueItems : [],
+        recentPayments: Array.isArray(body?.recentPayments) ? body.recentPayments : [],
+      });
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, userRole, toastMessage]);
 
   useEffect(() => {
     if (status !== 'authenticated' || userRole !== UserRole.STUDENT) return;
@@ -124,6 +159,31 @@ export default function StudentDashboard() {
   }, [status, toastMessage, userRole]);
 
   const summary = useMemo(() => data.summary, [data.summary]);
+  const q = query.trim().toLowerCase();
+  const filteredSubjects = useMemo(
+    () => data.subjects.filter((item) => !q || [item.name, item.teacher, item.grade].join(' ').toLowerCase().includes(q)),
+    [data.subjects, q]
+  );
+  const filteredDueItems = useMemo(
+    () => data.dueItems.filter((item) => {
+      const matchesQuery = !q || [item.title, item.status].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.dueDate, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    }),
+    [data.dueItems, q, dateFrom, dateTo]
+  );
+  const filteredTodaySchedule = useMemo(
+    () => data.todaySchedule.filter((item) => !q || [item.subject, item.slot].join(' ').toLowerCase().includes(q)),
+    [data.todaySchedule, q]
+  );
+  const filteredRecentPayments = useMemo(
+    () => data.recentPayments.filter((item) => {
+      const matchesQuery = !q || [item.method, item.reference || ''].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.paidAt, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    }),
+    [data.recentPayments, q, dateFrom, dateTo]
+  );
 
   if (status === 'loading' || (status === 'authenticated' && userRole !== UserRole.STUDENT)) {
     return (
@@ -142,6 +202,19 @@ export default function StudentDashboard() {
           <p className="mt-2 text-gray-600">
             {data.classLabel ? `Class: ${data.classLabel}` : 'Here is your academic and fee overview.'}
           </p>
+          <div className="mt-4">
+            <DashboardControls
+              query={query}
+              onQueryChange={setQuery}
+              dateFrom={dateFrom}
+              onDateFromChange={setDateFrom}
+              dateTo={dateTo}
+              onDateToChange={setDateTo}
+              onRefresh={loadDashboard}
+              loading={loading}
+              searchPlaceholder="Search subjects, dues, schedule, payments"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -249,7 +322,7 @@ export default function StudentDashboard() {
                 <h3 className="text-lg font-semibold text-gray-900">My Subjects</h3>
               </div>
               <div className="divide-y divide-gray-200">
-                {data.subjects.map((course) => (
+                {filteredSubjects.map((course) => (
                   <div key={course.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -271,7 +344,7 @@ export default function StudentDashboard() {
                     <p className="text-xs text-gray-600 mt-1">{course.progress}% Complete</p>
                   </div>
                 ))}
-                {data.subjects.length === 0 && (
+                {filteredSubjects.length === 0 && (
                   <div className="px-6 py-8 text-center text-gray-600">
                     <p className="text-sm">{loading ? 'Loading subjects...' : 'No subjects found.'}</p>
                   </div>
@@ -286,7 +359,7 @@ export default function StudentDashboard() {
                 <h3 className="text-lg font-semibold text-gray-900">Upcoming Dues</h3>
               </div>
               <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-                {data.dueItems.map((item) => (
+                {filteredDueItems.map((item) => (
                   <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
                     <p className="text-xs text-gray-600 mt-1">
@@ -312,7 +385,7 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                 ))}
-                {data.dueItems.length === 0 && (
+                {filteredDueItems.length === 0 && (
                   <div className="px-6 py-8 text-center text-gray-600">
                     <p className="text-sm">{loading ? 'Loading dues...' : 'No pending dues.'}</p>
                   </div>
@@ -327,13 +400,13 @@ export default function StudentDashboard() {
             <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Schedule</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {data.todaySchedule.map((item) => (
+            {filteredTodaySchedule.map((item) => (
               <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <p className="font-medium text-gray-900">{item.subject}</p>
                 <p className="text-sm text-gray-600">{item.slot}</p>
               </div>
             ))}
-            {data.todaySchedule.length === 0 && (
+            {filteredTodaySchedule.length === 0 && (
               <div className="px-6 py-8 text-center text-gray-600">
                 <p className="text-sm">{loading ? 'Loading schedule...' : 'No classes scheduled for today.'}</p>
               </div>
@@ -356,7 +429,7 @@ export default function StudentDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {data.recentPayments.map((item) => (
+                {filteredRecentPayments.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">INR {item.amount.toLocaleString()}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{item.method}</td>
@@ -364,7 +437,7 @@ export default function StudentDashboard() {
                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(item.paidAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
-                {data.recentPayments.length === 0 && (
+                {filteredRecentPayments.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-gray-600">
                       <p className="text-sm">{loading ? 'Loading payments...' : 'No payment records found.'}</p>

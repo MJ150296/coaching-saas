@@ -10,7 +10,7 @@ type OrganizationOption = {
   name: string;
 };
 
-type SchoolOption = {
+type CoachingCenterOption = {
   id: string;
   name: string;
   organizationId: string;
@@ -52,10 +52,10 @@ type FeePlanOption = {
 export default function FeeManagementPage() {
   const { toastMessage } = useToast();
   const [organizationId, setOrganizationId] = useState("");
-  const [schoolId, setSchoolId] = useState("");
+  const [coachingCenterId, setCoachingCenterId] = useState("");
   const [academicYearId, setAcademicYearId] = useState("");
   const [organizationSearch, setOrganizationSearch] = useState("");
-  const [schoolSearch, setSchoolSearch] = useState("");
+  const [coachingCenterSearch, setCoachingCenterSearch] = useState("");
   const [academicYearSearch, setAcademicYearSearch] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +108,7 @@ export default function FeeManagementPage() {
   const [tenantLoading, setTenantLoading] = useState(false);
   const [optionLoading, setOptionLoading] = useState(false);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
   const [classMasters, setClassMasters] = useState<ClassMasterOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -141,7 +141,7 @@ export default function FeeManagementPage() {
   function tenantPayload() {
     return {
       organizationId: organizationId || undefined,
-      schoolId: schoolId || undefined,
+      coachingCenterId: coachingCenterId || undefined,
       academicYearId: academicYearId || undefined,
     };
   }
@@ -199,15 +199,15 @@ export default function FeeManagementPage() {
     [organizations]
   );
 
-  const schoolOptions = useMemo(
+  const coachingCenterOptions = useMemo(
     () =>
-      schools
+      coachingCenters
         .filter((item) => !organizationId || item.organizationId === organizationId)
         .map((item) => ({
           value: item.id,
           label: `${item.name} (${item.id})`,
         })),
-    [schools, organizationId]
+    [coachingCenters, organizationId]
   );
 
   const academicYearOptions = useMemo(
@@ -294,19 +294,19 @@ export default function FeeManagementPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
-      setSchoolId("");
+      setCoachingCenters([]);
+      setCoachingCenterId("");
       return;
     }
 
     let active = true;
-    async function loadSchools() {
+    async function loadCoachingCenters() {
       setTenantLoading(true);
       try {
         const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
-        setSchools(items);
-        setSchoolId((prev) => {
+        setCoachingCenters(items);
+        setCoachingCenterId((prev) => {
           if (items.length === 1) return items[0].id;
           if (!items.some((item) => item.id === prev)) return "";
           return prev;
@@ -319,14 +319,14 @@ export default function FeeManagementPage() {
       }
     }
 
-    loadSchools();
+    loadCoachingCenters();
     return () => {
       active = false;
     };
   }, [organizationId]);
 
   useEffect(() => {
-    const canLoad = Boolean(organizationId && schoolId);
+    const canLoad = Boolean(organizationId && coachingCenterId);
     if (!canLoad) {
       setAcademicYears([]);
       setClassMasters([]);
@@ -344,7 +344,7 @@ export default function FeeManagementPage() {
       try {
         const params = new URLSearchParams();
         params.set("organizationId", organizationId);
-        params.set("schoolId", schoolId);
+        params.set("coachingCenterId", coachingCenterId);
         params.set("includeStudents", "true");
         params.set("includeFees", "true");
         const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
@@ -404,7 +404,7 @@ export default function FeeManagementPage() {
     return () => {
       active = false;
     };
-  }, [organizationId, schoolId]);
+  }, [organizationId, coachingCenterId]);
 
   useEffect(() => {
     if (!message) return;
@@ -439,8 +439,8 @@ export default function FeeManagementPage() {
                   value={organizationId}
                   onChange={(value) => {
                     setOrganizationId(value);
-                    setSchoolId("");
-                    setSchoolSearch("");
+                    setCoachingCenterId("");
+                    setCoachingCenterSearch("");
                   }}
                   search={organizationSearch}
                   onSearchChange={setOrganizationSearch}
@@ -454,11 +454,11 @@ export default function FeeManagementPage() {
               <label className="block text-sm font-medium text-gray-700">Coaching Center</label>
               <div className="mt-1">
                 <SearchableDropdown
-                  options={schoolOptions}
-                  value={schoolId}
-                  onChange={setSchoolId}
-                  search={schoolSearch}
-                  onSearchChange={setSchoolSearch}
+                  options={coachingCenterOptions}
+                  value={coachingCenterId}
+                  onChange={setCoachingCenterId}
+                  search={coachingCenterSearch}
+                  onSearchChange={setCoachingCenterSearch}
                   placeholder="Select coaching center"
                   searchPlaceholder="Search coaching center"
                   disabled={tenantLoading || !organizationId}
@@ -477,7 +477,7 @@ export default function FeeManagementPage() {
                 onSearchChange={setAcademicYearSearch}
                 placeholder="Select academic year"
                 searchPlaceholder="Search academic year"
-                disabled={optionLoading || !schoolId}
+                disabled={optionLoading || !coachingCenterId}
               />
             </div>
           </div>
@@ -576,7 +576,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setFeePlanSearch}
                   placeholder="Select fee plan"
                   searchPlaceholder="Search fee plan"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -595,7 +595,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setFeePlanClassMasterSearch}
                   placeholder="Select class master"
                   searchPlaceholder="Search class master"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -645,7 +645,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setLedgerStudentSearch}
                   placeholder="Select student"
                   searchPlaceholder="Search student"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -660,7 +660,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setLedgerFeePlanSearch}
                   placeholder="Select fee plan"
                   searchPlaceholder="Search fee plan"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -675,7 +675,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setLedgerFeeTypeSearch}
                   placeholder="Select fee type"
                   searchPlaceholder="Search fee type"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -780,7 +780,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setPaymentStudentSearch}
                   placeholder="Select student"
                   searchPlaceholder="Search student"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>
@@ -843,7 +843,7 @@ export default function FeeManagementPage() {
                   onSearchChange={setCreditStudentSearch}
                   placeholder="Select student"
                   searchPlaceholder="Search student"
-                  disabled={optionLoading || !schoolId}
+                  disabled={optionLoading || !coachingCenterId}
                 />
               </div>
             </div>

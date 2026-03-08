@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge } from '@/shared/components/ui/Badge';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 type RequestItem = {
   id: string;
@@ -48,11 +49,42 @@ export default function StaffDashboardPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [data, setData] = useState<StaffDashboardResponse>({
     summary: { pendingRequests: 0, completedToday: 0, highPriority: 0, scheduledBlocks: 0 },
     requests: [],
     schedule: [],
   });
+
+  const loadDashboard = useCallback(async () => {
+    if (status !== 'authenticated') return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/staff/dashboard');
+      const body = await response.json();
+      if (!response.ok) {
+        toastMessage(body?.error || 'Failed to load staff dashboard');
+        return;
+      }
+
+      setData({
+        summary: {
+          pendingRequests: Number(body?.summary?.pendingRequests ?? 0),
+          completedToday: Number(body?.summary?.completedToday ?? 0),
+          highPriority: Number(body?.summary?.highPriority ?? 0),
+          scheduledBlocks: Number(body?.summary?.scheduledBlocks ?? 0),
+        },
+        requests: Array.isArray(body?.requests) ? body.requests : [],
+        schedule: Array.isArray(body?.schedule) ? body.schedule : [],
+      });
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, toastMessage]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -94,6 +126,23 @@ export default function StaffDashboardPage() {
   }, [status, toastMessage]);
 
   const summary = useMemo(() => data.summary, [data.summary]);
+  const q = query.trim().toLowerCase();
+  const filteredRequests = useMemo(
+    () =>
+      data.requests.filter((item) =>
+        !q || [item.title, item.requester, item.priority, item.status].join(' ').toLowerCase().includes(q)
+      ),
+    [data.requests, q]
+  );
+  const filteredSchedule = useMemo(
+    () =>
+      data.schedule.filter((item) => {
+        const matchesQuery = !q || [item.title, item.time, item.owner].join(' ').toLowerCase().includes(q);
+        const matchesDate = isWithinDateRange(item.time, dateFrom, dateTo);
+        return matchesQuery && matchesDate;
+      }),
+    [data.schedule, q, dateFrom, dateTo]
+  );
 
   if (status === 'loading') {
     return (
@@ -116,6 +165,19 @@ export default function StaffDashboardPage() {
           <p className="mt-2 text-sm text-amber-50">
             Operational requests, processing queue, and today&apos;s support schedule.
           </p>
+          <div className="mt-4">
+            <DashboardControls
+              query={query}
+              onQueryChange={setQuery}
+              dateFrom={dateFrom}
+              onDateFromChange={setDateFrom}
+              dateTo={dateTo}
+              onDateToChange={setDateTo}
+              onRefresh={loadDashboard}
+              loading={loading}
+              searchPlaceholder="Search queue and schedule"
+            />
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -129,7 +191,7 @@ export default function StaffDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
             <h2 className="text-lg font-semibold text-slate-900">Request Queue</h2>
             <div className="mt-4 space-y-3">
-              {data.requests.map((item) => (
+              {filteredRequests.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{item.title}</p>
@@ -141,7 +203,7 @@ export default function StaffDashboardPage() {
                   <p className="mt-1 text-sm text-slate-600">Requester: {item.requester}</p>
                 </div>
               ))}
-              {data.requests.length === 0 && (
+              {filteredRequests.length === 0 && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   {loading ? 'Loading requests...' : 'No pending request items.'}
                 </div>
@@ -152,14 +214,14 @@ export default function StaffDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Recent Schedule</h2>
             <div className="mt-4 space-y-3">
-              {data.schedule.map((item) => (
+              {filteredSchedule.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <p className="font-medium text-slate-900">{item.title}</p>
                   <p className="mt-1 text-sm text-slate-600">{item.time}</p>
                   <p className="mt-1 text-xs text-slate-500">Owner: {item.owner}</p>
                 </div>
               ))}
-              {data.schedule.length === 0 && (
+              {filteredSchedule.length === 0 && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   {loading ? 'Loading schedule...' : 'No schedule items available.'}
                 </div>

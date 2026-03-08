@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
-    if (!organizationId || !schoolId) {
+    const coachingCenterId = actor.getCoachingCenterId();
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({ items: [], total: 0, limit: 0, offset: 0 });
     }
 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     if (
       session.getOrganizationId() !== organizationId ||
-      session.getSchoolId() !== schoolId ||
+      session.getCoachingCenterId() !== coachingCenterId ||
       session.getFacultyId() !== actor.getId()
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const filtered = await attendanceRepo.findByFilters({
       organizationId,
-      schoolId,
+      coachingCenterId,
       sessionId: requestedSessionId,
       studentId: requestedStudentId,
       limit,
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     const items = filtered.map((attendance) => ({
       id: attendance.getId(),
       organizationId: attendance.getOrganizationId(),
-      schoolId: attendance.getSchoolId(),
+      coachingCenterId: attendance.getCoachingCenterId(),
       programId: attendance.getProgramId(),
       batchId: attendance.getBatchId(),
       sessionId: attendance.getSessionId(),
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     const total = await attendanceRepo.countByFilters({
       organizationId,
-      schoolId,
+      coachingCenterId,
       sessionId: requestedSessionId,
       studentId: requestedStudentId,
     });
@@ -130,8 +130,8 @@ export async function POST(request: NextRequest) {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
-    if (!organizationId || !schoolId) {
+    const coachingCenterId = actor.getCoachingCenterId();
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({ error: 'Teacher tenant scope is missing' }, { status: 400 });
     }
 
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     if (
       session.getOrganizationId() !== organizationId ||
-      session.getSchoolId() !== schoolId ||
+      session.getCoachingCenterId() !== coachingCenterId ||
       session.getFacultyId() !== actor.getId()
     ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     const result = await useCase.execute({
       organizationId,
-      schoolId,
+      coachingCenterId,
       programId: session.getProgramId(),
       batchId: session.getBatchId(),
       sessionId: session.getId(),
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       action: 'TEACHER_MARK_COACHING_ATTENDANCE',
       targetId: created.getId(),
       organizationId,
-      schoolId,
+      coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
       metadata: {
         sessionId: created.getSessionId(),
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       {
         id: created.getId(),
         organizationId: created.getOrganizationId(),
-        schoolId: created.getSchoolId(),
+        coachingCenterId: created.getCoachingCenterId(),
         programId: created.getProgramId(),
         batchId: created.getBatchId(),
         sessionId: created.getSessionId(),

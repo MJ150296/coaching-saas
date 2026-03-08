@@ -37,12 +37,12 @@ export async function GET(request: NextRequest) {
 
     const requestedOrganizationId =
       request.nextUrl.searchParams.get('organizationId') || undefined;
-    const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
+    const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
     const includeStudents = request.nextUrl.searchParams.get('includeStudents') === 'true';
     const includeFees = request.nextUrl.searchParams.get('includeFees') === 'true';
-    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
 
-    if (!tenant.organizationId || !tenant.schoolId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId) {
       return NextResponse.json(
         { error: 'organizationId and coachingCenterId are required' },
         { status: 400 }
@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (actor.getRole() !== UserRole.SUPER_ADMIN) {
-      assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+      assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
-    const cacheKey = `${ACADEMIC_OPTIONS_CACHE_PREFIX}${actor.getId()}:${role}:${tenant.organizationId}:${tenant.schoolId}:${includeStudents ? '1' : '0'}:${includeFees ? '1' : '0'}`;
+    const cacheKey = `${ACADEMIC_OPTIONS_CACHE_PREFIX}${actor.getId()}:${role}:${tenant.organizationId}:${tenant.coachingCenterId}:${includeStudents ? '1' : '0'}:${includeFees ? '1' : '0'}`;
     const cached = getCachedValue<unknown>(cacheKey);
     if (cached) {
       logger.debug('GET /api/admin/academic/options cache hit', {
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       await Promise.all([
       AcademicYearModel.find({
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ startDate: -1 })
         .lean<
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         >(),
       ClassMasterModel.find({
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ createdAt: -1 })
         .lean<
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         >(),
       SectionModel.find({
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ createdAt: -1 })
         .lean<
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       UserModel.find({
         role: UserRole.TEACHER,
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ createdAt: -1 })
         .lean<
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
         ? UserModel.find({
             role: UserRole.STUDENT,
             organizationId: tenant.organizationId,
-            schoolId: tenant.schoolId,
+            coachingCenterId: tenant.coachingCenterId,
           })
             .sort({ createdAt: -1 })
             .lean<
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       includeFees
         ? FeeTypeModel.find({
             organizationId: tenant.organizationId,
-            schoolId: tenant.schoolId,
+            coachingCenterId: tenant.coachingCenterId,
           })
             .sort({ createdAt: -1 })
             .lean<Array<{ _id: string; name: string }>>()
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
       includeFees
         ? FeePlanModel.find({
             organizationId: tenant.organizationId,
-            schoolId: tenant.schoolId,
+            coachingCenterId: tenant.coachingCenterId,
           })
             .sort({ createdAt: -1 })
             .lean<Array<{ _id: string; name: string }>>()
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
       includeStudents,
       includeFees,
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       counts: {
         academicYears: payload.academicYears.length,
         classMasters: payload.classMasters.length,

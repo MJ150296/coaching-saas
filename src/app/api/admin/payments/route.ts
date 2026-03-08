@@ -14,14 +14,14 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.CREATE_PAYMENT);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
-    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
+    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const organizationId = tenant.organizationId as string;
-    const schoolId = tenant.schoolId as string;
+    const coachingCenterId = tenant.coachingCenterId as string;
     const academicYearId = typeof body.academicYearId === 'string' ? body.academicYearId.trim() : '';
     const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
     const amount = Number(body.amount);
@@ -54,21 +54,21 @@ export async function POST(request: NextRequest) {
     const student = await UserModel.findOne({ _id: studentId }).lean<{
       role: UserRole;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } | null>();
 
     if (
       !student ||
       student.role !== UserRole.STUDENT ||
       student.organizationId !== organizationId ||
-      student.schoolId !== schoolId
+      student.coachingCenterId !== coachingCenterId
     ) {
       return NextResponse.json({ error: 'Student not found in tenant scope' }, { status: 400 });
     }
 
     const dueEntries = await StudentFeeLedgerModel.find({
       organizationId,
-      schoolId,
+      coachingCenterId,
       academicYearId,
       studentId,
       status: 'DUE',
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
             {
               _id: paymentId,
               organizationId,
-              schoolId,
+              coachingCenterId,
               academicYearId,
               studentId,
               amount,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       actorRole: actor.getRole(),
       action: 'CREATE_PAYMENT',
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       {
         id: paymentId,
         organizationId,
-        schoolId,
+        coachingCenterId,
         academicYearId,
         studentId,
         amount,

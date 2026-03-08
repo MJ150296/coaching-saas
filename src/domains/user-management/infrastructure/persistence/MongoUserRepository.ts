@@ -33,7 +33,7 @@ export class MongoUserRepository implements UserRepository {
       phone: user.getPhone()?.getValue() || null,
       role: user.getRole(),
       organizationId: user.getOrganizationId(),
-      schoolId: user.getSchoolId(),
+      coachingCenterId: user.getCoachingCenterId(),
       coachingCenterId: user.getCoachingCenterId(),
       isActive: user.isUserActive(),
       emailVerified: user.isEmailVerified(),
@@ -106,7 +106,7 @@ export class MongoUserRepository implements UserRepository {
   async findByFilters(filters: {
     role?: string;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     limit?: number;
     offset?: number;
   }): Promise<User[]> {
@@ -115,12 +115,12 @@ export class MongoUserRepository implements UserRepository {
     const query: {
       role?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
 
     if (filters.role) query.role = filters.role;
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
 
     let dbQuery = UserModel.find(query);
     if (typeof filters.offset === 'number' && filters.offset > 0) {
@@ -137,18 +137,18 @@ export class MongoUserRepository implements UserRepository {
   async countByFilters(filters: {
     role?: string;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       role?: string;
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
 
     if (filters.role) query.role = filters.role;
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
 
     return UserModel.countDocuments(query);
   }
@@ -175,8 +175,8 @@ export class MongoUserRepository implements UserRepository {
         phone,
         role: normalizeUserRole(document.role) ?? document.role,
         organizationId: document.organizationId,
-        schoolId: document.coachingCenterId ?? document.schoolId,
-        coachingCenterId: document.coachingCenterId ?? document.schoolId,
+        coachingCenterId: document.coachingCenterId ?? document.coachingCenterId,
+        coachingCenterId: document.coachingCenterId ?? document.coachingCenterId,
         isActive: document.isActive,
         emailVerified: document.emailVerified,
       },

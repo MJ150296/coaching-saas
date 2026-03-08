@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateFeeTypeRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   amount: number;
   frequency: FeeFrequency;

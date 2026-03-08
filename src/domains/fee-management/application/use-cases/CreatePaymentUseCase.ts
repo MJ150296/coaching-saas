@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreatePaymentRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   amount: number;
@@ -21,7 +21,7 @@ export class CreatePaymentUseCase {
     try {
       const entity = Payment.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         academicYearId: request.academicYearId,
         studentId: request.studentId,
         amount: request.amount,

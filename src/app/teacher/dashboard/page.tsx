@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge } from '@/shared/components/ui/Badge';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 type ClassItem = {
   id: string;
@@ -44,11 +45,42 @@ export default function TeacherDashboardPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [data, setData] = useState<TeacherDashboardResponse>({
     summary: { totalClasses: 0, totalStudents: 0, pendingTasks: 0, completedTasks: 0 },
     todayClasses: [],
     tasks: [],
   });
+
+  const loadDashboard = useCallback(async () => {
+    if (status !== 'authenticated') return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/teacher/dashboard');
+      const body = await response.json();
+      if (!response.ok) {
+        toastMessage(body?.error || 'Failed to load teacher dashboard');
+        return;
+      }
+
+      setData({
+        summary: {
+          totalClasses: Number(body?.summary?.totalClasses ?? 0),
+          totalStudents: Number(body?.summary?.totalStudents ?? 0),
+          pendingTasks: Number(body?.summary?.pendingTasks ?? 0),
+          completedTasks: Number(body?.summary?.completedTasks ?? 0),
+        },
+        todayClasses: Array.isArray(body?.todayClasses) ? body.todayClasses : [],
+        tasks: Array.isArray(body?.tasks) ? body.tasks : [],
+      });
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, toastMessage]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -89,6 +121,22 @@ export default function TeacherDashboardPage() {
     };
   }, [status, toastMessage]);
 
+  const filteredTodayClasses = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return data.todayClasses.filter((item) =>
+      !q || [item.classLabel, item.subject, item.slot, item.room].join(' ').toLowerCase().includes(q)
+    );
+  }, [data.todayClasses, query]);
+
+  const filteredTasks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return data.tasks.filter((item) => {
+      const matchesQuery = !q || [item.title, item.classLabel, item.status].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.dueDate, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    });
+  }, [data.tasks, query, dateFrom, dateTo]);
+
   const summary = useMemo(() => data.summary, [data.summary]);
 
   if (status === 'loading') {
@@ -112,6 +160,19 @@ export default function TeacherDashboardPage() {
           <p className="mt-2 text-sm text-emerald-50">
             Today&apos;s classroom overview, grading queue, and timetable at one place.
           </p>
+          <div className="mt-4">
+            <DashboardControls
+              query={query}
+              onQueryChange={setQuery}
+              dateFrom={dateFrom}
+              onDateFromChange={setDateFrom}
+              dateTo={dateTo}
+              onDateToChange={setDateTo}
+              onRefresh={loadDashboard}
+              loading={loading}
+              searchPlaceholder="Search classes or tasks"
+            />
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -125,10 +186,10 @@ export default function TeacherDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Today&apos;s Classes</h2>
-              <Badge variant="green">{data.todayClasses.length} sessions</Badge>
+              <Badge variant="green">{filteredTodayClasses.length} sessions</Badge>
             </div>
             <div className="mt-4 space-y-3">
-              {data.todayClasses.map((item) => (
+              {filteredTodayClasses.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold text-slate-900">{item.subject} · {item.classLabel}</p>
@@ -137,7 +198,7 @@ export default function TeacherDashboardPage() {
                   <p className="mt-1 text-sm text-slate-600">Room: {item.room} · Students: {item.studentCount}</p>
                 </div>
               ))}
-              {data.todayClasses.length === 0 && (
+              {filteredTodayClasses.length === 0 && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   {loading ? 'Loading classes...' : 'No classes found for today.'}
                 </div>
@@ -148,7 +209,7 @@ export default function TeacherDashboardPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Task Queue</h2>
             <div className="mt-4 space-y-3">
-              {data.tasks.map((item) => (
+              {filteredTasks.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{item.title}</p>
@@ -157,7 +218,7 @@ export default function TeacherDashboardPage() {
                   <p className="mt-1 text-sm text-slate-600">{item.classLabel} · Due {new Date(item.dueDate).toLocaleDateString()}</p>
                 </div>
               ))}
-              {data.tasks.length === 0 && (
+              {filteredTasks.length === 0 && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
                   {loading ? 'Loading tasks...' : 'No tasks available.'}
                 </div>

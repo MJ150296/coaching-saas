@@ -10,9 +10,9 @@ function normalizeTenantId(value?: string): string | undefined {
 export function assertTenantScope(
   actor: User,
   organizationId?: string,
-  schoolIdOrCoachingCenterId?: string
+  coachingCenterId?: string
 ): void {
-  const tenantId = schoolIdOrCoachingCenterId;
+  const tenantId = coachingCenterId;
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
     return;
   }
@@ -33,24 +33,24 @@ export function assertTenantScope(
 export function resolveTenantScope(
   actor: User,
   organizationId?: string,
-  schoolId?: string
-): { organizationId?: string; schoolId?: string; coachingCenterId?: string } {
+  coachingCenterId?: string
+): { organizationId?: string; coachingCenterId?: string; coachingCenterId?: string } {
   const normalizedOrganizationId = normalizeTenantId(organizationId);
-  const normalizedSchoolId = normalizeTenantId(schoolId);
+  const normalizedCoachingCenterId = normalizeTenantId(coachingCenterId);
 
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
     return {
       organizationId: normalizedOrganizationId,
-      schoolId: normalizedSchoolId,
-      coachingCenterId: normalizedSchoolId,
+      coachingCenterId: normalizedCoachingCenterId,
+      coachingCenterId: normalizedCoachingCenterId,
     };
   }
 
   const actorTenantId = actor.getCoachingCenterId();
-  const resolvedTenantId = normalizedSchoolId ?? actorTenantId;
+  const resolvedTenantId = normalizedCoachingCenterId ?? actorTenantId;
   return {
     organizationId: normalizedOrganizationId ?? actor.getOrganizationId(),
-    schoolId: resolvedTenantId,
+    coachingCenterId: resolvedTenantId,
     coachingCenterId: resolvedTenantId,
   };
 }

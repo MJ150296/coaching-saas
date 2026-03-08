@@ -8,14 +8,14 @@ import { CoachingAttendance } from '../entities/CoachingAttendance';
 export interface CoachingProgramRepository extends Repository<CoachingProgram, string> {
   findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     academicYearId?: string;
     limit?: number;
     offset?: number;
   }): Promise<CoachingProgram[]>;
   countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     academicYearId?: string;
   }): Promise<number>;
 }
@@ -23,14 +23,14 @@ export interface CoachingProgramRepository extends Repository<CoachingProgram, s
 export interface CoachingBatchRepository extends Repository<CoachingBatch, string> {
   findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     limit?: number;
     offset?: number;
   }): Promise<CoachingBatch[]>;
   countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
   }): Promise<number>;
 }
@@ -38,7 +38,7 @@ export interface CoachingBatchRepository extends Repository<CoachingBatch, strin
 export interface CoachingEnrollmentRepository extends Repository<CoachingEnrollment, string> {
   findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     studentId?: string;
@@ -47,14 +47,14 @@ export interface CoachingEnrollmentRepository extends Repository<CoachingEnrollm
   }): Promise<CoachingEnrollment[]>;
   countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     studentId?: string;
   }): Promise<number>;
   existsByStudentInBatch(
     organizationId: string,
-    schoolId: string,
+    coachingCenterId: string,
     batchId: string,
     studentId: string
   ): Promise<boolean>;
@@ -63,7 +63,7 @@ export interface CoachingEnrollmentRepository extends Repository<CoachingEnrollm
 export interface CoachingSessionRepository extends Repository<CoachingSession, string> {
   findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     facultyId?: string;
@@ -74,7 +74,7 @@ export interface CoachingSessionRepository extends Repository<CoachingSession, s
   }): Promise<CoachingSession[]>;
   countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     facultyId?: string;
@@ -86,7 +86,7 @@ export interface CoachingSessionRepository extends Repository<CoachingSession, s
 export interface CoachingAttendanceRepository extends Repository<CoachingAttendance, string> {
   findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     sessionId?: string;
     studentId?: string;
     limit?: number;
@@ -94,13 +94,13 @@ export interface CoachingAttendanceRepository extends Repository<CoachingAttenda
   }): Promise<CoachingAttendance[]>;
   countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     sessionId?: string;
     studentId?: string;
   }): Promise<number>;
   existsBySessionAndStudent(
     organizationId: string,
-    schoolId: string,
+    coachingCenterId: string,
     sessionId: string,
     studentId: string
   ): Promise<boolean>;

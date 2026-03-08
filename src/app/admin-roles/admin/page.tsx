@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { Badge } from '@/shared/components/ui/Badge';
 import { PageLoader } from '@/shared/components/ui/PageLoader';
 import { TableLoader } from '@/shared/components/ui/TableLoader';
 import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
 
 type UserListItem = {
   id: string;
@@ -19,7 +20,7 @@ type UserListItem = {
 };
 
 type DashboardStats = {
-  totalSchools?: number;
+  totalCoachingCenters?: number;
   totalUsers: number;
   totalAdmins: number;
   totalTeachers: number;
@@ -52,6 +53,9 @@ export default function AdminPage() {
   const { data: session, status } = useSession();
   const { toastMessage } = useToast();
   const [loadingStats, setLoadingStats] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalAdmins: 0,
@@ -63,7 +67,7 @@ export default function AdminPage() {
 
   const actorRole = session?.user?.role as UserRole | undefined;
   const actorOrganizationId = (session?.user as { organizationId?: string } | undefined)?.organizationId;
-  const actorSchoolId = (session?.user as { schoolId?: string } | undefined)?.schoolId;
+  const actorCoachingCenterId = (session?.user as { coachingCenterId?: string } | undefined)?.coachingCenterId;
 
   const roleTitle = useMemo(() => {
     if (!actorRole) return 'Admin Workspace';
@@ -79,6 +83,32 @@ export default function AdminPage() {
     };
     return labels[actorRole];
   }, [actorRole]);
+
+  const loadDashboardData = useCallback(async () => {
+    if (status !== 'authenticated') return;
+    if (!actorRole) return;
+    setLoadingStats(true);
+    try {
+      const response = await fetch('/api/admin/dashboard/overview');
+      const data = (await response.json()) as DashboardOverviewResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to load dashboard data');
+      }
+
+      setStats({
+        totalUsers: Number(data.summary?.totalUsers ?? 0),
+        totalAdmins: Number(data.summary?.totalAdmins ?? 0),
+        totalTeachers: Number(data.summary?.totalTeachers ?? 0),
+        totalStudents: Number(data.summary?.totalStudents ?? 0),
+        totalStaff: Number(data.summary?.totalStaff ?? 0),
+      });
+      setRecentUsers(Array.isArray(data.recentUsers) ? data.recentUsers : []);
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoadingStats(false);
+    }
+  }, [status, actorRole, toastMessage]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -126,7 +156,19 @@ export default function AdminPage() {
     return () => {
       active = false;
     };
-  }, [status, actorRole, actorOrganizationId, actorSchoolId, toastMessage]);
+  }, [status, actorRole, actorOrganizationId, actorCoachingCenterId, toastMessage]);
+
+  const filteredRecentUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return recentUsers.filter((item) => {
+      const matchesQuery = !q || [item.firstName, item.lastName, item.email, item.role]
+        .join(' ')
+        .toLowerCase()
+        .includes(q);
+      const matchesDate = isWithinDateRange(item.createdAt, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    });
+  }, [recentUsers, query, dateFrom, dateTo]);
 
   if (status === 'loading') {
     return <PageLoader message="Loading dashboard..." />;
@@ -146,7 +188,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap gap-2">
               {actorRole ? <Badge variant="blue">{formatRoleLabel(actorRole)}</Badge> : null}
               {actorOrganizationId ? <Badge variant="green">Org: {actorOrganizationId}</Badge> : null}
-              {actorSchoolId ? <Badge variant="orange">Coaching Center: {actorSchoolId}</Badge> : null}
+              {actorCoachingCenterId ? <Badge variant="orange">Coaching Center: {actorCoachingCenterId}</Badge> : null}
             </div>
           </div>
         </section>
@@ -162,6 +204,19 @@ export default function AdminPage() {
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
             <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
+            <div className="mt-4">
+              <DashboardControls
+                query={query}
+                onQueryChange={setQuery}
+                dateFrom={dateFrom}
+                onDateFromChange={setDateFrom}
+                dateTo={dateTo}
+                onDateToChange={setDateTo}
+                onRefresh={loadDashboardData}
+                loading={loadingStats}
+                searchPlaceholder="Search recent users"
+              />
+            </div>
             <div className="mt-4 grid grid-cols-1 gap-2">
               <QuickLink href="/admin-roles/users" label="Manage Users" />
               <QuickLink href="/admin-roles/manage-setting/academic" label="Manage Academic" />
@@ -175,7 +230,7 @@ export default function AdminPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-900">Recent Users</h2>
-              <span className="text-xs font-medium text-slate-500">Latest {recentUsers.length} records</span>
+              <span className="text-xs font-medium text-slate-500">Latest {filteredRecentUsers.length} records</span>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -191,7 +246,7 @@ export default function AdminPage() {
                   <TableLoader columns={4} rows={6} />
                 ) : (
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {recentUsers.map((item) => (
+                  {filteredRecentUsers.map((item) => (
                     <tr key={item.id}>
                       <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
                       <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
@@ -201,7 +256,7 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
-                  {recentUsers.length === 0 && (
+                  {filteredRecentUsers.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-4 text-center text-sm text-slate-500">
                         No users found in current role scope.

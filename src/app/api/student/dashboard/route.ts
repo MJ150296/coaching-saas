@@ -90,9 +90,9 @@ export async function GET() {
     }
 
     const organizationId = actor.getOrganizationId();
-    const schoolId = actor.getSchoolId();
+    const coachingCenterId = actor.getCoachingCenterId();
     const studentId = actor.getId();
-    if (!organizationId || !schoolId) {
+    if (!organizationId || !coachingCenterId) {
       return NextResponse.json({
         summary: { totalSubjects: 0, todayClasses: 0, pendingDues: 0, feeClearance: 0 },
         classLabel: '',
@@ -149,7 +149,7 @@ export async function GET() {
       await Promise.all([
         SubjectAllocationModel.find({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           classMasterId: enrollment.classMasterId,
           $or: sectionScopedOrClassLevel,
@@ -158,7 +158,7 @@ export async function GET() {
           {
             $match: {
               organizationId,
-              schoolId,
+              coachingCenterId,
               academicYearId: enrollment.academicYearId,
               classMasterId: enrollment.classMasterId,
               $or: sectionScopedOrClassLevel,
@@ -168,7 +168,7 @@ export async function GET() {
         ]),
         TimetableEntryModel.find({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           classMasterId: enrollment.classMasterId,
           dayOfWeek: WEEK_DAYS[new Date().getDay()],
@@ -178,7 +178,7 @@ export async function GET() {
           .lean<Array<TimetableTodayDoc>>(),
         StudentFeeLedgerModel.find({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           studentId,
           status: { $ne: 'PAID' },
@@ -188,7 +188,7 @@ export async function GET() {
           .lean<Array<LedgerDoc>>(),
         PaymentModel.find({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           studentId,
         })
@@ -197,13 +197,13 @@ export async function GET() {
           .lean<Array<PaymentDoc>>(),
         StudentFeeLedgerModel.countDocuments({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           studentId,
         }),
         StudentFeeLedgerModel.countDocuments({
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId: enrollment.academicYearId,
           studentId,
           status: 'PAID',

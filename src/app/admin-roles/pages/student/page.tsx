@@ -12,7 +12,7 @@ type StudentRow = {
   email: string;
   phone?: string;
   organizationId?: string;
-  schoolId?: string;
+  coachingCenterId?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: string;
@@ -62,7 +62,7 @@ export default function StudentAnalyticsPage() {
   const analytics = useMemo(() => {
     const activeCount = students.filter((item) => item.isActive).length;
     const verifiedCount = students.filter((item) => item.emailVerified).length;
-    const coachingCenters = new Set(students.map((item) => item.schoolId).filter(Boolean));
+    const coachingCenters = new Set(students.map((item) => item.coachingCenterId).filter(Boolean));
     return { activeCount, verifiedCount, coachingCentersCount: coachingCenters.size };
   }, [students]);
 
@@ -109,7 +109,7 @@ export default function StudentAnalyticsPage() {
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-sm text-slate-700">{item.schoolId || '-'}</td>
+                  <td className="px-3 py-2 text-sm text-slate-700">{item.coachingCenterId || '-'}</td>
                   <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}

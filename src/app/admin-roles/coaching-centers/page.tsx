@@ -61,12 +61,12 @@ export default function CoachingCentersPage() {
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
 
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<CoachingCenterItem[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterItem[]>([]);
   const [organizationId, setOrganizationId] = useState("");
   const [organizationSearch, setOrganizationSearch] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [editingSchoolId, setEditingSchoolId] = useState<string | null>(null);
-  const [deleteSchoolId, setDeleteSchoolId] = useState<string | null>(null);
+  const [editingCoachingCenterId, setEditingCoachingCenterId] = useState<string | null>(null);
+  const [deleteCoachingCenterId, setDeleteCoachingCenterId] = useState<string | null>(null);
   const [coachingCenterName, setCoachingCenterName] = useState("");
   const [coachingCenterCode, setCoachingCenterCode] = useState("");
   const [street, setStreet] = useState("");
@@ -95,7 +95,7 @@ export default function CoachingCentersPage() {
 
   const filteredCoachingCenters = useMemo(() => {
     const q = searchText.trim().toLowerCase();
-    return schools.filter((item) => {
+    return coachingCenters.filter((item) => {
       if (organizationId && item.organizationId !== organizationId) return false;
       if (!q) return true;
       const orgName = organizationMap.get(item.organizationId)?.toLowerCase() || "";
@@ -107,7 +107,7 @@ export default function CoachingCentersPage() {
         orgName.includes(q)
       );
     });
-  }, [schools, searchText, organizationId, organizationMap]);
+  }, [coachingCenters, searchText, organizationId, organizationMap]);
 
   async function loadOrganizations() {
     setOrganizationsLoading(true);
@@ -142,7 +142,7 @@ export default function CoachingCentersPage() {
         address: item.address,
         contactInfo: item.contactInfo,
       }));
-      setSchools(items);
+      setCoachingCenters(items);
     } catch {
       // handled by server auth/permission response when needed
     } finally {
@@ -164,7 +164,7 @@ export default function CoachingCentersPage() {
   }, [message, toastMessage]);
 
   function clearForm() {
-    setEditingSchoolId(null);
+    setEditingCoachingCenterId(null);
     setCoachingCenterName("");
     setCoachingCenterCode("");
     setStreet("");
@@ -206,12 +206,12 @@ export default function CoachingCentersPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const isEditing = Boolean(editingSchoolId);
+      const isEditing = Boolean(editingCoachingCenterId);
       const response = await fetch("/api/admin/coaching-centers", {
         method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: editingSchoolId || undefined,
+          id: editingCoachingCenterId || undefined,
           organizationId: organizationId || undefined,
           coachingCenterName,
           coachingCenterCode,
@@ -241,7 +241,7 @@ export default function CoachingCentersPage() {
     }
   }
 
-  async function handleDeleteSchool(id: string) {
+  async function handleDeleteCoachingCenter(id: string) {
     setLoading(true);
     setMessage(null);
     try {
@@ -256,8 +256,8 @@ export default function CoachingCentersPage() {
         return;
       }
       invalidateAdminCoachingCenters();
-      setDeleteSchoolId(null);
-      if (editingSchoolId === id) {
+      setDeleteCoachingCenterId(null);
+      if (editingCoachingCenterId === id) {
         clearForm();
       }
       setMessage("Coaching center deleted successfully.");
@@ -269,8 +269,8 @@ export default function CoachingCentersPage() {
     }
   }
 
-  function startEditSchool(item: CoachingCenterItem) {
-    setEditingSchoolId(item.id);
+  function startEditCoachingCenter(item: CoachingCenterItem) {
+    setEditingCoachingCenterId(item.id);
     setOrganizationId(item.organizationId || "");
     setCoachingCenterName(item.name || "");
     setCoachingCenterCode(item.code || "");
@@ -309,7 +309,7 @@ export default function CoachingCentersPage() {
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <h2 className="text-lg font-semibold text-gray-900">
-            {editingSchoolId ? "Edit Coaching Center" : "Create Coaching Center"}
+            {editingCoachingCenterId ? "Edit Coaching Center" : "Create Coaching Center"}
           </h2>
           <p className="mt-1 text-sm text-gray-600">
             Select organization first. Organization admin users can only create coaching centers in their own organization.
@@ -384,7 +384,7 @@ export default function CoachingCentersPage() {
               </div>
             </div>
 
-            {editingSchoolId && (
+            {editingCoachingCenterId && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
                 <select
@@ -403,7 +403,7 @@ export default function CoachingCentersPage() {
                 disabled={loading}
                 className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? (editingSchoolId ? "Updating..." : "Creating...") : editingSchoolId ? "Update Coaching Center" : "Create Coaching Center"}
+                {loading ? (editingCoachingCenterId ? "Updating..." : "Creating...") : editingCoachingCenterId ? "Update Coaching Center" : "Create Coaching Center"}
               </button>
               <button
                 type="button"
@@ -411,7 +411,7 @@ export default function CoachingCentersPage() {
                 onClick={clearForm}
                 className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {editingSchoolId ? "Cancel Edit" : "Clear Form"}
+                {editingCoachingCenterId ? "Cancel Edit" : "Clear Form"}
               </button>
             </div>
           </form>
@@ -422,7 +422,7 @@ export default function CoachingCentersPage() {
             <h2 className="text-lg font-semibold text-gray-900">Existing Coaching Centers</h2>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                Total: {schools.length}
+                Total: {coachingCenters.length}
               </span>
               <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
                 Visible: {filteredCoachingCenters.length}
@@ -473,7 +473,7 @@ export default function CoachingCentersPage() {
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white/80">
                 {filteredCoachingCenters.map((item) => (
-                  <tr key={item.id} className={editingSchoolId === item.id ? "bg-indigo-50/50" : ""}>
+                  <tr key={item.id} className={editingCoachingCenterId === item.id ? "bg-indigo-50/50" : ""}>
                     <td className="px-3 py-2 text-sm text-gray-700">{item.name}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{item.code}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">
@@ -493,7 +493,7 @@ export default function CoachingCentersPage() {
                     <td className="px-3 py-2 text-sm">
                       <button
                         type="button"
-                        onClick={() => startEditSchool(item)}
+                        onClick={() => startEditCoachingCenter(item)}
                         disabled={loading}
                         className="mr-2 rounded-lg border border-indigo-300 px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -501,7 +501,7 @@ export default function CoachingCentersPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeleteSchoolId(item.id)}
+                        onClick={() => setDeleteCoachingCenterId(item.id)}
                         disabled={loading}
                         className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -522,7 +522,7 @@ export default function CoachingCentersPage() {
           </div>
         </div>
 
-        <Dialog open={Boolean(deleteSchoolId)} onOpenChange={(open) => !open && setDeleteSchoolId(null)}>
+        <Dialog open={Boolean(deleteCoachingCenterId)} onOpenChange={(open) => !open && setDeleteCoachingCenterId(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Coaching Center</DialogTitle>
@@ -533,15 +533,15 @@ export default function CoachingCentersPage() {
             <DialogFooter>
               <button
                 type="button"
-                onClick={() => setDeleteSchoolId(null)}
+                onClick={() => setDeleteCoachingCenterId(null)}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={loading || !deleteSchoolId}
-                onClick={() => deleteSchoolId && handleDeleteSchool(deleteSchoolId)}
+                disabled={loading || !deleteCoachingCenterId}
+                onClick={() => deleteCoachingCenterId && handleDeleteCoachingCenter(deleteCoachingCenterId)}
                 className="rounded-lg border border-red-600 bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Deleting..." : "Delete"}

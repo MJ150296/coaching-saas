@@ -37,7 +37,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         name: entity.getName(),
         amount: entity.getAmount(),
         frequency: entity.getFrequency(),
@@ -54,7 +54,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
     if (!doc) return null;
     return new FeeType(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       amount: doc.amount,
       frequency: doc.frequency as FeeFrequency,
@@ -68,7 +68,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
     const docs = (await FeeTypeModel.find({})) as IFeeTypeDocument[];
     return docs.map((doc) => new FeeType(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       amount: doc.amount,
       frequency: doc.frequency as FeeFrequency,
@@ -79,13 +79,13 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
 
   async findByTenant(
     organizationId?: string,
-    schoolId?: string,
+    coachingCenterId?: string,
     options?: { limit?: number; offset?: number }
   ): Promise<FeeType[]> {
     await this.ensureConnection();
-    const query: { organizationId?: string; schoolId?: string } = {};
+    const query: { organizationId?: string; coachingCenterId?: string } = {};
     if (organizationId) query.organizationId = organizationId;
-    if (schoolId) query.schoolId = schoolId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
     let dbQuery = FeeTypeModel.find(query);
     if (typeof options?.offset === 'number' && options.offset > 0) {
       dbQuery = dbQuery.skip(options.offset);
@@ -96,7 +96,7 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
     const docs = (await dbQuery) as IFeeTypeDocument[];
     return docs.map((doc) => new FeeType(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       amount: doc.amount,
       frequency: doc.frequency as FeeFrequency,
@@ -105,11 +105,11 @@ export class MongoFeeTypeRepository implements FeeTypeRepository {
     }, doc.createdAt, doc.updatedAt));
   }
 
-  async countByTenant(organizationId?: string, schoolId?: string): Promise<number> {
+  async countByTenant(organizationId?: string, coachingCenterId?: string): Promise<number> {
     await this.ensureConnection();
-    const query: { organizationId?: string; schoolId?: string } = {};
+    const query: { organizationId?: string; coachingCenterId?: string } = {};
     if (organizationId) query.organizationId = organizationId;
-    if (schoolId) query.schoolId = schoolId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
     return FeeTypeModel.countDocuments(query);
   }
 
@@ -137,7 +137,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         name: entity.getName(),
         items: entity.getItems(),
@@ -152,7 +152,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
     if (!doc) return null;
     return new FeePlan(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       name: doc.name,
       items: doc.items as FeePlanItem[],
@@ -164,7 +164,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
     const docs = (await FeePlanModel.find({})) as IFeePlanDocument[];
     return docs.map((doc) => new FeePlan(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       name: doc.name,
       items: doc.items as FeePlanItem[],
@@ -173,13 +173,13 @@ export class MongoFeePlanRepository implements FeePlanRepository {
 
   async findByTenant(
     organizationId?: string,
-    schoolId?: string,
+    coachingCenterId?: string,
     options?: { academicYearId?: string; limit?: number; offset?: number }
   ): Promise<FeePlan[]> {
     await this.ensureConnection();
-    const query: { organizationId?: string; schoolId?: string; academicYearId?: string } = {};
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
     if (organizationId) query.organizationId = organizationId;
-    if (schoolId) query.schoolId = schoolId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
     if (options?.academicYearId) query.academicYearId = options.academicYearId;
 
     let dbQuery = FeePlanModel.find(query);
@@ -192,7 +192,7 @@ export class MongoFeePlanRepository implements FeePlanRepository {
     const docs = (await dbQuery) as IFeePlanDocument[];
     return docs.map((doc) => new FeePlan(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       name: doc.name,
       items: doc.items as FeePlanItem[],
@@ -201,13 +201,13 @@ export class MongoFeePlanRepository implements FeePlanRepository {
 
   async countByTenant(
     organizationId?: string,
-    schoolId?: string,
+    coachingCenterId?: string,
     options?: { academicYearId?: string }
   ): Promise<number> {
     await this.ensureConnection();
-    const query: { organizationId?: string; schoolId?: string; academicYearId?: string } = {};
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
     if (organizationId) query.organizationId = organizationId;
-    if (schoolId) query.schoolId = schoolId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
     if (options?.academicYearId) query.academicYearId = options.academicYearId;
     return FeePlanModel.countDocuments(query);
   }
@@ -236,7 +236,7 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         feePlanId: entity.getFeePlanId(),
         classMasterId: entity.getClassMasterId(),
@@ -252,7 +252,7 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
     if (!doc) return null;
     return new FeePlanAssignment(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       feePlanId: doc.feePlanId,
       classMasterId: doc.classMasterId,
@@ -265,7 +265,7 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
     const docs = (await FeePlanAssignmentModel.find({})) as IFeePlanAssignmentDocument[];
     return docs.map((doc) => new FeePlanAssignment(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       feePlanId: doc.feePlanId,
       classMasterId: doc.classMasterId,
@@ -297,7 +297,7 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         studentId: entity.getStudentId(),
         feePlanId: entity.getFeePlanId(),
@@ -318,7 +318,7 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
     if (!doc) return null;
     return new StudentFeeLedgerEntry(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       feePlanId: doc.feePlanId,
@@ -344,7 +344,7 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
     const docs = (await StudentFeeLedgerModel.find({})) as IStudentFeeLedgerDocument[];
     return docs.map((doc) => new StudentFeeLedgerEntry(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       feePlanId: doc.feePlanId,
@@ -389,7 +389,7 @@ export class MongoPaymentRepository implements PaymentRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         studentId: entity.getStudentId(),
         amount: entity.getAmount(),
@@ -407,7 +407,7 @@ export class MongoPaymentRepository implements PaymentRepository {
     if (!doc) return null;
     return new Payment(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,
@@ -422,7 +422,7 @@ export class MongoPaymentRepository implements PaymentRepository {
     const docs = (await PaymentModel.find({})) as IPaymentDocument[];
     return docs.map((doc) => new Payment(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,
@@ -456,7 +456,7 @@ export class MongoCreditNoteRepository implements CreditNoteRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         studentId: entity.getStudentId(),
         amount: entity.getAmount(),
@@ -473,7 +473,7 @@ export class MongoCreditNoteRepository implements CreditNoteRepository {
     if (!doc) return null;
     return new CreditNote(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,
@@ -487,7 +487,7 @@ export class MongoCreditNoteRepository implements CreditNoteRepository {
     const docs = (await CreditNoteModel.find({})) as ICreditNoteDocument[];
     return docs.map((doc) => new CreditNote(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       studentId: doc.studentId,
       amount: doc.amount,

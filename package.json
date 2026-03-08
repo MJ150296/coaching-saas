@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "seed:dev:users": "NODE_ENV=development node scripts/seed-dev-users.cjs",
+    "seed:users": "node scripts/seed-dev-users.cjs",
     "type-check": "npm run type-check:chunked",
     "type-check:all": "tsc --noEmit --pretty false",
     "type-check:api": "npm run type-check:api-routes:individual",

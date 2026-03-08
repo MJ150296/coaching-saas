@@ -27,7 +27,7 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         name: entity.getName(),
         startDate: entity.getStartDate(),
         endDate: entity.getEndDate(),
@@ -43,7 +43,7 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
     if (!doc) return null;
     return new AcademicYear(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       startDate: doc.startDate,
       endDate: doc.endDate,
@@ -56,7 +56,7 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
     const docs = (await AcademicYearModel.find({})) as IAcademicYearDocument[];
     return docs.map((doc) => new AcademicYear(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       startDate: doc.startDate,
       endDate: doc.endDate,
@@ -66,18 +66,18 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     limit?: number;
     offset?: number;
   }): Promise<AcademicYear[]> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
 
     let dbQuery = AcademicYearModel.find(query);
     if (typeof filters.offset === 'number' && filters.offset > 0) {
@@ -90,7 +90,7 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
     const docs = (await dbQuery) as IAcademicYearDocument[];
     return docs.map((doc) => new AcademicYear(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       startDate: doc.startDate,
       endDate: doc.endDate,
@@ -100,15 +100,15 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     return AcademicYearModel.countDocuments(query);
   }
 
@@ -136,7 +136,7 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         name: entity.getName(),
         level: entity.getLevel(),
       },
@@ -150,7 +150,7 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
     if (!doc) return null;
     return new ClassMaster(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       level: doc.level,
     }, doc.createdAt, doc.updatedAt);
@@ -161,7 +161,7 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
     const docs = (await ClassMasterModel.find({})) as IClassMasterDocument[];
     return docs.map((doc) => new ClassMaster(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       level: doc.level,
     }, doc.createdAt, doc.updatedAt));
@@ -169,18 +169,18 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     limit?: number;
     offset?: number;
   }): Promise<ClassMaster[]> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
 
     let dbQuery = ClassMasterModel.find(query);
     if (typeof filters.offset === 'number' && filters.offset > 0) {
@@ -193,7 +193,7 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
     const docs = (await dbQuery) as IClassMasterDocument[];
     return docs.map((doc) => new ClassMaster(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       name: doc.name,
       level: doc.level,
     }, doc.createdAt, doc.updatedAt));
@@ -201,15 +201,15 @@ export class MongoClassMasterRepository implements ClassMasterRepository {
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
     } = {};
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     return ClassMasterModel.countDocuments(query);
   }
 
@@ -237,7 +237,7 @@ export class MongoSectionRepository implements SectionRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         classMasterId: entity.getClassMasterId(),
         name: entity.getName(),
         capacity: entity.getCapacity(),
@@ -255,7 +255,7 @@ export class MongoSectionRepository implements SectionRepository {
     if (!doc) return null;
     return new Section(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       classMasterId: doc.classMasterId,
       name: doc.name,
       capacity: doc.capacity,
@@ -270,7 +270,7 @@ export class MongoSectionRepository implements SectionRepository {
     const docs = (await SectionModel.find({})) as ISectionDocument[];
     return docs.map((doc) => new Section(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       classMasterId: doc.classMasterId,
       name: doc.name,
       capacity: doc.capacity,
@@ -282,7 +282,7 @@ export class MongoSectionRepository implements SectionRepository {
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     classMasterId?: string;
     limit?: number;
     offset?: number;
@@ -290,12 +290,12 @@ export class MongoSectionRepository implements SectionRepository {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       classMasterId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.classMasterId) query.classMasterId = filters.classMasterId;
 
     let dbQuery = SectionModel.find(query);
@@ -309,7 +309,7 @@ export class MongoSectionRepository implements SectionRepository {
     const docs = (await dbQuery) as ISectionDocument[];
     return docs.map((doc) => new Section(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       classMasterId: doc.classMasterId,
       name: doc.name,
       capacity: doc.capacity,
@@ -321,17 +321,17 @@ export class MongoSectionRepository implements SectionRepository {
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     classMasterId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       classMasterId?: string;
     } = {};
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.classMasterId) query.classMasterId = filters.classMasterId;
     return SectionModel.countDocuments(query);
   }
@@ -360,7 +360,7 @@ export class MongoSubjectAllocationRepository implements SubjectAllocationReposi
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         classMasterId: entity.getClassMasterId(),
         sectionId: entity.getSectionId(),
@@ -378,7 +378,7 @@ export class MongoSubjectAllocationRepository implements SubjectAllocationReposi
     if (!doc) return null;
     return new SubjectAllocation(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       classMasterId: doc.classMasterId,
       sectionId: doc.sectionId,
@@ -393,7 +393,7 @@ export class MongoSubjectAllocationRepository implements SubjectAllocationReposi
     const docs = (await SubjectAllocationModel.find({})) as ISubjectAllocationDocument[];
     return docs.map((doc) => new SubjectAllocation(doc._id, {
       organizationId: doc.organizationId,
-      schoolId: doc.schoolId,
+      coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       classMasterId: doc.classMasterId,
       sectionId: doc.sectionId,

@@ -12,11 +12,11 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.CREATE_CREDIT_NOTE);
     const body = await request.json();
-    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
-    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.schoolId)) {
+    const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
+    if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const useCase = await initializeAppAndGetService<CreateCreditNoteUseCase>(
       ServiceKeys.CREATE_CREDIT_NOTE_USE_CASE
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       actorRole: actor.getRole(),
       action: 'CREATE_CREDIT_NOTE',
       organizationId: tenant.organizationId,
-      schoolId: tenant.schoolId,
+      coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 

@@ -36,7 +36,7 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         name: entity.getName(),
         code: entity.getCode(),
@@ -58,7 +58,7 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
       doc._id,
       {
         organizationId: doc.organizationId,
-        schoolId: doc.schoolId,
+        coachingCenterId: doc.coachingCenterId,
         academicYearId: doc.academicYearId,
         name: doc.name,
         code: doc.code,
@@ -81,7 +81,7 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             academicYearId: doc.academicYearId,
             name: doc.name,
             code: doc.code,
@@ -98,7 +98,7 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     academicYearId?: string;
     limit?: number;
     offset?: number;
@@ -106,12 +106,12 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       academicYearId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.academicYearId) query.academicYearId = filters.academicYearId;
 
     let dbQuery = CoachingProgramModel.find(query).sort({ createdAt: -1 });
@@ -129,7 +129,7 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             academicYearId: doc.academicYearId,
             name: doc.name,
             code: doc.code,
@@ -146,18 +146,18 @@ export class MongoCoachingProgramRepository implements CoachingProgramRepository
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     academicYearId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       academicYearId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.academicYearId) query.academicYearId = filters.academicYearId;
     return CoachingProgramModel.countDocuments(query);
   }
@@ -186,7 +186,7 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         programId: entity.getProgramId(),
         name: entity.getName(),
         facultyId: entity.getFacultyId(),
@@ -209,7 +209,7 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
       doc._id,
       {
         organizationId: doc.organizationId,
-        schoolId: doc.schoolId,
+        coachingCenterId: doc.coachingCenterId,
         programId: doc.programId,
         name: doc.name,
         facultyId: doc.facultyId,
@@ -233,7 +233,7 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             name: doc.name,
             facultyId: doc.facultyId,
@@ -251,7 +251,7 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     limit?: number;
     offset?: number;
@@ -259,12 +259,12 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
 
     let dbQuery = CoachingBatchModel.find(query).sort({ createdAt: -1 });
@@ -282,7 +282,7 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             name: doc.name,
             facultyId: doc.facultyId,
@@ -300,18 +300,18 @@ export class MongoCoachingBatchRepository implements CoachingBatchRepository {
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
 
     return CoachingBatchModel.countDocuments(query);
@@ -341,7 +341,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         programId: entity.getProgramId(),
         batchId: entity.getBatchId(),
         studentId: entity.getStudentId(),
@@ -361,7 +361,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
       doc._id,
       {
         organizationId: doc.organizationId,
-        schoolId: doc.schoolId,
+        coachingCenterId: doc.coachingCenterId,
         programId: doc.programId,
         batchId: doc.batchId,
         studentId: doc.studentId,
@@ -382,7 +382,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             studentId: doc.studentId,
@@ -397,7 +397,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     studentId?: string;
@@ -407,14 +407,14 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
       batchId?: string;
       studentId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
     if (filters.batchId) query.batchId = filters.batchId;
     if (filters.studentId) query.studentId = filters.studentId;
@@ -434,7 +434,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             studentId: doc.studentId,
@@ -449,7 +449,7 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     studentId?: string;
@@ -457,14 +457,14 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
       batchId?: string;
       studentId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
     if (filters.batchId) query.batchId = filters.batchId;
     if (filters.studentId) query.studentId = filters.studentId;
@@ -474,14 +474,14 @@ export class MongoCoachingEnrollmentRepository implements CoachingEnrollmentRepo
 
   async existsByStudentInBatch(
     organizationId: string,
-    schoolId: string,
+    coachingCenterId: string,
     batchId: string,
     studentId: string
   ): Promise<boolean> {
     await this.ensureConnection();
     const count = await CoachingEnrollmentModel.countDocuments({
       organizationId,
-      schoolId,
+      coachingCenterId,
       batchId,
       studentId,
     });
@@ -512,7 +512,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         programId: entity.getProgramId(),
         batchId: entity.getBatchId(),
         topic: entity.getTopic(),
@@ -534,7 +534,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
       doc._id,
       {
         organizationId: doc.organizationId,
-        schoolId: doc.schoolId,
+        coachingCenterId: doc.coachingCenterId,
         programId: doc.programId,
         batchId: doc.batchId,
         topic: doc.topic,
@@ -558,7 +558,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             topic: doc.topic,
@@ -576,7 +576,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     facultyId?: string;
@@ -588,7 +588,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
       batchId?: string;
       facultyId?: string;
@@ -596,7 +596,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
     if (filters.batchId) query.batchId = filters.batchId;
     if (filters.facultyId) query.facultyId = filters.facultyId;
@@ -621,7 +621,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             topic: doc.topic,
@@ -639,7 +639,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     programId?: string;
     batchId?: string;
     facultyId?: string;
@@ -649,7 +649,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       programId?: string;
       batchId?: string;
       facultyId?: string;
@@ -657,7 +657,7 @@ export class MongoCoachingSessionRepository implements CoachingSessionRepository
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.programId) query.programId = filters.programId;
     if (filters.batchId) query.batchId = filters.batchId;
     if (filters.facultyId) query.facultyId = filters.facultyId;
@@ -693,7 +693,7 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
       {
         _id: entity.getId(),
         organizationId: entity.getOrganizationId(),
-        schoolId: entity.getSchoolId(),
+        coachingCenterId: entity.getCoachingCenterId(),
         programId: entity.getProgramId(),
         batchId: entity.getBatchId(),
         sessionId: entity.getSessionId(),
@@ -714,7 +714,7 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
       doc._id,
       {
         organizationId: doc.organizationId,
-        schoolId: doc.schoolId,
+        coachingCenterId: doc.coachingCenterId,
         programId: doc.programId,
         batchId: doc.batchId,
         sessionId: doc.sessionId,
@@ -737,7 +737,7 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             sessionId: doc.sessionId,
@@ -754,7 +754,7 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
 
   async findByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     sessionId?: string;
     studentId?: string;
     limit?: number;
@@ -763,13 +763,13 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       sessionId?: string;
       studentId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.sessionId) query.sessionId = filters.sessionId;
     if (filters.studentId) query.studentId = filters.studentId;
 
@@ -788,7 +788,7 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
           doc._id,
           {
             organizationId: doc.organizationId,
-            schoolId: doc.schoolId,
+            coachingCenterId: doc.coachingCenterId,
             programId: doc.programId,
             batchId: doc.batchId,
             sessionId: doc.sessionId,
@@ -805,20 +805,20 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
 
   async countByFilters(filters: {
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
     sessionId?: string;
     studentId?: string;
   }): Promise<number> {
     await this.ensureConnection();
     const query: {
       organizationId?: string;
-      schoolId?: string;
+      coachingCenterId?: string;
       sessionId?: string;
       studentId?: string;
     } = {};
 
     if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
     if (filters.sessionId) query.sessionId = filters.sessionId;
     if (filters.studentId) query.studentId = filters.studentId;
 
@@ -827,14 +827,14 @@ export class MongoCoachingAttendanceRepository implements CoachingAttendanceRepo
 
   async existsBySessionAndStudent(
     organizationId: string,
-    schoolId: string,
+    coachingCenterId: string,
     sessionId: string,
     studentId: string
   ): Promise<boolean> {
     await this.ensureConnection();
     const count = await CoachingAttendanceModel.countDocuments({
       organizationId,
-      schoolId,
+      coachingCenterId,
       sessionId,
       studentId,
     });

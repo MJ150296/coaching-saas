@@ -6,7 +6,7 @@ import { useToast } from '@/shared/components/ui/ToastProvider';
 import { getAdminOrganizations, getAdminCoachingCenters } from '@/shared/lib/client/adminTenantReferenceData';
 
 type OrganizationOption = { id: string; name: string };
-type SchoolOption = { id: string; name: string; organizationId: string };
+type CoachingCenterOption = { id: string; name: string; organizationId: string };
 type AcademicYearOption = { id: string; name: string };
 type ClassMasterOption = { id: string; name: string; level?: string };
 type SectionOption = { id: string; name: string; classMasterId: string };
@@ -15,11 +15,11 @@ type StudentOption = { id: string; firstName?: string; lastName?: string; email:
 type Enrollment = {
   id: string;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   studentId: string;
   classMasterId: string;
-  sectionId: string;
+  sectionId?: string;
   rollNumber?: string;
 };
 
@@ -31,22 +31,23 @@ export default function EnrollmentPage() {
   const [optionLoading, setOptionLoading] = useState(false);
 
   const [organizationId, setOrganizationId] = useState('');
-  const [schoolId, setSchoolId] = useState('');
+  const [coachingCenterId, setCoachingCenterId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
   const [classMasterId, setClassMasterId] = useState('');
   const [sectionId, setSectionId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [rollNumber, setRollNumber] = useState('');
+  const [showAdvancedAcademicFields, setShowAdvancedAcademicFields] = useState(false);
 
   const [organizationSearch, setOrganizationSearch] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
+  const [coachingCenterSearch, setCoachingCenterSearch] = useState('');
   const [academicYearSearch, setAcademicYearSearch] = useState('');
   const [classMasterSearch, setClassMasterSearch] = useState('');
   const [sectionSearch, setSectionSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
 
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
   const [classMasters, setClassMasters] = useState<ClassMasterOption[]>([]);
   const [sections, setSections] = useState<SectionOption[]>([]);
@@ -62,12 +63,12 @@ export default function EnrollmentPage() {
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvSummary, setCsvSummary] = useState<string | null>(null);
 
-  const schoolOptions = useMemo(
+  const coachingCenterOptions = useMemo(
     () =>
-      schools
+      coachingCenters
         .filter((item) => !organizationId || item.organizationId === organizationId)
         .map((item) => ({ value: item.id, label: `${item.name} (${item.id})` })),
-    [organizationId, schools]
+    [organizationId, coachingCenters]
   );
 
   const organizationOptions = useMemo(
@@ -148,10 +149,10 @@ export default function EnrollmentPage() {
     [students]
   );
 
-  async function loadEnrollments(orgId: string, schId: string, yearId?: string) {
+  async function loadEnrollments(orgId: string, centerId: string, yearId?: string) {
     const params = new URLSearchParams();
     params.set('organizationId', orgId);
-    params.set('schoolId', schId);
+    params.set('coachingCenterId', centerId);
     if (yearId) params.set('academicYearId', yearId);
     const response = await fetch(`/api/admin/enrollments?${params.toString()}`);
     const data = await response.json();
@@ -182,19 +183,19 @@ export default function EnrollmentPage() {
 
   useEffect(() => {
     if (!organizationId) {
-      setSchools([]);
-      setSchoolId('');
+      setCoachingCenters([]);
+      setCoachingCenterId('');
       return;
     }
 
     let active = true;
-    async function loadSchools() {
+    async function loadCoachingCenters() {
       setTenantLoading(true);
       try {
         const items = await getAdminCoachingCenters(organizationId);
         if (!active) return;
-        setSchools(items);
-        setSchoolId((prev) => {
+        setCoachingCenters(items);
+        setCoachingCenterId((prev) => {
           if (items.length === 1) return items[0].id;
           if (!items.some((item) => item.id === prev)) return '';
           return prev;
@@ -203,14 +204,14 @@ export default function EnrollmentPage() {
         if (active) setTenantLoading(false);
       }
     }
-    loadSchools();
+    loadCoachingCenters();
     return () => {
       active = false;
     };
   }, [organizationId]);
 
   useEffect(() => {
-    const canLoad = Boolean(organizationId && schoolId);
+    const canLoad = Boolean(organizationId && coachingCenterId);
     if (!canLoad) {
       setAcademicYears([]);
       setClassMasters([]);
@@ -226,7 +227,7 @@ export default function EnrollmentPage() {
       try {
         const params = new URLSearchParams();
         params.set('organizationId', organizationId);
-        params.set('schoolId', schoolId);
+        params.set('coachingCenterId', coachingCenterId);
         params.set('includeStudents', 'true');
         const response = await fetch(`/api/admin/academic/options?${params.toString()}`);
         const data = await response.json();
@@ -271,24 +272,33 @@ export default function EnrollmentPage() {
     return () => {
       active = false;
     };
-  }, [organizationId, schoolId]);
+  }, [organizationId, coachingCenterId]);
 
   useEffect(() => {
-    if (!organizationId || !schoolId) {
+    if (!organizationId || !coachingCenterId) {
       setEnrollments([]);
       return;
     }
-    loadEnrollments(organizationId, schoolId, academicYearId || undefined);
-  }, [academicYearId, organizationId, schoolId]);
+    loadEnrollments(organizationId, coachingCenterId, academicYearId || undefined);
+  }, [academicYearId, organizationId, coachingCenterId]);
 
   useEffect(() => {
     if (!message) return;
     toastMessage(message);
   }, [message, toastMessage]);
 
+  useEffect(() => {
+    if (showAdvancedAcademicFields) return;
+    setSectionId('');
+    setRollNumber('');
+    setFilterSectionId('');
+    setSectionSearch('');
+    setFilterSectionSearch('');
+  }, [showAdvancedAcademicFields]);
+
   async function submitEnrollment() {
-    if (!organizationId || !schoolId || !academicYearId || !studentId || !classMasterId || !sectionId) {
-      setMessage('Please select organization, coaching center, academic year, student, class and section.');
+    if (!organizationId || !coachingCenterId || !academicYearId || !studentId || !classMasterId) {
+      setMessage('Please select organization, coaching center, academic year, student and class.');
       return;
     }
 
@@ -302,11 +312,11 @@ export default function EnrollmentPage() {
         body: JSON.stringify({
           id: editingEnrollmentId || undefined,
           organizationId,
-          schoolId,
+          coachingCenterId,
           academicYearId,
           studentId,
           classMasterId,
-          sectionId,
+          sectionId: sectionId || undefined,
           rollNumber: rollNumber || undefined,
         }),
       });
@@ -317,7 +327,7 @@ export default function EnrollmentPage() {
       }
       setEditingEnrollmentId(null);
       setMessage(isUpdate ? 'Enrollment updated successfully.' : 'Enrollment saved successfully.');
-      await loadEnrollments(organizationId, schoolId, academicYearId || undefined);
+      await loadEnrollments(organizationId, coachingCenterId, academicYearId || undefined);
     } catch (error) {
       setMessage(`Error: ${String(error)}`);
     } finally {
@@ -326,14 +336,14 @@ export default function EnrollmentPage() {
   }
 
   async function removeEnrollment(id: string) {
-    if (!organizationId || !schoolId) return;
+    if (!organizationId || !coachingCenterId) return;
     setLoading(true);
     setMessage(null);
     try {
       const params = new URLSearchParams();
       params.set('id', id);
       params.set('organizationId', organizationId);
-      params.set('schoolId', schoolId);
+      params.set('coachingCenterId', coachingCenterId);
       const response = await fetch(`/api/admin/enrollments?${params.toString()}`, { method: 'DELETE' });
       const data = await response.json();
       if (!response.ok) {
@@ -341,7 +351,7 @@ export default function EnrollmentPage() {
         return;
       }
       setMessage('Enrollment removed.');
-      await loadEnrollments(organizationId, schoolId, academicYearId || undefined);
+      await loadEnrollments(organizationId, coachingCenterId, academicYearId || undefined);
     } catch (error) {
       setMessage(`Error: ${String(error)}`);
     } finally {
@@ -362,7 +372,7 @@ export default function EnrollmentPage() {
     setAcademicYearId(item.academicYearId);
     setStudentId(item.studentId);
     setClassMasterId(item.classMasterId);
-    setSectionId(item.sectionId);
+    setSectionId(item.sectionId || '');
     setRollNumber(item.rollNumber || '');
     setMessage('Editing selected enrollment. Update fields and click "Update Enrollment".');
   }
@@ -394,7 +404,7 @@ export default function EnrollmentPage() {
   }
 
   async function importCsv(file: File) {
-    if (!organizationId || !schoolId) {
+    if (!organizationId || !coachingCenterId) {
       setMessage('Select organization and coaching center before CSV import.');
       return;
     }
@@ -417,7 +427,7 @@ export default function EnrollmentPage() {
       const headers = parseCsvLine(lines[0]).map((item) => item.toLowerCase());
       const indexMap = new Map(headers.map((header, index) => [header, index]));
 
-      const requiredHeaders = ['studentid', 'classmasterid', 'sectionid'];
+      const requiredHeaders = ['studentid', 'classmasterid'];
       for (const header of requiredHeaders) {
         if (!indexMap.has(header)) {
           setMessage(`Missing required CSV header: ${header}`);
@@ -444,10 +454,10 @@ export default function EnrollmentPage() {
             const academicYearIdValue = cells[indexMap.get('academicyearid') ?? -1]?.trim() || academicYearId;
             const rollNumberValue = cells[indexMap.get('rollnumber') ?? -1]?.trim() || undefined;
 
-            if (!studentIdValue || !classMasterIdValue || !sectionIdValue || !academicYearIdValue) {
+            if (!studentIdValue || !classMasterIdValue || !academicYearIdValue) {
               return {
                 ok: false,
-                error: `Row ${rowNumber}: studentId, classMasterId, sectionId and academicYearId are required.`,
+                error: `Row ${rowNumber}: studentId, classMasterId and academicYearId are required.`,
               };
             }
 
@@ -457,11 +467,11 @@ export default function EnrollmentPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   organizationId,
-                  schoolId,
+                  coachingCenterId,
                   academicYearId: academicYearIdValue,
                   studentId: studentIdValue,
                   classMasterId: classMasterIdValue,
-                  sectionId: sectionIdValue,
+                  sectionId: sectionIdValue || undefined,
                   rollNumber: rollNumberValue,
                 }),
               });
@@ -492,7 +502,7 @@ export default function EnrollmentPage() {
         }
       }
 
-      await loadEnrollments(organizationId, schoolId, academicYearId || undefined);
+      await loadEnrollments(organizationId, coachingCenterId, academicYearId || undefined);
       const previewErrors = errors.slice(0, 5).join(' | ');
       setCsvSummary(`Imported ${success} row(s). Failed ${failed} row(s).${previewErrors ? ` First errors: ${previewErrors}` : ''}`);
       setMessage('CSV import completed.');
@@ -502,14 +512,18 @@ export default function EnrollmentPage() {
   }
 
   function downloadCsvTemplate() {
-    const header = 'studentId,classMasterId,sectionId,academicYearId,rollNumber';
-    const sample = 'student_001,class_001,section_001,year_2026_2027,12';
+    const header = showAdvancedAcademicFields
+      ? 'studentId,classMasterId,sectionId,academicYearId,rollNumber'
+      : 'studentId,classMasterId,academicYearId';
+    const sample = showAdvancedAcademicFields
+      ? 'student_001,class_001,section_001,year_2026_2027,12'
+      : 'student_001,class_001,year_2026_2027';
     const csv = `${header}\n${sample}\n`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'student-enrollment-template.csv');
+    link.setAttribute('download', 'coaching-student-enrollment-template.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -524,7 +538,7 @@ export default function EnrollmentPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">Student Enrollment</h1>
               <p className="mt-2 text-sm text-emerald-50">
-                Assign students to class and section for a selected academic year.
+                Assign students to class and batch context for a selected academic year.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -550,11 +564,11 @@ export default function EnrollmentPage() {
               label="Organization"
             />
             <SearchableDropdown
-              options={schoolOptions}
-              value={schoolId}
-              onChange={setSchoolId}
-              search={schoolSearch}
-              onSearchChange={setSchoolSearch}
+              options={coachingCenterOptions}
+              value={coachingCenterId}
+              onChange={setCoachingCenterId}
+              search={coachingCenterSearch}
+              onSearchChange={setCoachingCenterSearch}
               placeholder={!organizationId ? 'Select organization first' : 'Select coaching center'}
               searchPlaceholder="Search coaching center"
               disabled={!organizationId}
@@ -568,6 +582,15 @@ export default function EnrollmentPage() {
 
         <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70">
           <h2 className="text-lg font-semibold text-gray-900">Create or Update Enrollment</h2>
+          <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              checked={showAdvancedAcademicFields}
+              onChange={(e) => setShowAdvancedAcademicFields(e.target.checked)}
+            />
+            Enable advanced academic fields (section and roll number)
+          </label>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <SearchableDropdown
               options={academicYearOptions}
@@ -577,7 +600,7 @@ export default function EnrollmentPage() {
               onSearchChange={setAcademicYearSearch}
               placeholder="Select academic year"
               searchPlaceholder="Search academic year"
-              disabled={!organizationId || !schoolId}
+              disabled={!organizationId || !coachingCenterId}
               label="Academic Year"
             />
             <SearchableDropdown
@@ -588,7 +611,7 @@ export default function EnrollmentPage() {
               onSearchChange={setStudentSearch}
               placeholder="Select student"
               searchPlaceholder="Search student"
-              disabled={!organizationId || !schoolId}
+              disabled={!organizationId || !coachingCenterId}
               label="Student"
             />
             <SearchableDropdown
@@ -599,29 +622,33 @@ export default function EnrollmentPage() {
               onSearchChange={setClassMasterSearch}
               placeholder="Select class"
               searchPlaceholder="Search class"
-              disabled={!organizationId || !schoolId}
+              disabled={!organizationId || !coachingCenterId}
               label="Class"
             />
-            <SearchableDropdown
-              options={sectionOptions}
-              value={sectionId}
-              onChange={setSectionId}
-              search={sectionSearch}
-              onSearchChange={setSectionSearch}
-              placeholder={!classMasterId ? 'Select class first' : 'Select section'}
-              searchPlaceholder="Search section"
-              disabled={!organizationId || !schoolId || !classMasterId}
-              label="Section"
-            />
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">Roll Number (Optional)</label>
-              <input
-                value={rollNumber}
-                onChange={(e) => setRollNumber(e.target.value)}
-                placeholder="Enter roll number"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+            {showAdvancedAcademicFields && (
+              <>
+                <SearchableDropdown
+                  options={sectionOptions}
+                  value={sectionId}
+                  onChange={setSectionId}
+                  search={sectionSearch}
+                  onSearchChange={setSectionSearch}
+                  placeholder={!classMasterId ? 'Select class first' : 'Select section (optional)'}
+                  searchPlaceholder="Search section"
+                  disabled={!organizationId || !coachingCenterId || !classMasterId}
+                  label="Section (Optional)"
+                />
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">Roll Number (Optional)</label>
+                  <input
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    placeholder="Enter roll number"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
@@ -654,8 +681,8 @@ export default function EnrollmentPage() {
               </button>
             </div>
             <p className="mt-1 text-xs text-gray-600">
-              Required headers: <code>studentId,classMasterId,sectionId</code>. Optional: <code>academicYearId,rollNumber</code>.
-              If <code>academicYearId</code> is omitted, selected academic year is used.
+              Required headers: <code>studentId,classMasterId</code>. Optional: <code>sectionId,academicYearId,rollNumber</code>.
+              If <code>academicYearId</code> is omitted, selected academic year is used. Keep section and roll only when your coaching needs them.
             </p>
             <input
               type="file"
@@ -699,17 +726,19 @@ export default function EnrollmentPage() {
               searchPlaceholder="Search class filter"
               label="Class Filter"
             />
-            <SearchableDropdown
-              options={filterSectionOptions}
-              value={filterSectionId}
-              onChange={setFilterSectionId}
-              search={filterSectionSearch}
-              onSearchChange={setFilterSectionSearch}
-              placeholder={!filterClassMasterId ? 'Select class filter first' : 'Filter by section'}
-              searchPlaceholder="Search section filter"
-              disabled={!filterClassMasterId}
-              label="Section Filter"
-            />
+            {showAdvancedAcademicFields && (
+              <SearchableDropdown
+                options={filterSectionOptions}
+                value={filterSectionId}
+                onChange={setFilterSectionId}
+                search={filterSectionSearch}
+                onSearchChange={setFilterSectionSearch}
+                placeholder={!filterClassMasterId ? 'Select class filter first' : 'Filter by section'}
+                searchPlaceholder="Search section filter"
+                disabled={!filterClassMasterId}
+                label="Section Filter"
+              />
+            )}
             <SearchableDropdown
               options={studentOptions}
               value={filterStudentId}
@@ -754,7 +783,7 @@ export default function EnrollmentPage() {
                     <td className="px-3 py-2 text-sm text-gray-700">{studentMap.get(item.studentId) ?? item.studentId}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{academicYearMap.get(item.academicYearId) ?? item.academicYearId}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{classMap.get(item.classMasterId) ?? item.classMasterId}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{sectionMap.get(item.sectionId) ?? item.sectionId}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{item.sectionId ? sectionMap.get(item.sectionId) ?? item.sectionId : '-'}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{item.rollNumber || '-'}</td>
                     <td className="px-3 py-2 text-sm">
                       {item.rollNumber ? (

@@ -5,7 +5,7 @@ import { CoachingSession } from '../../domain/entities/CoachingSession';
 
 export interface CreateCoachingSessionRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   topic: string;

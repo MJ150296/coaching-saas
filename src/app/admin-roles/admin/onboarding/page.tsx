@@ -34,13 +34,13 @@ import {
   fetchFeePlans,
   fetchFeeTypes,
   fetchOrganizations,
-  fetchSchools,
+  fetchCoachingCenters,
   fetchStudents,
   fetchTeachers,
   inferClassLevelFromName,
   JsonRecord,
   OrgOption,
-  SchoolOption,
+  CoachingCenterOption,
   STEP_ALLOWED_ROLES,
   STEP_META,
   StudentOption,
@@ -59,10 +59,11 @@ const classLevelOptions: ClassLevelOption[] = CLASS_LEVEL_OPTIONS;
 type OnboardingDraft = {
   currentStep: number;
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   academicYearId: string;
   classMasterId: string;
   sectionId: string;
+  showAdvancedAcademicFields?: boolean;
   teacherId: string;
   feeTypeId: string;
   feePlanId: string;
@@ -80,9 +81,9 @@ type OnboardingDraft = {
     contactEmail: string;
     contactPhone: string;
   };
-  schoolForm: {
-    schoolName: string;
-    schoolCode: string;
+  coachingCenterForm: {
+    coachingCenterName: string;
+    coachingCenterCode: string;
     street: string;
     city: string;
     state: string;
@@ -131,16 +132,17 @@ export default function OnboardingFlowPage() {
   const stepContentRef = useRef<HTMLDivElement>(null);
 
   const [organizationId, setOrganizationId] = useState('');
-  const [schoolId, setSchoolId] = useState('');
+  const [coachingCenterId, setCoachingCenterId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
   const [classMasterId, setClassMasterId] = useState('');
   const [sectionId, setSectionId] = useState('');
+  const [showAdvancedAcademicFields, setShowAdvancedAcademicFields] = useState(false);
   const [teacherId, setTeacherId] = useState('');
   const [feeTypeId, setFeeTypeId] = useState('');
   const [feePlanId, setFeePlanId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [organizations, setOrganizations] = useState<OrgOption[]>([]);
-  const [coachingCenters, setCoachingCenters] = useState<SchoolOption[]>([]);
+  const [coachingCenters, setCoachingCenters] = useState<CoachingCenterOption[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
   const [classMasters, setClassMasters] = useState<ClassOption[]>([]);
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
@@ -148,7 +150,7 @@ export default function OnboardingFlowPage() {
   const [feeTypes, setFeeTypes] = useState<FeeTypeOption[]>([]);
   const [feePlans, setFeePlans] = useState<FeePlanOption[]>([]);
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
-  const [loadingSchools, setLoadingSchools] = useState(false);
+  const [loadingCoachingCenters, setLoadingCoachingCenters] = useState(false);
   const [loadingAcademicYears, setLoadingAcademicYears] = useState(false);
   const [loadingClassMasters, setLoadingClassMasters] = useState(false);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
@@ -156,7 +158,7 @@ export default function OnboardingFlowPage() {
   const [loadingFeeTypes, setLoadingFeeTypes] = useState(false);
   const [loadingFeePlans, setLoadingFeePlans] = useState(false);
   const [organizationSearch, setOrganizationSearch] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
+  const [coachingCenterSearch, setCoachingCenterSearch] = useState('');
   const [academicYearSearch, setAcademicYearSearch] = useState('');
   const [classMasterSearch, setClassMasterSearch] = useState('');
   const [teacherSearch, setTeacherSearch] = useState('');
@@ -165,15 +167,15 @@ export default function OnboardingFlowPage() {
   const [feePlanSearch, setFeePlanSearch] = useState('');
   const [classLevelSearch, setClassLevelSearch] = useState('');
   const [recentOrganizationId, setRecentOrganizationId] = useState('');
-  const [recentSchoolId, setRecentSchoolId] = useState('');
+  const [recentCoachingCenterId, setRecentCoachingCenterId] = useState('');
   const [adminRoleSearch, setAdminRoleSearch] = useState('');
   const [feeFrequencySearch, setFeeFrequencySearch] = useState('');
 
   const actorRole = session?.user?.role;
   const actorOrganizationId = session?.user?.organizationId ?? '';
-  const actorSchoolId = session?.user?.schoolId ?? '';
+  const actorCoachingCenterId = session?.user?.coachingCenterId ?? '';
   const canSelectOrganization = actorRole === UserRole.SUPER_ADMIN;
-  const canSelectSchool =
+  const canSelectCoachingCenter =
     actorRole === UserRole.SUPER_ADMIN || actorRole === UserRole.ORGANIZATION_ADMIN;
   const canAccessStep = useCallback(
     (stepIndex: number) => Boolean(actorRole && stepAllowedRoles[stepIndex]?.includes(actorRole)),
@@ -191,9 +193,9 @@ export default function OnboardingFlowPage() {
     contactEmail: '',
     contactPhone: '',
   });
-  const [schoolForm, setSchoolForm] = useState({
-    schoolName: '',
-    schoolCode: '',
+  const [coachingCenterForm, setCoachingCenterForm] = useState({
+    coachingCenterName: '',
+    coachingCenterCode: '',
     street: '',
     city: '',
     state: '',
@@ -257,16 +259,16 @@ export default function OnboardingFlowPage() {
     return [
       statusMap.bootstrapCheck?.type === 'success',
       Boolean(organizationId),
-      Boolean(schoolId),
+      Boolean(coachingCenterId),
       true,
       Boolean(academicYearId && classMasterId),
-      Boolean(teacherId && sectionId && (skipSubjectAllocation || statusMap.subjectAllocation?.type === 'success')),
+      Boolean(teacherId && (!showAdvancedAcademicFields || sectionId) && (skipSubjectAllocation || statusMap.subjectAllocation?.type === 'success')),
       Boolean(feePlanId && (skipAssignFeePlan || statusMap.assignFeePlan?.type === 'success')),
       Boolean(studentId),
       statusMap.studentLedger?.type === 'success',
       true,
     ];
-  }, [statusMap, organizationId, schoolId, academicYearId, classMasterId, teacherId, sectionId, feePlanId, studentId, skipSubjectAllocation, skipAssignFeePlan]);
+  }, [statusMap, organizationId, coachingCenterId, academicYearId, classMasterId, teacherId, sectionId, feePlanId, studentId, skipSubjectAllocation, skipAssignFeePlan, showAdvancedAcademicFields]);
 
   const filteredOrganizations = useMemo(() => {
     const q = organizationSearch.trim().toLowerCase();
@@ -276,14 +278,14 @@ export default function OnboardingFlowPage() {
     );
   }, [organizations, organizationSearch]);
 
-  const filteredSchools = useMemo(() => {
-    const q = schoolSearch.trim().toLowerCase();
+  const filteredCoachingCenters = useMemo(() => {
+    const q = coachingCenterSearch.trim().toLowerCase();
     const scoped = coachingCenters.filter((coachingCenter) => coachingCenter.organizationId === organizationId);
     if (!q) return scoped;
     return scoped.filter(
       (coachingCenter) => coachingCenter.name.toLowerCase().includes(q) || coachingCenter.id.toLowerCase().includes(q)
     );
-  }, [coachingCenters, schoolSearch, organizationId]);
+  }, [coachingCenters, coachingCenterSearch, organizationId]);
 
   const organizationOptions = useMemo(
     () =>
@@ -294,19 +296,19 @@ export default function OnboardingFlowPage() {
     [filteredOrganizations, recentOrganizationId]
   );
 
-  const schoolOptions = useMemo(
+  const coachingCenterOptions = useMemo(
     () =>
-      filteredSchools.map((coachingCenter) => ({
+      filteredCoachingCenters.map((coachingCenter) => ({
         value: coachingCenter.id,
-        label: `${coachingCenter.name} (${coachingCenter.id})${coachingCenter.id === recentSchoolId ? ' - Recently Created' : ''}`,
+        label: `${coachingCenter.name} (${coachingCenter.id})${coachingCenter.id === recentCoachingCenterId ? ' - Recently Created' : ''}`,
       })),
-    [filteredSchools, recentSchoolId]
+    [filteredCoachingCenters, recentCoachingCenterId]
   );
 
   const filteredAcademicYears = useMemo(() => {
     const q = academicYearSearch.trim().toLowerCase();
     const scoped = academicYears.filter(
-      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+      (item) => item.organizationId === organizationId && item.coachingCenterId === coachingCenterId
     );
     if (!q) return scoped;
     return scoped.filter(
@@ -316,7 +318,7 @@ export default function OnboardingFlowPage() {
         (item.startDate ?? '').toLowerCase().includes(q) ||
         (item.endDate ?? '').toLowerCase().includes(q)
     );
-  }, [academicYearSearch, academicYears, organizationId, schoolId]);
+  }, [academicYearSearch, academicYears, organizationId, coachingCenterId]);
 
   const academicYearOptions = useMemo(
     () =>
@@ -330,7 +332,7 @@ export default function OnboardingFlowPage() {
   const filteredClassMasters = useMemo(() => {
     const q = classMasterSearch.trim().toLowerCase();
     const scoped = classMasters.filter(
-      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+      (item) => item.organizationId === organizationId && item.coachingCenterId === coachingCenterId
     );
     if (!q) return scoped;
     return scoped.filter(
@@ -339,13 +341,13 @@ export default function OnboardingFlowPage() {
         item.id.toLowerCase().includes(q) ||
         (item.level ?? '').toLowerCase().includes(q)
     );
-  }, [classMasters, classMasterSearch, organizationId, schoolId]);
+  }, [classMasters, classMasterSearch, organizationId, coachingCenterId]);
 
   const filteredTeachers = useMemo(() => {
     const q = teacherSearch.trim().toLowerCase();
     const scoped = teachers.filter((item) => {
       if (organizationId && item.organizationId && item.organizationId !== organizationId) return false;
-      if (schoolId && item.schoolId && item.schoolId !== schoolId) return false;
+      if (coachingCenterId && item.coachingCenterId && item.coachingCenterId !== coachingCenterId) return false;
       return true;
     });
     if (!q) return scoped;
@@ -355,7 +357,7 @@ export default function OnboardingFlowPage() {
         item.id.toLowerCase().includes(q) ||
         item.email.toLowerCase().includes(q)
     );
-  }, [teachers, teacherSearch, organizationId, schoolId]);
+  }, [teachers, teacherSearch, organizationId, coachingCenterId]);
 
   const classMasterOptions = useMemo(
     () =>
@@ -379,7 +381,7 @@ export default function OnboardingFlowPage() {
     const q = studentSearch.trim().toLowerCase();
     const scoped = students.filter((item) => {
       if (organizationId && item.organizationId && item.organizationId !== organizationId) return false;
-      if (schoolId && item.schoolId && item.schoolId !== schoolId) return false;
+      if (coachingCenterId && item.coachingCenterId && item.coachingCenterId !== coachingCenterId) return false;
       return true;
     });
     if (!q) return scoped;
@@ -389,12 +391,12 @@ export default function OnboardingFlowPage() {
         item.id.toLowerCase().includes(q) ||
         item.email.toLowerCase().includes(q)
     );
-  }, [organizationId, schoolId, studentSearch, students]);
+  }, [organizationId, coachingCenterId, studentSearch, students]);
 
   const filteredFeeTypes = useMemo(() => {
     const q = feeTypeSearch.trim().toLowerCase();
     const scoped = feeTypes.filter(
-      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+      (item) => item.organizationId === organizationId && item.coachingCenterId === coachingCenterId
     );
     if (!q) return scoped;
     return scoped.filter(
@@ -403,12 +405,12 @@ export default function OnboardingFlowPage() {
         item.id.toLowerCase().includes(q) ||
         item.frequency.toLowerCase().includes(q)
     );
-  }, [feeTypeSearch, feeTypes, organizationId, schoolId]);
+  }, [feeTypeSearch, feeTypes, organizationId, coachingCenterId]);
 
   const filteredFeePlans = useMemo(() => {
     const q = feePlanSearch.trim().toLowerCase();
     const scoped = feePlans.filter(
-      (item) => item.organizationId === organizationId && item.schoolId === schoolId
+      (item) => item.organizationId === organizationId && item.coachingCenterId === coachingCenterId
     );
     if (!q) return scoped;
     return scoped.filter(
@@ -417,7 +419,7 @@ export default function OnboardingFlowPage() {
         item.id.toLowerCase().includes(q) ||
         item.academicYearId.toLowerCase().includes(q)
     );
-  }, [feePlanSearch, feePlans, organizationId, schoolId]);
+  }, [feePlanSearch, feePlans, organizationId, coachingCenterId]);
 
   const studentOptions = useMemo(
     () =>
@@ -453,12 +455,12 @@ export default function OnboardingFlowPage() {
     return [{ value: organizationId, label: `Current Organization (${organizationId})` }, ...organizationOptions];
   }, [organizationId, organizationOptions]);
 
-  const tenantSchoolOptions = useMemo(() => {
-    if (!schoolId) return schoolOptions;
-    const exists = schoolOptions.some((opt) => opt.value === schoolId);
-    if (exists) return schoolOptions;
-    return [{ value: schoolId, label: `Current Coaching Center (${schoolId})` }, ...schoolOptions];
-  }, [schoolId, schoolOptions]);
+  const tenantCoachingCenterOptions = useMemo(() => {
+    if (!coachingCenterId) return coachingCenterOptions;
+    const exists = coachingCenterOptions.some((opt) => opt.value === coachingCenterId);
+    if (exists) return coachingCenterOptions;
+    return [{ value: coachingCenterId, label: `Current Coaching Center (${coachingCenterId})` }, ...coachingCenterOptions];
+  }, [coachingCenterId, coachingCenterOptions]);
 
   const tenantClassMasterOptions = useMemo(() => {
     if (!classMasterId) return classMasterOptions;
@@ -554,10 +556,11 @@ export default function OnboardingFlowPage() {
 
     if (typeof draft.currentStep === 'number') setCurrentStep(Math.max(0, Math.min(stepMeta.length - 1, draft.currentStep)));
     if (typeof draft.organizationId === 'string') setOrganizationId(draft.organizationId);
-    if (typeof draft.schoolId === 'string') setSchoolId(draft.schoolId);
+    if (typeof draft.coachingCenterId === 'string') setCoachingCenterId(draft.coachingCenterId);
     if (typeof draft.academicYearId === 'string') setAcademicYearId(draft.academicYearId);
     if (typeof draft.classMasterId === 'string') setClassMasterId(draft.classMasterId);
     if (typeof draft.sectionId === 'string') setSectionId(draft.sectionId);
+    if (typeof draft.showAdvancedAcademicFields === 'boolean') setShowAdvancedAcademicFields(draft.showAdvancedAcademicFields);
     if (typeof draft.teacherId === 'string') setTeacherId(draft.teacherId);
     if (typeof draft.feeTypeId === 'string') setFeeTypeId(draft.feeTypeId);
     if (typeof draft.feePlanId === 'string') setFeePlanId(draft.feePlanId);
@@ -566,7 +569,7 @@ export default function OnboardingFlowPage() {
     if (typeof draft.skipAssignFeePlan === 'boolean') setSkipAssignFeePlan(draft.skipAssignFeePlan);
 
     if (draft.orgForm && typeof draft.orgForm === 'object') setOrgForm((prev) => ({ ...prev, ...draft.orgForm }));
-    if (draft.schoolForm && typeof draft.schoolForm === 'object') setSchoolForm((prev) => ({ ...prev, ...draft.schoolForm }));
+    if (draft.coachingCenterForm && typeof draft.coachingCenterForm === 'object') setCoachingCenterForm((prev) => ({ ...prev, ...draft.coachingCenterForm }));
     if (draft.adminForm && typeof draft.adminForm === 'object') {
       const safeAdminForm = { ...(draft.adminForm as Record<string, unknown>) };
       delete safeAdminForm.password;
@@ -602,13 +605,13 @@ export default function OnboardingFlowPage() {
     }
   }
 
-  async function loadSchools(orgId?: string) {
-    setLoadingSchools(true);
+  async function loadCoachingCenters(orgId?: string) {
+    setLoadingCoachingCenters(true);
     try {
-      const data = await fetchSchools(orgId);
+      const data = await fetchCoachingCenters(orgId);
       setCoachingCenters(data);
     } finally {
-      setLoadingSchools(false);
+      setLoadingCoachingCenters(false);
     }
   }
 
@@ -672,7 +675,7 @@ export default function OnboardingFlowPage() {
     }
   }
 
-  const resetSchoolScopedSelections = useCallback(() => {
+  const resetCoachingCenterScopedSelections = useCallback(() => {
     setAcademicYearId('');
     setClassMasterId('');
     setSectionId('');
@@ -686,19 +689,19 @@ export default function OnboardingFlowPage() {
     (nextOrganizationId: string) => {
       if (nextOrganizationId === organizationId) return;
       setOrganizationId(nextOrganizationId);
-      setSchoolId('');
-      resetSchoolScopedSelections();
+      setCoachingCenterId('');
+      resetCoachingCenterScopedSelections();
     },
-    [organizationId, resetSchoolScopedSelections]
+    [organizationId, resetCoachingCenterScopedSelections]
   );
 
-  const handleSchoolChange = useCallback(
-    (nextSchoolId: string) => {
-      if (nextSchoolId === schoolId) return;
-      setSchoolId(nextSchoolId);
-      resetSchoolScopedSelections();
+  const handleCoachingCenterChange = useCallback(
+    (nextCoachingCenterId: string) => {
+      if (nextCoachingCenterId === coachingCenterId) return;
+      setCoachingCenterId(nextCoachingCenterId);
+      resetCoachingCenterScopedSelections();
     },
-    [schoolId, resetSchoolScopedSelections]
+    [coachingCenterId, resetCoachingCenterScopedSelections]
   );
 
   useEffect(() => {
@@ -726,35 +729,35 @@ export default function OnboardingFlowPage() {
       if (actorOrganizationId) {
         setOrganizationId((prev) => (prev === actorOrganizationId ? prev : actorOrganizationId));
       }
-      if (actorSchoolId) {
-        setSchoolId((prev) => (prev === actorSchoolId ? prev : actorSchoolId));
+      if (actorCoachingCenterId) {
+        setCoachingCenterId((prev) => (prev === actorCoachingCenterId ? prev : actorCoachingCenterId));
       }
     }
-  }, [actorOrganizationId, actorRole, actorSchoolId, status]);
+  }, [actorOrganizationId, actorRole, actorCoachingCenterId, status]);
 
   useEffect(() => {
     if (!organizationId) {
       setCoachingCenters([]);
-      if (canSelectSchool) {
-        setSchoolId('');
+      if (canSelectCoachingCenter) {
+        setCoachingCenterId('');
       }
       return;
     }
-    loadSchools(organizationId);
-  }, [canSelectSchool, organizationId]);
+    loadCoachingCenters(organizationId);
+  }, [canSelectCoachingCenter, organizationId]);
 
   useEffect(() => {
-    if (!canSelectSchool || !organizationId || !schoolId || loadingSchools) return;
+    if (!canSelectCoachingCenter || !organizationId || !coachingCenterId || loadingCoachingCenters) return;
     const existsInCurrentOrganization = coachingCenters.some(
-      (item) => item.id === schoolId && item.organizationId === organizationId
+      (item) => item.id === coachingCenterId && item.organizationId === organizationId
     );
     if (!existsInCurrentOrganization) {
-      handleSchoolChange('');
+      handleCoachingCenterChange('');
     }
-  }, [canSelectSchool, handleSchoolChange, loadingSchools, organizationId, schoolId, coachingCenters]);
+  }, [canSelectCoachingCenter, handleCoachingCenterChange, loadingCoachingCenters, organizationId, coachingCenterId, coachingCenters]);
 
   useEffect(() => {
-    if (!organizationId || !schoolId) {
+    if (!organizationId || !coachingCenterId) {
       setAcademicYears([]);
       setClassMasters([]);
       setTeachers([]);
@@ -764,22 +767,23 @@ export default function OnboardingFlowPage() {
       return;
     }
 
-    loadAcademicYears(organizationId, schoolId);
-    loadClassMasters(organizationId, schoolId);
-    loadTeachers(organizationId, schoolId);
-    loadStudents(organizationId, schoolId);
-    loadFeeTypes(organizationId, schoolId);
-    loadFeePlans(organizationId, schoolId);
-  }, [organizationId, schoolId]);
+    loadAcademicYears(organizationId, coachingCenterId);
+    loadClassMasters(organizationId, coachingCenterId);
+    loadTeachers(organizationId, coachingCenterId);
+    loadStudents(organizationId, coachingCenterId);
+    loadFeeTypes(organizationId, coachingCenterId);
+    loadFeePlans(organizationId, coachingCenterId);
+  }, [organizationId, coachingCenterId]);
 
   useEffect(() => {
     const draft = {
       currentStep,
       organizationId,
-      schoolId,
+      coachingCenterId,
       academicYearId,
       classMasterId,
       sectionId,
+      showAdvancedAcademicFields,
       teacherId,
       feeTypeId,
       feePlanId,
@@ -787,7 +791,7 @@ export default function OnboardingFlowPage() {
       skipSubjectAllocation,
       skipAssignFeePlan,
       orgForm,
-      schoolForm,
+      coachingCenterForm,
       adminForm: { ...adminForm, password: '' },
       yearForm,
       classForm,
@@ -807,10 +811,11 @@ export default function OnboardingFlowPage() {
   }, [
     currentStep,
     organizationId,
-    schoolId,
+    coachingCenterId,
     academicYearId,
     classMasterId,
     sectionId,
+    showAdvancedAcademicFields,
     teacherId,
     feeTypeId,
     feePlanId,
@@ -818,7 +823,7 @@ export default function OnboardingFlowPage() {
     skipSubjectAllocation,
     skipAssignFeePlan,
     orgForm,
-    schoolForm,
+    coachingCenterForm,
     adminForm,
     yearForm,
     classForm,
@@ -873,7 +878,7 @@ export default function OnboardingFlowPage() {
   }
 
   const hasText = (value: string) => value.trim().length > 0;
-  const hasTenantContext = () => Boolean(organizationId && schoolId);
+  const hasTenantContext = () => Boolean(organizationId && coachingCenterId);
   const setStepError = (key: string, message: string) => {
     setStatusMap((prev) => ({ ...prev, [key]: { type: 'error', message } }));
   };
@@ -881,7 +886,7 @@ export default function OnboardingFlowPage() {
 
   const getCurrentStepErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    const tenantSelected = Boolean(organizationId && schoolId);
+    const tenantSelected = Boolean(organizationId && coachingCenterId);
     switch (currentStep) {
       case 1:
         if (!hasText(orgForm.organizationName)) errors.organizationName = 'Organization name is required.';
@@ -890,8 +895,8 @@ export default function OnboardingFlowPage() {
         break;
       case 2:
         if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
-        if (!hasText(schoolForm.schoolName)) errors.schoolName = 'Coaching center name is required.';
-        if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'Coaching center code is required.';
+        if (!hasText(coachingCenterForm.coachingCenterName)) errors.coachingCenterName = 'Coaching center name is required.';
+        if (!hasText(coachingCenterForm.coachingCenterCode)) errors.coachingCenterCode = 'Coaching center code is required.';
         break;
       case 3:
         if (!tenantSelected) errors.tenant = 'Please select organization and coaching center from tenant selectors.';
@@ -914,8 +919,10 @@ export default function OnboardingFlowPage() {
         if (!hasText(teacherForm.password)) errors.teacherPassword = 'Teacher password is required.';
         if (!hasText(teacherForm.firstName)) errors.teacherFirstName = 'Teacher first name is required.';
         if (!hasText(teacherForm.lastName)) errors.teacherLastName = 'Teacher last name is required.';
-        if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before creating section.';
-        if (!hasText(sectionForm.name)) errors.sectionName = 'Section name is required.';
+        if (!hasText(classMasterId)) errors.classMasterId = showAdvancedAcademicFields
+          ? 'Select class master before creating section.'
+          : 'Select class master for teacher and subject setup.';
+        if (showAdvancedAcademicFields && !hasText(sectionForm.name)) errors.sectionName = 'Section name is required.';
         if (!hasText(academicYearId)) errors.academicYearId = 'Academic year is required for subject allocation.';
         if (!hasText(subjectForm.subjectName)) errors.subjectName = 'Subject name is required.';
         if (Number(subjectForm.weeklyPeriods || '0') <= 0) errors.weeklyPeriods = 'Weekly periods must be greater than 0.';
@@ -976,10 +983,11 @@ export default function OnboardingFlowPage() {
     orgForm.organizationName,
     orgForm.type,
     organizationId,
-    schoolId,
-    schoolForm.schoolCode,
-    schoolForm.schoolName,
+    coachingCenterId,
+    coachingCenterForm.coachingCenterCode,
+    coachingCenterForm.coachingCenterName,
     sectionForm.name,
+    showAdvancedAcademicFields,
     studentForm.email,
     studentForm.firstName,
     studentForm.lastName,
@@ -1006,6 +1014,12 @@ export default function OnboardingFlowPage() {
       setFieldErrors(nextErrors);
     }
   }, [fieldErrors, getCurrentStepErrors]);
+
+  useEffect(() => {
+    if (showAdvancedAcademicFields) return;
+    setSectionId('');
+    setSectionForm((prev) => ({ ...prev, name: '' }));
+  }, [showAdvancedAcademicFields]);
 
   useEffect(() => {
     if (!focusInvalidNonce) return;
@@ -1079,14 +1093,14 @@ export default function OnboardingFlowPage() {
       case 2:
         return (
           <CoachingCenterStep
-            schoolForm={schoolForm}
-            setSchoolForm={setSchoolForm}
+            coachingCenterForm={coachingCenterForm}
+            setCoachingCenterForm={setCoachingCenterForm}
             organizationId={organizationId}
             onCreate={() => {
               const errors: Record<string, string> = {};
               if (!hasText(organizationId)) errors.organizationId = 'Select organization first from tenant selectors.';
-              if (!hasText(schoolForm.schoolName)) errors.schoolName = 'Coaching center name is required.';
-              if (!hasText(schoolForm.schoolCode)) errors.schoolCode = 'Coaching center code is required.';
+              if (!hasText(coachingCenterForm.coachingCenterName)) errors.coachingCenterName = 'Coaching center name is required.';
+              if (!hasText(coachingCenterForm.coachingCenterCode)) errors.coachingCenterCode = 'Coaching center code is required.';
               const error = firstError(errors);
               if (error) {
                 setFieldErrors(errors);
@@ -1095,14 +1109,14 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('coachingCenter', '/api/admin/coaching-centers', { ...schoolForm, organizationId }, async (d) => {
+              postStep('coachingCenter', '/api/admin/coaching-centers', { ...coachingCenterForm, organizationId }, async (d) => {
                 invalidateAdminCoachingCenters(organizationId);
                 const id = extractId(d);
                 if (id) {
-                  setSchoolId(id);
-                  setRecentSchoolId(id);
+                  setCoachingCenterId(id);
+                  setRecentCoachingCenterId(id);
                 }
-                await loadSchools(organizationId);
+                await loadCoachingCenters(organizationId);
               });
             }}
             status={statusMap.coachingCenter ?? initialStatus}
@@ -1131,7 +1145,7 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('adminUser', '/api/admin/users', { ...adminForm, organizationId, schoolId });
+              postStep('adminUser', '/api/admin/users', { ...adminForm, organizationId, coachingCenterId });
             }}
             status={statusMap.adminUser ?? initialStatus}
             errors={fieldErrors}
@@ -1141,7 +1155,7 @@ export default function OnboardingFlowPage() {
         return (
           <AcademicSetupStep
             organizationId={organizationId}
-            schoolId={schoolId}
+            coachingCenterId={coachingCenterId}
             academicYearId={academicYearId}
             classMasterId={classMasterId}
             setAcademicYearId={setAcademicYearId}
@@ -1159,8 +1173,8 @@ export default function OnboardingFlowPage() {
             setClassMasterSearch={setClassMasterSearch}
             tenantAcademicYearOptions={tenantAcademicYearOptions}
             tenantClassMasterOptions={tenantClassMasterOptions}
-            onRefreshAcademicYears={() => loadAcademicYears(organizationId, schoolId)}
-            onRefreshClasses={() => loadClassMasters(organizationId, schoolId)}
+            onRefreshAcademicYears={() => loadAcademicYears(organizationId, coachingCenterId)}
+            onRefreshClasses={() => loadClassMasters(organizationId, coachingCenterId)}
             onCreateAcademicYear={() => {
               const errors: Record<string, string> = {};
               if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
@@ -1178,10 +1192,10 @@ export default function OnboardingFlowPage() {
               postStep(
                 'academicYear',
                 '/api/admin/academic-years',
-                { organizationId, schoolId, ...yearForm },
+                { organizationId, coachingCenterId, ...yearForm },
                 async (d) => {
                   setAcademicYearId(extractId(d));
-                  await loadAcademicYears(organizationId, schoolId);
+                  await loadAcademicYears(organizationId, coachingCenterId);
                 }
               );
             }}
@@ -1201,10 +1215,10 @@ export default function OnboardingFlowPage() {
               postStep(
                 'classMaster',
                 '/api/admin/class-masters',
-                { organizationId, schoolId, ...classForm },
+                { organizationId, coachingCenterId, ...classForm },
                 async (d) => {
                   setClassMasterId(extractId(d));
-                  await loadClassMasters(organizationId, schoolId);
+                  await loadClassMasters(organizationId, coachingCenterId);
                 }
               );
             }}
@@ -1218,7 +1232,7 @@ export default function OnboardingFlowPage() {
         return (
           <TeacherClassTeacherStep
             organizationId={organizationId}
-            schoolId={schoolId}
+            coachingCenterId={coachingCenterId}
             teacherForm={teacherForm}
             setTeacherForm={setTeacherForm}
             classMasterId={classMasterId}
@@ -1242,8 +1256,8 @@ export default function OnboardingFlowPage() {
             tenantClassMasterOptions={tenantClassMasterOptions}
             tenantTeacherOptions={tenantTeacherOptions}
             tenantAcademicYearOptions={tenantAcademicYearOptions}
-            onRefreshClasses={() => loadClassMasters(organizationId, schoolId)}
-            onRefreshTeachers={() => loadTeachers(organizationId, schoolId)}
+            onRefreshClasses={() => loadClassMasters(organizationId, coachingCenterId)}
+            onRefreshTeachers={() => loadTeachers(organizationId, coachingCenterId)}
             onCreateTeacher={() => {
               const errors: Record<string, string> = {};
               if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
@@ -1262,14 +1276,15 @@ export default function OnboardingFlowPage() {
               postStep(
                 'teacherUser',
                 '/api/admin/users',
-                { ...teacherForm, role: UserRole.TEACHER, organizationId, schoolId },
+                { ...teacherForm, role: UserRole.TEACHER, organizationId, coachingCenterId },
                 async (d) => {
                   setTeacherId(extractId(d));
-                  await loadTeachers(organizationId, schoolId);
+                  await loadTeachers(organizationId, coachingCenterId);
                 }
               );
             }}
             onCreateSectionAssignTeacher={() => {
+              if (!showAdvancedAcademicFields) return;
               const errors: Record<string, string> = {};
               if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
               if (!hasText(classMasterId)) errors.classMasterId = 'Select class master before creating section.';
@@ -1282,7 +1297,7 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('section', '/api/admin/sections', { organizationId, schoolId, classMasterId, name: sectionForm.name, capacity: Number(sectionForm.capacity || '0'), roomNumber: sectionForm.roomNumber || undefined, shift: sectionForm.shift || undefined, classTeacherId: teacherId || undefined }, (d) => setSectionId(extractId(d)));
+              postStep('section', '/api/admin/sections', { organizationId, coachingCenterId, classMasterId, name: sectionForm.name, capacity: Number(sectionForm.capacity || '0'), roomNumber: sectionForm.roomNumber || undefined, shift: sectionForm.shift || undefined, classTeacherId: teacherId || undefined }, (d) => setSectionId(extractId(d)));
             }}
             onCreateSubjectAllocation={() => {
               const errors: Record<string, string> = {};
@@ -1299,11 +1314,12 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('subjectAllocation', '/api/admin/subject-allocations', { organizationId, schoolId, academicYearId, classMasterId, sectionId: sectionId || undefined, subjectName: subjectForm.subjectName, teacherId: teacherId || undefined, weeklyPeriods: Number(subjectForm.weeklyPeriods || '0') });
+              postStep('subjectAllocation', '/api/admin/subject-allocations', { organizationId, coachingCenterId, academicYearId, classMasterId, sectionId: sectionId || undefined, subjectName: subjectForm.subjectName, teacherId: teacherId || undefined, weeklyPeriods: Number(subjectForm.weeklyPeriods || '0') });
             }}
             statusTeacherUser={statusMap.teacherUser ?? initialStatus}
             statusSection={statusMap.section ?? initialStatus}
             statusSubjectAllocation={statusMap.subjectAllocation ?? initialStatus}
+            showAdvancedAcademicFields={showAdvancedAcademicFields}
             errors={fieldErrors}
           />
         );
@@ -1331,10 +1347,10 @@ export default function OnboardingFlowPage() {
               postStep(
                 'feeType',
                 '/api/admin/fee-types',
-                { organizationId, schoolId, ...feeTypeForm, amount: Number(feeTypeForm.amount || '0') },
+                { organizationId, coachingCenterId, ...feeTypeForm, amount: Number(feeTypeForm.amount || '0') },
                 async (d) => {
                   setFeeTypeId(extractId(d));
-                  await loadFeeTypes(organizationId, schoolId);
+                  await loadFeeTypes(organizationId, coachingCenterId);
                 }
               );
             }}
@@ -1363,10 +1379,10 @@ export default function OnboardingFlowPage() {
               postStep(
                 'feePlan',
                 '/api/admin/fee-plans',
-                { organizationId, schoolId, academicYearId, name: feePlanForm.name, items: (() => { try { return JSON.parse(feePlanForm.itemsJson); } catch { return []; } })() },
+                { organizationId, coachingCenterId, academicYearId, name: feePlanForm.name, items: (() => { try { return JSON.parse(feePlanForm.itemsJson); } catch { return []; } })() },
                 async (d) => {
                   setFeePlanId(extractId(d));
-                  await loadFeePlans(organizationId, schoolId);
+                  await loadFeePlans(organizationId, coachingCenterId);
                 }
               );
             }}
@@ -1387,7 +1403,7 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('assignFeePlan', '/api/admin/fee-plan-assignments', { organizationId, schoolId, academicYearId, feePlanId, classMasterId, sectionId: sectionId || undefined });
+              postStep('assignFeePlan', '/api/admin/fee-plan-assignments', { organizationId, coachingCenterId, academicYearId, feePlanId, classMasterId, sectionId: sectionId || undefined });
             }}
             statusAssignFeePlan={statusMap.assignFeePlan ?? initialStatus}
             errors={fieldErrors}
@@ -1417,10 +1433,10 @@ export default function OnboardingFlowPage() {
               postStep(
                 'studentWithParent',
                 '/api/admin/users',
-                { email: studentForm.email, password: studentForm.password, firstName: studentForm.firstName, lastName: studentForm.lastName, phone: studentForm.phone || undefined, role: UserRole.STUDENT, organizationId, schoolId, parent: { email: studentForm.parentEmail, password: studentForm.parentPassword, firstName: studentForm.parentFirstName, lastName: studentForm.parentLastName, phone: studentForm.parentPhone || undefined } },
+                { email: studentForm.email, password: studentForm.password, firstName: studentForm.firstName, lastName: studentForm.lastName, phone: studentForm.phone || undefined, role: UserRole.STUDENT, organizationId, coachingCenterId, parent: { email: studentForm.parentEmail, password: studentForm.parentPassword, firstName: studentForm.parentFirstName, lastName: studentForm.parentLastName, phone: studentForm.parentPhone || undefined } },
                 async (d) => {
                   setStudentId(extractId(d));
-                  await loadStudents(organizationId, schoolId);
+                  await loadStudents(organizationId, coachingCenterId);
                 }
               );
             }}
@@ -1432,7 +1448,7 @@ export default function OnboardingFlowPage() {
         return (
           <StudentLedgerStep
             organizationId={organizationId}
-            schoolId={schoolId}
+            coachingCenterId={coachingCenterId}
             tenantStudentOptions={tenantStudentOptions}
             studentId={studentId}
             setStudentId={setStudentId}
@@ -1450,9 +1466,9 @@ export default function OnboardingFlowPage() {
             setFeeTypeSearch={setFeeTypeSearch}
             ledgerForm={ledgerForm}
             setLedgerForm={setLedgerForm}
-            onRefreshStudents={() => loadStudents(organizationId, schoolId)}
-            onRefreshFeePlans={() => loadFeePlans(organizationId, schoolId)}
-            onRefreshFeeTypes={() => loadFeeTypes(organizationId, schoolId)}
+            onRefreshStudents={() => loadStudents(organizationId, coachingCenterId)}
+            onRefreshFeePlans={() => loadFeePlans(organizationId, coachingCenterId)}
+            onRefreshFeeTypes={() => loadFeeTypes(organizationId, coachingCenterId)}
             onCreateLedger={() => {
               const errors: Record<string, string> = {};
               if (!hasTenantContext()) errors.tenant = 'Organization and coaching center context are required.';
@@ -1468,7 +1484,7 @@ export default function OnboardingFlowPage() {
                 return;
               }
               setFieldErrors({});
-              postStep('studentLedger', '/api/admin/student-fee-ledger', { organizationId, schoolId, academicYearId, studentId, feePlanId: feePlanId || undefined, feeTypeId: feeTypeId || undefined, amount: Number(ledgerForm.amount || '0'), dueDate: ledgerForm.dueDate });
+              postStep('studentLedger', '/api/admin/student-fee-ledger', { organizationId, coachingCenterId, academicYearId, studentId, feePlanId: feePlanId || undefined, feeTypeId: feeTypeId || undefined, amount: Number(ledgerForm.amount || '0'), dueDate: ledgerForm.dueDate });
             }}
             status={statusMap.studentLedger ?? initialStatus}
             errors={fieldErrors}
@@ -1479,7 +1495,7 @@ export default function OnboardingFlowPage() {
           <ParentHandoverStep
             summary={{
               organizationId,
-              schoolId,
+              coachingCenterId,
               academicYearId,
               classMasterId,
               sectionId,
@@ -1493,7 +1509,7 @@ export default function OnboardingFlowPage() {
             onExportSummary={() => {
               const payload = {
                 organizationId,
-                schoolId,
+                coachingCenterId,
                 academicYearId,
                 classMasterId,
                 sectionId,
@@ -1526,6 +1542,15 @@ export default function OnboardingFlowPage() {
               <h1 className="text-3xl font-bold text-gray-900">Onboarding Workspace</h1>
               <p className="mt-2 text-sm text-gray-600">
                 <b>Note:</b> Use sequential mode for first-time onboarding and flexible mode for ongoing operations.              </p>
+              <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  checked={showAdvancedAcademicFields}
+                  onChange={(e) => setShowAdvancedAcademicFields(e.target.checked)}
+                />
+                Enable advanced academic fields (section)
+              </label>
             </div>
             <div className="hidden md:grid grid-cols-3 gap-2">
               <div className="h-10 w-10 rounded-lg bg-blue-100" />
@@ -1541,23 +1566,23 @@ export default function OnboardingFlowPage() {
               status={status}
               actorRole={actorRole}
               isLoadingOrganizations={loadingOrganizations}
-              isLoadingSchools={loadingSchools}
+              isLoadingCoachingCenters={loadingCoachingCenters}
               canSelectOrganization={canSelectOrganization}
-              canSelectSchool={canSelectSchool}
+              canSelectCoachingCenter={canSelectCoachingCenter}
               organizationId={organizationId}
-              schoolId={schoolId}
+              coachingCenterId={coachingCenterId}
               organizationSearch={organizationSearch}
-              schoolSearch={schoolSearch}
+              coachingCenterSearch={coachingCenterSearch}
               tenantOrganizationOptions={tenantOrganizationOptions}
-              tenantSchoolOptions={tenantSchoolOptions}
+              tenantCoachingCenterOptions={tenantCoachingCenterOptions}
               recentOrganizationId={recentOrganizationId}
-              recentSchoolId={recentSchoolId}
+              recentCoachingCenterId={recentCoachingCenterId}
               onOrganizationChange={handleOrganizationChange}
-              onSchoolChange={handleSchoolChange}
+              onCoachingCenterChange={handleCoachingCenterChange}
               onOrganizationSearchChange={setOrganizationSearch}
-              onSchoolSearchChange={setSchoolSearch}
+              onCoachingCenterSearchChange={setCoachingCenterSearch}
               onRefreshOrganizations={() => loadOrganizations()}
-              onRefreshSchools={() => loadSchools(organizationId)}
+              onRefreshCoachingCenters={() => loadCoachingCenters(organizationId)}
             />
 
             <StepTabsCard

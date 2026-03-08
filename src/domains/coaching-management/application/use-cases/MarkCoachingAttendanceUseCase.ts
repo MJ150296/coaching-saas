@@ -8,7 +8,7 @@ import {
 
 export interface MarkCoachingAttendanceRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   programId: string;
   batchId: string;
   sessionId: string;
@@ -26,7 +26,7 @@ export class MarkCoachingAttendanceUseCase {
     try {
       const alreadyMarked = await this.repo.existsBySessionAndStudent(
         request.organizationId,
-        request.schoolId,
+        request.coachingCenterId,
         request.sessionId,
         request.studentId
       );

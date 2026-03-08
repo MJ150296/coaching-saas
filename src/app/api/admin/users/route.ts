@@ -41,31 +41,31 @@ export async function GET(request: NextRequest) {
   const requestedRole = request.nextUrl.searchParams.get('role') || undefined;
   const requestedOrganizationId =
     request.nextUrl.searchParams.get('organizationId') || undefined;
-  const requestedSchoolId = request.nextUrl.searchParams.get('coachingCenterId') || request.nextUrl.searchParams.get('schoolId') || undefined;
+  const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
   const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
   const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
   const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
 
-  const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedSchoolId);
+  const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
   if (actor.getRole() !== UserRole.SUPER_ADMIN) {
-    assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+    assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
   }
 
   await connectDB();
   const query: {
     role?: string;
     organizationId?: string;
-    schoolId?: string;
+    coachingCenterId?: string;
   } = {};
   if (requestedRole) query.role = requestedRole;
   if (tenant.organizationId) query.organizationId = tenant.organizationId;
-  if (tenant.schoolId) query.schoolId = tenant.schoolId;
+  if (tenant.coachingCenterId) query.coachingCenterId = tenant.coachingCenterId;
 
   const items = await UserModel.find(query)
     .sort({ createdAt: -1 })
     .skip(offset)
     .limit(limit)
-    .select('_id email firstName lastName role phone organizationId schoolId isActive emailVerified createdAt updatedAt')
+    .select('_id email firstName lastName role phone organizationId coachingCenterId isActive emailVerified createdAt updatedAt')
     .lean<
       Array<{
         _id: string;
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         role: UserRole;
         phone?: string;
         organizationId?: string;
-        schoolId?: string;
+        coachingCenterId?: string;
         isActive: boolean;
         emailVerified: boolean;
         createdAt: Date;
@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
         role: row.role,
         phone: row.phone,
         organizationId: row.organizationId,
-        schoolId: row.schoolId,
-        coachingCenterId: row.schoolId,
+        coachingCenterId: row.coachingCenterId,
+        coachingCenterId: row.coachingCenterId,
         isActive: row.isActive,
         emailVerified: row.emailVerified,
         createdAt: row.createdAt,
@@ -141,13 +141,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId ?? body.schoolId);
+  const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
   if (actor.getRole() === UserRole.SUPER_ADMIN && targetRole !== UserRole.SUPER_ADMIN) {
-    if (!tenant.organizationId || !tenant.schoolId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId) {
       return NextResponse.json({ error: 'organizationId and coachingCenterId are required' }, { status: 400 });
     }
   }
-  assertTenantScope(actor, tenant.organizationId, tenant.schoolId);
+  assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
   const useCase = await initializeAppAndGetService<CreateUserUseCase>(
     ServiceKeys.CREATE_USER_USE_CASE
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     phone: body.phone,
     role: targetRole,
     organizationId: tenant.organizationId,
-    schoolId: tenant.schoolId,
+    coachingCenterId: tenant.coachingCenterId,
     coachingCenterId: tenant.coachingCenterId,
   });
 
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       }
       if (
         existingParent.getOrganizationId() !== tenant.organizationId ||
-        existingParent.getCoachingCenterId() !== tenant.schoolId
+        existingParent.getCoachingCenterId() !== tenant.coachingCenterId
       ) {
         await repo.delete(result.getValue().user.id).catch(() => undefined);
         return NextResponse.json(
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         phone: parent.phone,
         role: UserRole.PARENT,
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
         coachingCenterId: tenant.coachingCenterId,
       });
 
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
           parentId,
           studentId: result.getValue().user.id,
           organizationId: tenant.organizationId,
-          schoolId: tenant.schoolId,
+          coachingCenterId: tenant.coachingCenterId,
         });
       }
     } catch {
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         targetId: createdParentId,
         targetRole: UserRole.PARENT,
         organizationId: tenant.organizationId,
-        schoolId: tenant.schoolId,
+        coachingCenterId: tenant.coachingCenterId,
         ip: request.headers.get('x-forwarded-for') || undefined,
       });
     }
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
     targetId: result.getValue().user.id,
     targetRole: result.getValue().user.role,
     organizationId: tenant.organizationId,
-    schoolId: tenant.schoolId,
+    coachingCenterId: tenant.coachingCenterId,
     ip: request.headers.get('x-forwarded-for') || undefined,
   });
 

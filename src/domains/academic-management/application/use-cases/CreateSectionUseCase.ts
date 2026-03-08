@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateSectionRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   classMasterId: string;
   name: string;
   capacity?: number;
@@ -21,7 +21,7 @@ export class CreateSectionUseCase {
     try {
       const entity = Section.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         classMasterId: request.classMasterId,
         name: request.name,
         capacity: request.capacity,

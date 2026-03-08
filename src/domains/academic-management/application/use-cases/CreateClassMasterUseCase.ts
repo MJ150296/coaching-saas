@@ -5,7 +5,7 @@ import { generateId } from '@/shared/lib/utils';
 
 export interface CreateClassMasterRequest {
   organizationId: string;
-  schoolId: string;
+  coachingCenterId: string;
   name: string;
   level?: string;
 }
@@ -17,7 +17,7 @@ export class CreateClassMasterUseCase {
     try {
       const entity = ClassMaster.create(generateId(), {
         organizationId: request.organizationId,
-        schoolId: request.schoolId,
+        coachingCenterId: request.coachingCenterId,
         name: request.name,
         level: request.level,
       });

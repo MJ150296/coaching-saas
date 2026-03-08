@@ -73,7 +73,7 @@ export interface IStudentEnrollmentDocument {
   academicYearId: string;
   studentId: string;
   classMasterId: string;
-  sectionId: string;
+  sectionId?: string;
   rollNumber?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -158,7 +158,7 @@ const studentEnrollmentSchema = new Schema(
     academicYearId: { type: String, required: true, index: true },
     studentId: { type: String, required: true, index: true },
     classMasterId: { type: String, required: true, index: true },
-    sectionId: { type: String, required: true, index: true },
+    sectionId: { type: String, index: true },
     rollNumber: { type: String },
   },
   { timestamps: true }
