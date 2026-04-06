@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission, hasPermission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { CreateCoachingProgramUseCase } from '@/domains/coaching-management/application/use-cases';
-import { MongoCoachingProgramRepository } from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
@@ -34,9 +31,7 @@ export async function GET(request: NextRequest) {
       assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
-    const repo = await initializeAppAndGetService<MongoCoachingProgramRepository>(
-      ServiceKeys.COACHING_PROGRAM_REPOSITORY
-    );
+    const { coachingProgramRepository: repo } = await getCoachingServices();
 
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
@@ -53,7 +48,6 @@ export async function GET(request: NextRequest) {
       academicYearId: program.getAcademicYearId(),
       name: program.getName(),
       code: program.getCode(),
-      classLevel: program.getClassLevel(),
       board: program.getBoard(),
       description: program.getDescription(),
       status: program.getStatus(),
@@ -91,9 +85,7 @@ export async function POST(request: NextRequest) {
 
     assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
-    const useCase = await initializeAppAndGetService<CreateCoachingProgramUseCase>(
-      ServiceKeys.CREATE_COACHING_PROGRAM_USE_CASE
-    );
+    const { createCoachingProgramUseCase: useCase } = await getCoachingServices();
 
     const result = await useCase.execute({
       ...body,
@@ -123,7 +115,6 @@ export async function POST(request: NextRequest) {
         academicYearId: created.getAcademicYearId(),
         name: created.getName(),
         code: created.getCode(),
-        classLevel: created.getClassLevel(),
         board: created.getBoard(),
         description: created.getDescription(),
         status: created.getStatus(),

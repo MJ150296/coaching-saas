@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
-import { MongoCoachingSessionRepository } from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
 
 function parseDateParam(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -39,9 +37,7 @@ export async function GET(request: NextRequest) {
       (withMeta ? 100 : 200);
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
 
-    const repo = await initializeAppAndGetService<MongoCoachingSessionRepository>(
-      ServiceKeys.COACHING_SESSION_REPOSITORY
-    );
+    const { coachingSessionRepository: repo } = await getCoachingServices();
 
     const filtered = await repo.findByFilters({
       organizationId,

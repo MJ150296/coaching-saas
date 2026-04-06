@@ -1,3 +1,8 @@
+/**
+ * Profile Layout
+ * This layout provides the RoleBasedAppShell for all profile pages
+ */
+
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { RoleBasedAppShell } from '@/shared/components/navigation/RoleBasedAppShell';
 import { requireRole } from '@/shared/lib/requireRole';

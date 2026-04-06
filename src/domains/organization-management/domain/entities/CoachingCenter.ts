@@ -11,7 +11,7 @@ export interface CoachingCenterProps {
   coachingCenterCode: CoachingCenterCode;
   address: Address;
   contactInfo: ContactInfo;
-  principalId?: string;
+  ownerId?: string;
   status: 'active' | 'inactive';
   studentCount?: number;
   teacherCount?: number;
@@ -24,7 +24,7 @@ export class CoachingCenter extends AggregateRoot<string> {
   private coachingCenterCode: CoachingCenterCode;
   private address: Address;
   private contactInfo: ContactInfo;
-  private principalId?: string;
+  private ownerId?: string;
   private status: 'active' | 'inactive';
   private studentCount: number;
   private teacherCount: number;
@@ -37,7 +37,7 @@ export class CoachingCenter extends AggregateRoot<string> {
     this.coachingCenterCode = props.coachingCenterCode;
     this.address = props.address;
     this.contactInfo = props.contactInfo;
-    this.principalId = props.principalId;
+    this.ownerId = props.ownerId;
     this.status = props.status;
     this.studentCount = props.studentCount || 0;
     this.teacherCount = props.teacherCount || 0;
@@ -84,12 +84,12 @@ export class CoachingCenter extends AggregateRoot<string> {
     return this.contactInfo;
   }
 
-  getPrincipalId(): string | undefined {
-    return this.principalId;
+  getOwnerId(): string | undefined {
+    return this.ownerId;
   }
 
-  assignPrincipal(principalId: string): void {
-    this.principalId = principalId;
+  assignOwner(ownerId: string): void {
+    this.ownerId = ownerId;
     this.setUpdatedAt(new Date());
   }
 

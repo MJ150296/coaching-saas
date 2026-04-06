@@ -11,11 +11,20 @@
     "seed:users": "node scripts/seed-dev-users.cjs",
     "type-check": "npm run type-check:chunked",
     "type-check:all": "tsc --noEmit --pretty false",
+    "type-check:auth-users": "NODE_OPTIONS=--max-old-space-size=3072 tsc -p tsconfig.typecheck.api-auth-users.json --pretty false",
+    "type-check:admin-org-users": "NODE_OPTIONS=--max-old-space-size=3072 tsc -p tsconfig.typecheck.api-admin-org-users.json --pretty false",
+    "type-check:admin-academic-years": "NODE_OPTIONS=--max-old-space-size=3072 tsc -p tsconfig.typecheck.api-admin-academic-years.json --pretty false",
+    "type-check:admin-academic-options": "NODE_OPTIONS=--max-old-space-size=3072 tsc -p tsconfig.typecheck.api-admin-academic-options.json --pretty false",
+    "type-check:admin-academic": "npm run type-check:admin-academic-years && npm run type-check:admin-academic-options",
+    "type-check:admin-core": "npm run type-check:admin-org-users && npm run type-check:admin-academic",
+    "type-check:admin-ops": "NODE_OPTIONS=--max-old-space-size=4096 tsc -p tsconfig.typecheck.api-admin-ops.json --pretty false",
+    "type-check:role-views": "NODE_OPTIONS=--max-old-space-size=3072 tsc -p tsconfig.typecheck.api-role-views.json --pretty false",
+    "type-check:server-chunks": "npm run type-check:auth-users && npm run type-check:admin-core && npm run type-check:admin-ops && npm run type-check:role-views",
     "type-check:api": "npm run type-check:api-routes:individual",
     "type-check:api-routes:individual": "node scripts/type-check-api-routes.cjs",
     "type-check:admin-panels": "NODE_OPTIONS=--max-old-space-size=4096 tsc -p tsconfig.typecheck.admin-panels.json --pretty false",
     "type-check:admin-pages:individual": "node scripts/type-check-admin-pages.cjs",
-    "type-check:chunked": "npm run type-check:api && npm run type-check:admin-panels",
+    "type-check:chunked": "npm run type-check:server-chunks && npm run type-check:admin-panels",
     "migrate:coaching-center-id": "node scripts/migrate-school-to-coaching-center.cjs"
   },
   "dependencies": {
@@ -31,6 +40,8 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "recharts": "^3.8.1",
+    "redis": "^4.7.1",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

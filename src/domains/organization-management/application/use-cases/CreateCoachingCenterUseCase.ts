@@ -12,8 +12,6 @@ export interface CreateCoachingCenterRequest {
   organizationId: string;
   coachingCenterName?: string;
   coachingCenterCode?: string;
-  coachingCenterName?: string;
-  coachingCenterCode?: string;
   street: string;
   city: string;
   state: string;
@@ -27,9 +25,6 @@ export interface CreateCoachingCenterResponse {
   coachingCenterId: string;
   coachingCenterName: string;
   coachingCenterCode: string;
-  coachingCenterId: string;
-  coachingCenterName: string;
-  coachingCenterCode: string;
 }
 
 export class CreateCoachingCenterUseCase {
@@ -39,8 +34,8 @@ export class CreateCoachingCenterUseCase {
     request: CreateCoachingCenterRequest
   ): Promise<Result<CreateCoachingCenterResponse, string>> {
     try {
-      const rawName = request.coachingCenterName ?? request.coachingCenterName;
-      const rawCode = request.coachingCenterCode ?? request.coachingCenterCode;
+      const rawName = request.coachingCenterName;
+      const rawCode = request.coachingCenterCode;
       if (!rawName || !rawCode) {
         return Result.fail<CreateCoachingCenterResponse>('coachingCenterName and coachingCenterCode are required');
       }
@@ -71,9 +66,6 @@ export class CreateCoachingCenterUseCase {
       await this.coachingCenterRepository.save(center);
 
       return Result.ok<CreateCoachingCenterResponse>({
-        coachingCenterId: centerId,
-        coachingCenterName: centerName.getValue(),
-        coachingCenterCode: centerCode.getValue(),
         coachingCenterId: centerId,
         coachingCenterName: centerName.getValue(),
         coachingCenterCode: centerCode.getValue(),

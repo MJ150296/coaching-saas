@@ -20,7 +20,8 @@ export interface CreateUserUseCaseRequest {
   phone?: string;
   organizationId?: string;
   coachingCenterId?: string;
-  coachingCenterId?: string;
+  schoolGrade?: string;
+  schoolName?: string;
 }
 
 export interface CreateUserUseCaseResponse {
@@ -69,7 +70,9 @@ export class CreateUserUseCase {
         request.role,
         request.organizationId,
         tenantCoachingCenterId,
-        phone
+        phone,
+        request.schoolGrade,
+        request.schoolName
       );
 
       // Persist

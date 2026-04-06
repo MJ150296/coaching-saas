@@ -9,9 +9,9 @@ export async function GET(req: Request) {
     const end = url.searchParams.get('end') ?? undefined;
     const data = await getFeesOverview({ months, start, end });
     return NextResponse.json(data);
-  } catch (err: any) {
-    // eslint-disable-next-line no-console
-    console.error('api/analytics/fees error', err?.message ?? err);
+  } catch (err: unknown) {
+    console.error('api/analytics/fees error', (err as { message?: string }).message ?? err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

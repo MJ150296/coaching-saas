@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
+async function main() {
+const { spawnSync } = await import("node:child_process");
+const fs = await import("node:fs");
+const os = await import("node:os");
+const path = await import("node:path");
 
 const root = process.cwd();
 const apiRoot = path.join(root, "src", "app", "api");
 const nextEnv = path.join(root, "next-env.d.ts");
 const tscBin = path.join(root, "node_modules", ".bin", "tsc");
 
-const heapMb = Number(process.env.API_TSC_HEAP_MB || "1536");
-const timeoutSec = Number(process.env.API_TSC_TIMEOUT_SEC || "25");
+const heapMb = Number(process.env.API_TSC_HEAP_MB || "3072");
+const timeoutSec = Number(process.env.API_TSC_TIMEOUT_SEC || "90");
 const timeoutMs = timeoutSec * 1000;
 const routeFilter = (process.env.API_ROUTE_FILTER || "").trim().toLowerCase();
 
@@ -129,3 +130,9 @@ console.error(
   `API route checks finished with issues: failed=${failures}, timeouts=${timeouts}, ooms=${ooms}, total=${routes.length}`
 );
 process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

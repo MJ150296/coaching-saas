@@ -7,10 +7,12 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { initializeApp } from '@/shared/bootstrap/init';
 import {
   AcademicYearModel,
-  ClassMasterModel,
-  SectionModel,
   StudentEnrollmentModel,
 } from '@/domains/academic-management/infrastructure/persistence/AcademicSchema';
+import {
+  CoachingProgramModel,
+  CoachingBatchModel,
+} from '@/domains/coaching-management/infrastructure/persistence/CoachingSchema';
 import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
@@ -31,8 +33,8 @@ function serializeEnrollment(item: {
   coachingCenterId: string;
   academicYearId: string;
   studentId: string;
-  classMasterId: string;
-  sectionId?: string;
+  programId: string;
+  batchId?: string;
   rollNumber?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -43,8 +45,8 @@ function serializeEnrollment(item: {
     coachingCenterId: item.coachingCenterId,
     academicYearId: item.academicYearId,
     studentId: item.studentId,
-    classMasterId: item.classMasterId,
-    sectionId: item.sectionId,
+    programId: item.programId,
+    batchId: item.batchId,
     rollNumber: item.rollNumber,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -65,8 +67,8 @@ export async function GET(request: NextRequest) {
     const requestedOrganizationId = normalizeId(request.nextUrl.searchParams.get('organizationId') || undefined);
     const requestedCoachingCenterId = normalizeId(request.nextUrl.searchParams.get('coachingCenterId') || undefined);
     const academicYearId = normalizeId(request.nextUrl.searchParams.get('academicYearId') || undefined);
-    const classMasterId = normalizeId(request.nextUrl.searchParams.get('classMasterId') || undefined);
-    const sectionId = normalizeId(request.nextUrl.searchParams.get('sectionId') || undefined);
+    const programId = normalizeId(request.nextUrl.searchParams.get('programId') || undefined);
+    const batchId = normalizeId(request.nextUrl.searchParams.get('batchId') || undefined);
     const studentId = normalizeId(request.nextUrl.searchParams.get('studentId') || undefined);
     const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
@@ -87,8 +89,8 @@ export async function GET(request: NextRequest) {
       coachingCenterId: tenant.coachingCenterId,
     };
     if (academicYearId) query.academicYearId = academicYearId;
-    if (classMasterId) query.classMasterId = classMasterId;
-    if (sectionId) query.sectionId = sectionId;
+    if (programId) query.programId = programId;
+    if (batchId) query.batchId = batchId;
     if (studentId) query.studentId = studentId;
 
     let findQuery = StudentEnrollmentModel.find(query).sort({ createdAt: -1 });
@@ -129,24 +131,24 @@ export async function POST(request: NextRequest) {
 
     const academicYearId = normalizeId(body.academicYearId);
     const studentId = normalizeId(body.studentId);
-    const classMasterId = normalizeId(body.classMasterId);
-    const sectionId = normalizeId(body.sectionId);
+    const programId = normalizeId(body.programId);
+    const batchId = normalizeId(body.batchId);
     const rollNumber = typeof body.rollNumber === 'string' ? body.rollNumber.trim() || undefined : undefined;
 
-    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !studentId || !classMasterId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !studentId || !programId) {
       return NextResponse.json(
-        { error: 'organizationId, coachingCenterId, academicYearId, studentId and classMasterId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId, studentId and programId are required' },
         { status: 400 }
       );
     }
 
     await initializeApp();
 
-    const [year, student, classMaster, section] = await Promise.all([
+    const [year, student, program, batch] = await Promise.all([
       AcademicYearModel.findById(academicYearId),
       UserModel.findById(studentId),
-      ClassMasterModel.findById(classMasterId),
-      sectionId ? SectionModel.findById(sectionId) : Promise.resolve(null),
+      CoachingProgramModel.findById(programId),
+      batchId ? CoachingBatchModel.findById(batchId) : Promise.resolve(null),
     ]);
 
     if (!year || year.organizationId !== tenant.organizationId || year.coachingCenterId !== tenant.coachingCenterId) {
@@ -155,22 +157,22 @@ export async function POST(request: NextRequest) {
     if (!student || student.role !== UserRole.STUDENT || student.organizationId !== tenant.organizationId || student.coachingCenterId !== tenant.coachingCenterId) {
       return NextResponse.json({ error: 'Student not found in tenant scope' }, { status: 400 });
     }
-    if (!classMaster || classMaster.organizationId !== tenant.organizationId || classMaster.coachingCenterId !== tenant.coachingCenterId) {
-      return NextResponse.json({ error: 'Class master not found in tenant scope' }, { status: 400 });
+    if (!program || program.organizationId !== tenant.organizationId || program.coachingCenterId !== tenant.coachingCenterId) {
+      return NextResponse.json({ error: 'Program not found in tenant scope' }, { status: 400 });
     }
-    if (sectionId && (!section || section.organizationId !== tenant.organizationId || section.coachingCenterId !== tenant.coachingCenterId)) {
-      return NextResponse.json({ error: 'Section not found in tenant scope' }, { status: 400 });
+    if (batchId && (!batch || batch.organizationId !== tenant.organizationId || batch.coachingCenterId !== tenant.coachingCenterId)) {
+      return NextResponse.json({ error: 'Batch not found in tenant scope' }, { status: 400 });
     }
-    if (sectionId && section && section.classMasterId !== classMasterId) {
-      return NextResponse.json({ error: 'Selected section does not belong to selected class' }, { status: 400 });
+    if (batchId && batch && batch.programId !== programId) {
+      return NextResponse.json({ error: 'Selected batch does not belong to selected program' }, { status: 400 });
     }
 
-    const updateSet: Record<string, string> = { classMasterId };
-    if (sectionId) updateSet.sectionId = sectionId;
+    const updateSet: Record<string, string> = { programId };
+    if (batchId) updateSet.batchId = batchId;
     if (rollNumber) updateSet.rollNumber = rollNumber;
 
     const updateUnset: Record<string, number> = {};
-    if (!sectionId) updateUnset.sectionId = 1;
+    if (!batchId) updateUnset.batchId = 1;
     if (!rollNumber) updateUnset.rollNumber = 1;
 
     const saved = await StudentEnrollmentModel.findOneAndUpdate(
@@ -237,13 +239,13 @@ export async function PUT(request: NextRequest) {
 
     const academicYearId = normalizeId(body.academicYearId);
     const studentId = normalizeId(body.studentId);
-    const classMasterId = normalizeId(body.classMasterId);
-    const sectionId = normalizeId(body.sectionId);
+    const programId = normalizeId(body.programId);
+    const batchId = normalizeId(body.batchId);
     const rollNumber = typeof body.rollNumber === 'string' ? body.rollNumber.trim() || undefined : undefined;
 
-    if (!id || !tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !studentId || !classMasterId) {
+    if (!id || !tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !studentId || !programId) {
       return NextResponse.json(
-        { error: 'id, organizationId, coachingCenterId, academicYearId, studentId and classMasterId are required' },
+        { error: 'id, organizationId, coachingCenterId, academicYearId, studentId and programId are required' },
         { status: 400 }
       );
     }
@@ -259,11 +261,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Enrollment not found' }, { status: 404 });
     }
 
-    const [year, student, classMaster, section] = await Promise.all([
+    const [year, student, program, batch] = await Promise.all([
       AcademicYearModel.findById(academicYearId),
       UserModel.findById(studentId),
-      ClassMasterModel.findById(classMasterId),
-      sectionId ? SectionModel.findById(sectionId) : Promise.resolve(null),
+      CoachingProgramModel.findById(programId),
+      batchId ? CoachingBatchModel.findById(batchId) : Promise.resolve(null),
     ]);
 
     if (!year || year.organizationId !== tenant.organizationId || year.coachingCenterId !== tenant.coachingCenterId) {
@@ -272,14 +274,14 @@ export async function PUT(request: NextRequest) {
     if (!student || student.role !== UserRole.STUDENT || student.organizationId !== tenant.organizationId || student.coachingCenterId !== tenant.coachingCenterId) {
       return NextResponse.json({ error: 'Student not found in tenant scope' }, { status: 400 });
     }
-    if (!classMaster || classMaster.organizationId !== tenant.organizationId || classMaster.coachingCenterId !== tenant.coachingCenterId) {
-      return NextResponse.json({ error: 'Class master not found in tenant scope' }, { status: 400 });
+    if (!program || program.organizationId !== tenant.organizationId || program.coachingCenterId !== tenant.coachingCenterId) {
+      return NextResponse.json({ error: 'Program not found in tenant scope' }, { status: 400 });
     }
-    if (sectionId && (!section || section.organizationId !== tenant.organizationId || section.coachingCenterId !== tenant.coachingCenterId)) {
-      return NextResponse.json({ error: 'Section not found in tenant scope' }, { status: 400 });
+    if (batchId && (!batch || batch.organizationId !== tenant.organizationId || batch.coachingCenterId !== tenant.coachingCenterId)) {
+      return NextResponse.json({ error: 'Batch not found in tenant scope' }, { status: 400 });
     }
-    if (sectionId && section && section.classMasterId !== classMasterId) {
-      return NextResponse.json({ error: 'Selected section does not belong to selected class' }, { status: 400 });
+    if (batchId && batch && batch.programId !== programId) {
+      return NextResponse.json({ error: 'Selected batch does not belong to selected program' }, { status: 400 });
     }
 
     const duplicate = await StudentEnrollmentModel.findOne({
@@ -299,13 +301,13 @@ export async function PUT(request: NextRequest) {
     const updateSet: Record<string, string> = {
       academicYearId,
       studentId,
-      classMasterId,
+      programId,
     };
-    if (sectionId) updateSet.sectionId = sectionId;
+    if (batchId) updateSet.batchId = batchId;
     if (rollNumber) updateSet.rollNumber = rollNumber;
 
     const updateUnset: Record<string, number> = {};
-    if (!sectionId) updateUnset.sectionId = 1;
+    if (!batchId) updateUnset.batchId = 1;
     if (!rollNumber) updateUnset.rollNumber = 1;
 
     const updated = await StudentEnrollmentModel.findOneAndUpdate(

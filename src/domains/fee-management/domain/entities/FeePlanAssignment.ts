@@ -5,8 +5,8 @@ export interface FeePlanAssignmentProps {
   coachingCenterId: string;
   academicYearId: string;
   feePlanId: string;
-  classMasterId: string;
-  sectionId?: string;
+  programId: string;
+  batchId?: string;
 }
 
 export class FeePlanAssignment extends AggregateRoot<string> {
@@ -14,8 +14,8 @@ export class FeePlanAssignment extends AggregateRoot<string> {
   private coachingCenterId: string;
   private academicYearId: string;
   private feePlanId: string;
-  private classMasterId: string;
-  private sectionId?: string;
+  private programId: string;
+  private batchId?: string;
 
   constructor(id: string, props: FeePlanAssignmentProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
@@ -23,8 +23,8 @@ export class FeePlanAssignment extends AggregateRoot<string> {
     this.coachingCenterId = props.coachingCenterId;
     this.academicYearId = props.academicYearId;
     this.feePlanId = props.feePlanId;
-    this.classMasterId = props.classMasterId;
-    this.sectionId = props.sectionId;
+    this.programId = props.programId;
+    this.batchId = props.batchId;
   }
 
   static create(id: string, props: FeePlanAssignmentProps): FeePlanAssignment {
@@ -47,11 +47,11 @@ export class FeePlanAssignment extends AggregateRoot<string> {
     return this.feePlanId;
   }
 
-  getClassMasterId(): string {
-    return this.classMasterId;
+  getProgramId(): string {
+    return this.programId;
   }
 
-  getSectionId(): string | undefined {
-    return this.sectionId;
+  getBatchId(): string | undefined {
+    return this.batchId;
   }
 }

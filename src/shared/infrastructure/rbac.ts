@@ -5,7 +5,6 @@ export enum Permission {
   CREATE_ORGANIZATION = 'CREATE_ORGANIZATION',
   CREATE_COACHING_CENTER = 'CREATE_COACHING_CENTER',
   CREATE_ACADEMIC_YEAR = 'CREATE_ACADEMIC_YEAR',
-  CREATE_CLASS_MASTER = 'CREATE_CLASS_MASTER',
   CREATE_SECTION = 'CREATE_SECTION',
   CREATE_SUBJECT_ALLOCATION = 'CREATE_SUBJECT_ALLOCATION',
   CREATE_FEE_TYPE = 'CREATE_FEE_TYPE',
@@ -24,7 +23,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_USER,
     Permission.CREATE_COACHING_CENTER,
     Permission.CREATE_ACADEMIC_YEAR,
-    Permission.CREATE_CLASS_MASTER,
     Permission.CREATE_SECTION,
     Permission.CREATE_SUBJECT_ALLOCATION,
     Permission.CREATE_FEE_TYPE,
@@ -39,7 +37,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.COACHING_ADMIN]: [
     Permission.CREATE_USER,
     Permission.CREATE_ACADEMIC_YEAR,
-    Permission.CREATE_CLASS_MASTER,
     Permission.CREATE_SECTION,
     Permission.CREATE_SUBJECT_ALLOCATION,
     Permission.CREATE_FEE_TYPE,
@@ -54,7 +51,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.ADMIN]: [
     Permission.CREATE_USER,
     Permission.CREATE_ACADEMIC_YEAR,
-    Permission.CREATE_CLASS_MASTER,
     Permission.CREATE_SECTION,
     Permission.CREATE_SUBJECT_ALLOCATION,
     Permission.CREATE_FEE_TYPE,

@@ -2,7 +2,7 @@
  * MongoDB Schemas for Organization & Coaching Center
  */
 
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, Model } from 'mongoose';
 
 // Organization Schema
 export interface IOrganizationDocument {
@@ -52,8 +52,8 @@ const organizationSchema = new Schema(
 
 organizationSchema.index({ status: 1, createdAt: -1 });
 
-export const getOrCreateOrganizationModel = () => {
-  if (models.Organization) return models.Organization;
+export const getOrCreateOrganizationModel = (): Model<IOrganizationDocument> => {
+  if (models.Organization) return models.Organization as Model<IOrganizationDocument>;
   return model<IOrganizationDocument>('Organization', organizationSchema);
 };
 
@@ -76,7 +76,7 @@ export interface ICoachingCenterDocument {
     email: string;
     phone: string;
   };
-  principalId?: string;
+  ownerId?: string;
   status: 'active' | 'inactive';
   studentCount: number;
   teacherCount: number;
@@ -102,7 +102,7 @@ const coachingCenterSchema = new Schema(
       email: { type: String, required: true },
       phone: { type: String, required: true },
     },
-    principalId: { type: String, index: true },
+    ownerId: { type: String, index: true },
     status: { type: String, enum: ['active', 'inactive'], default: 'active', index: true },
     studentCount: { type: Number, default: 0 },
     teacherCount: { type: Number, default: 0 },
@@ -116,12 +116,9 @@ const coachingCenterSchema = new Schema(
 coachingCenterSchema.index({ organizationId: 1, status: 1 });
 coachingCenterSchema.index({ organizationId: 1, createdAt: -1 });
 
-export const getOrCreateCoachingCenterModel = () => {
-  // @ts-ignore
-  if (models.CoachingCenter) return models.CoachingCenter;
-  // @ts-ignore
+export const getOrCreateCoachingCenterModel = (): Model<ICoachingCenterDocument> => {
+  if (models.CoachingCenter) return models.CoachingCenter as Model<ICoachingCenterDocument>;
   return model<ICoachingCenterDocument>('CoachingCenter', coachingCenterSchema);
 };
 
-// @ts-ignore
 export const CoachingCenterModel = getOrCreateCoachingCenterModel();

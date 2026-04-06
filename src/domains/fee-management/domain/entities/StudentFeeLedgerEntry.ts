@@ -101,4 +101,26 @@ export class StudentFeeLedgerEntry extends AggregateRoot<string> {
   getStatus(): LedgerStatus {
     return this.status;
   }
+
+  markAsPaid(): void {
+    if (this.status === 'PAID') {
+      throw new Error('Ledger entry is already marked as paid');
+    }
+    if (this.status === 'CANCELLED') {
+      throw new Error('Cannot mark a cancelled ledger entry as paid');
+    }
+    this.status = 'PAID';
+    this.setUpdatedAt(new Date());
+  }
+
+  cancel(): void {
+    if (this.status === 'PAID') {
+      throw new Error('Cannot cancel a paid ledger entry');
+    }
+    if (this.status === 'CANCELLED') {
+      throw new Error('Ledger entry is already cancelled');
+    }
+    this.status = 'CANCELLED';
+    this.setUpdatedAt(new Date());
+  }
 }

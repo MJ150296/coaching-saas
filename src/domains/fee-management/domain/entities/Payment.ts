@@ -11,6 +11,7 @@ export interface PaymentProps {
   method: PaymentMethod;
   reference?: string;
   paidAt: Date;
+  ledgerEntryId?: string;
 }
 
 export class Payment extends AggregateRoot<string> {
@@ -22,6 +23,7 @@ export class Payment extends AggregateRoot<string> {
   private method: PaymentMethod;
   private reference?: string;
   private paidAt: Date;
+  private ledgerEntryId?: string;
 
   constructor(id: string, props: PaymentProps, createdAt?: Date, updatedAt?: Date) {
     super(id, createdAt, updatedAt);
@@ -33,6 +35,7 @@ export class Payment extends AggregateRoot<string> {
     this.method = props.method;
     this.reference = props.reference;
     this.paidAt = props.paidAt;
+    this.ledgerEntryId = props.ledgerEntryId;
   }
 
   static create(id: string, props: PaymentProps): Payment {
@@ -69,5 +72,9 @@ export class Payment extends AggregateRoot<string> {
 
   getPaidAt(): Date {
     return this.paidAt;
+  }
+
+  getLedgerEntryId(): string | undefined {
+    return this.ledgerEntryId;
   }
 }

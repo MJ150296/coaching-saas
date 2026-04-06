@@ -98,6 +98,13 @@ const navItems: NavItem[] = [
     section: 'manage',
   },
   {
+    label: 'Manage Users',
+    href: '/admin-roles/manage-setting/users',
+    icon: 'users',
+    allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
+    section: 'manage',
+  },
+  {
     label: 'Manage Academic',
     href: '/admin-roles/manage-setting/academic',
     icon: 'academic',
@@ -162,8 +169,8 @@ const navItems: NavItem[] = [
     section: 'pages',
   },
   {
-    label: 'Classes Analytics',
-    href: '/admin-roles/pages/classes',
+    label: 'Programs & Batches Analytics',
+    href: '/admin-roles/pages/programs-batches',
     icon: 'academic',
     allowedRoles: [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
     section: 'pages',
@@ -307,7 +314,7 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
       {/* ── Mobile drawer ── */}
       {isMobile === true && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-72 flex-col overflow-hidden border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out lg:hidden ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -367,13 +374,12 @@ export function RoleBasedAppShell({ role, children }: RoleBasedAppShellProps) {
       {/* ── Main content ── */}
       {/*
         Mobile  (<lg): no left margin — sidebar slides over the content as an overlay.
-        Desktop (≥lg): left margin equals the sidebar width so content is pushed aside.
-        We drive the desktop margin via a CSS custom property so the collapse animation
-        is smooth without needing a JS resize listener.
+        Desktop (≥lg): left margin to account for fixed sidebar width.
       */}
       <main
-        style={{ '--sidebar-w': `${desktopSidebarWidth}px` } as React.CSSProperties}
-        className="min-h-screen pt-14 lg:pt-0 lg:ml-(--sidebar-w)"
+        className={`min-h-screen transition-[margin-left] duration-300 ease-in-out ${
+          isMobile ? '' : isCollapsed ? 'lg:ml-20' : 'lg:ml-72'
+        }`}
       >
         <div className="min-h-screen w-full overflow-x-hidden">{children}</div>
       </main>
@@ -452,6 +458,7 @@ function SidebarContent({
                 <Link
                   href={item.href}
                   onClick={onNavigate}
+                  scroll={false}
                   title={collapsed ? item.label : undefined}
                   className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     active
@@ -500,6 +507,7 @@ function SidebarContent({
                       <Link
                         href={item.href}
                         onClick={onNavigate}
+                        scroll={false}
                         className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                           active
                             ? 'bg-blue-50 text-blue-700 border border-blue-100'
@@ -595,6 +603,7 @@ function SidebarContent({
                       <Link
                         href={item.href}
                         onClick={onNavigate}
+                        scroll={false}
                         className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                           active
                             ? 'bg-blue-50 text-blue-700 border border-blue-100'
@@ -647,6 +656,7 @@ function SidebarContent({
                       <Link
                         href={item.href}
                         onClick={onNavigate}
+                        scroll={false}
                         className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                           active
                             ? 'bg-blue-50 text-blue-700 border border-blue-100'

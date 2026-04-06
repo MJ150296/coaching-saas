@@ -3,8 +3,6 @@ import { getActorUser } from '@/shared/infrastructure/actor';
 import { connectDB } from '@/shared/infrastructure/database';
 import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
 import {
-  ClassMasterModel,
-  SectionModel,
   StudentEnrollmentModel,
 } from '@/domains/academic-management/infrastructure/persistence/AcademicSchema';
 import {
@@ -16,7 +14,10 @@ import {
   CoachingAttendanceModel,
   CoachingEnrollmentModel,
   CoachingSessionModel,
+  CoachingProgramModel,
+  CoachingBatchModel,
 } from '@/domains/coaching-management/infrastructure/persistence/CoachingSchema';
+import { getOrSetCachedValue } from '@/shared/infrastructure/api-response-cache';
 
 const ADMIN_ROLES = new Set<UserRole>([
   UserRole.SUPER_ADMIN,
@@ -35,6 +36,11 @@ type MonthSeries = {
   keys: string[];
 };
 
+type DateRange = {
+  from?: Date;
+  to?: Date;
+};
+
 function round(value: number, places = 2): number {
   const p = 10 ** places;
   return Math.round(value * p) / p;
@@ -45,10 +51,6 @@ function pct(part: number, total: number): number {
   return round((part / total) * 100, 2);
 }
 
-function safeRatio(a: number, b: number): number {
-  if (!b) return 0;
-  return round(a / b, 2);
-}
 
 function formatDate(value?: Date): string {
   if (!value) return '-';
@@ -63,8 +65,8 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function buildMonthSeries(months = 12): MonthSeries {
-  const now = new Date();
+function buildMonthSeries(months = 12, anchor?: Date): MonthSeries {
+  const now = anchor ?? new Date();
   const labels: string[] = [];
   const keys: string[] = [];
   for (let i = months - 1; i >= 0; i -= 1) {
@@ -79,6 +81,41 @@ function buildMonthSeries(months = 12): MonthSeries {
   }
   return { labels, keys };
 }
+
+function normalizeRange(range?: DateRange): DateRange | undefined {
+  if (!range) return undefined;
+  const from = range.from ? new Date(range.from) : undefined;
+  const to = range.to ? new Date(range.to) : undefined;
+  if (from) from.setHours(0, 0, 0, 0);
+  if (to) to.setHours(23, 59, 59, 999);
+  if (from && to && from > to) return undefined;
+  if (!from && !to) return undefined;
+  return { from, to };
+}
+
+function buildDateQuery(field: string, range?: DateRange) {
+  if (!range) return undefined;
+  const query: Record<string, Date> = {};
+  if (range.from) query.$gte = range.from;
+  if (range.to) query.$lte = range.to;
+  return Object.keys(query).length ? { [field]: query } : undefined;
+}
+
+function buildMonthSeriesForRange(range?: DateRange, fallbackMonths = 12): MonthSeries {
+  if (!range?.from || !range?.to) return buildMonthSeries(fallbackMonths);
+  const from = new Date(range.from.getFullYear(), range.from.getMonth(), 1);
+  const to = new Date(range.to.getFullYear(), range.to.getMonth(), 1);
+  const months = Math.max(
+    1,
+    Math.min(
+      fallbackMonths,
+      (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1
+    )
+  );
+  return buildMonthSeries(months, to);
+}
+
+const ENTERPRISE_ANALYTICS_CACHE_TTL_MS = 60_000;
 
 function herfindahlIndex(values: number[]): number {
   const total = values.reduce((sum, v) => sum + v, 0);
@@ -132,22 +169,28 @@ async function resolveScope(): Promise<TenantQuery> {
   return { organizationId, coachingCenterId };
 }
 
-export async function getUsersEnterpriseAnalytics() {
+export async function getUsersEnterpriseAnalytics(range?: DateRange) {
   await connectDB();
   const scope = await resolveScope();
+  const normalizedRange = normalizeRange(range);
+  const rangeKey = `${normalizedRange?.from?.toISOString() ?? 'na'}:${normalizedRange?.to?.toISOString() ?? 'na'}`;
+  const cacheKey = `analytics:users:${scope.organizationId ?? 'all'}:${scope.coachingCenterId ?? 'all'}:${rangeKey}`;
 
-  const users = await UserModel.find(scope)
-    .select('_id role isActive emailVerified createdAt coachingCenterId')
-    .lean<
-      Array<{
-        _id: string;
-        role: UserRole;
-        isActive: boolean;
-        emailVerified: boolean;
-        createdAt: Date;
-        coachingCenterId?: string;
-      }>
-    >();
+  return getOrSetCachedValue(cacheKey, ENTERPRISE_ANALYTICS_CACHE_TTL_MS, async () => {
+    const createdAtQuery = buildDateQuery('createdAt', normalizedRange);
+
+    const users = await UserModel.find({ ...scope, ...(createdAtQuery ?? {}) })
+      .select('_id role isActive emailVerified createdAt coachingCenterId')
+      .lean<
+        Array<{
+          _id: string;
+          role: UserRole;
+          isActive: boolean;
+          emailVerified: boolean;
+          createdAt: Date;
+          coachingCenterId?: string;
+        }>
+      >();
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.isActive).length;
@@ -195,7 +238,7 @@ export async function getUsersEnterpriseAnalytics() {
       ? 100
       : 0;
 
-  const monthSeries = buildMonthSeries(12);
+  const monthSeries = buildMonthSeriesForRange(normalizedRange, 12);
   const monthMap = new Map<string, number>();
   for (const key of monthSeries.keys) monthMap.set(key, 0);
   for (const user of users) {
@@ -216,61 +259,72 @@ export async function getUsersEnterpriseAnalytics() {
     2
   );
 
-  return {
-    summary: {
-      totalUsers,
-      activeUsers,
-      verifiedUsers,
-      activationRatePct: pct(activeUsers, totalUsers),
-      verificationRatePct: pct(verifiedUsers, totalUsers),
-      recentJoiners30d: recentCount,
-      growthPct,
-      centerCoverage,
-      roleConcentrationHHI: herfindahlIndex(roleBreakdown.map((r) => r.count)),
-      onboardingRiskScore,
-    },
-    roleBreakdown,
-    monthlyTrend: {
-      labels: monthSeries.labels,
-      newUsers: monthlyNewUsers,
-    },
-    complianceWatchlist: users
-      .filter((u) => !u.emailVerified || !u.isActive)
-      .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
-      .slice(0, 8)
-      .map((u) => ({
-        id: u._id,
-        role: u.role,
-        isActive: u.isActive,
-        emailVerified: u.emailVerified,
-        createdAt: formatDate(u.createdAt),
-      })),
-  };
+    return {
+      summary: {
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        activationRatePct: pct(activeUsers, totalUsers),
+        verificationRatePct: pct(verifiedUsers, totalUsers),
+        recentJoiners30d: recentCount,
+        growthPct,
+        centerCoverage,
+        roleConcentrationHHI: herfindahlIndex(roleBreakdown.map((r) => r.count)),
+        onboardingRiskScore,
+      },
+      roleBreakdown,
+      monthlyTrend: {
+        labels: monthSeries.labels,
+        newUsers: monthlyNewUsers,
+      },
+      complianceWatchlist: users
+        .filter((u) => !u.emailVerified || !u.isActive)
+        .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
+        .slice(0, 8)
+        .map((u) => ({
+          id: u._id,
+          role: u.role,
+          isActive: u.isActive,
+          emailVerified: u.emailVerified,
+          createdAt: formatDate(u.createdAt),
+        })),
+    };
+  });
 }
 
-export async function getFeesEnterpriseAnalytics() {
+export async function getFeesEnterpriseAnalytics(range?: DateRange) {
   await connectDB();
   const scope = await resolveScope();
+  const normalizedRange = normalizeRange(range);
+  const rangeKey = `${normalizedRange?.from?.toISOString() ?? 'na'}:${normalizedRange?.to?.toISOString() ?? 'na'}`;
+  const cacheKey = `analytics:fees:${scope.organizationId ?? 'all'}:${scope.coachingCenterId ?? 'all'}:${rangeKey}`;
 
-  const [ledger, payments, credits, students] = await Promise.all([
-    StudentFeeLedgerModel.find(scope)
-      .select('studentId amount dueDate status')
-      .lean<Array<{ studentId: string; amount: number; dueDate: Date; status: string }>>(),
-    PaymentModel.find(scope)
-      .select('studentId amount paidAt method')
-      .lean<Array<{ studentId: string; amount: number; paidAt: Date; method: string }>>(),
-    CreditNoteModel.find(scope)
-      .select('studentId amount')
-      .lean<Array<{ studentId: string; amount: number }>>(),
-    UserModel.find({ ...scope, role: UserRole.STUDENT })
-      .select('_id firstName lastName email')
-      .lean<Array<{ _id: string; firstName?: string; lastName?: string; email: string }>>(),
-  ]);
+  return getOrSetCachedValue(cacheKey, ENTERPRISE_ANALYTICS_CACHE_TTL_MS, async () => {
+    const ledgerDateQuery = buildDateQuery('dueDate', normalizedRange);
+    const paymentDateQuery = buildDateQuery('paidAt', normalizedRange);
+    const creditDateQuery = buildDateQuery('createdOn', normalizedRange);
+
+    const [ledger, payments, credits, students] = await Promise.all([
+      StudentFeeLedgerModel.find({ ...scope, ...(ledgerDateQuery ?? {}) })
+        .select('studentId amount dueDate status')
+        .lean<Array<{ studentId: string; amount: number; dueDate: Date; status: string }>>(),
+      PaymentModel.find({ ...scope, ...(paymentDateQuery ?? {}) })
+        .select('studentId amount paidAt method')
+        .lean<Array<{ studentId: string; amount: number; paidAt: Date; method: string }>>(),
+      CreditNoteModel.find({ ...scope, ...(creditDateQuery ?? {}) })
+        .select('studentId amount createdOn')
+        .lean<Array<{ studentId: string; amount: number; createdOn: Date }>>(),
+      UserModel.find({ ...scope, role: UserRole.STUDENT })
+        .select('_id firstName lastName email')
+        .lean<Array<{ _id: string; firstName?: string; lastName?: string; email: string }>>(),
+    ]);
 
   const studentNameMap = new Map<string, string>();
+  const studentEmailMap = new Map<string, string>();
   for (const student of students) {
     const name = `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || student.email;
     studentNameMap.set(student._id, name);
+    studentEmailMap.set(student._id, student.email);
   }
 
   const totalBilled = ledger.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -284,7 +338,7 @@ export async function getFeesEnterpriseAnalytics() {
   const outstandingAmount = unpaid.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const overdueAmount = overdue.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-  const monthSeries = buildMonthSeries(12);
+  const monthSeries = buildMonthSeriesForRange(normalizedRange, 12);
   const billedByMonth = new Map<string, number>();
   const paidByMonth = new Map<string, number>();
   for (const key of monthSeries.keys) {
@@ -346,6 +400,7 @@ export async function getFeesEnterpriseAnalytics() {
     .map(([studentId, row]) => ({
       studentId,
       studentName: studentNameMap.get(studentId) ?? studentId,
+      studentEmail: studentEmailMap.get(studentId) ?? '',
       outstanding: round(row.outstanding, 0),
       overdue: round(row.overdue, 0),
       overduePct: pct(row.overdue, row.outstanding),
@@ -355,52 +410,56 @@ export async function getFeesEnterpriseAnalytics() {
     .sort((a, b) => b.riskScore - a.riskScore)
     .slice(0, 10);
 
-  return {
-    summary: {
-      totalBilled: round(totalBilled, 0),
-      totalPaid: round(totalPaid, 0),
-      totalCredits: round(totalCredits, 0),
-      collectionRatePct: pct(totalPaid, totalBilled),
-      creditCoveragePct: pct(totalCredits, totalBilled),
-      outstandingAmount: round(outstandingAmount, 0),
-      overdueAmount: round(overdueAmount, 0),
-      overdueRatePct: pct(overdueAmount, outstandingAmount),
-      payerConcentrationTop10Pct: topShare,
-      payerDistributionGini: gini(Array.from(paymentByStudent.values())),
-    },
-    trend: {
-      labels: monthSeries.labels,
-      billed: billedTrend,
-      collected: collectedTrend,
-      gap: billedTrend.map((value, idx) => round(value - (collectedTrend[idx] ?? 0), 0)),
-    },
-    methodMix,
-    riskTable,
-  };
+    return {
+      summary: {
+        totalBilled: round(totalBilled, 0),
+        totalPaid: round(totalPaid, 0),
+        totalCredits: round(totalCredits, 0),
+        collectionRatePct: pct(totalPaid, totalBilled),
+        creditCoveragePct: pct(totalCredits, totalBilled),
+        outstandingAmount: round(outstandingAmount, 0),
+        overdueAmount: round(overdueAmount, 0),
+        overdueRatePct: pct(overdueAmount, outstandingAmount),
+        payerConcentrationTop10Pct: topShare,
+        payerDistributionGini: gini(Array.from(paymentByStudent.values())),
+      },
+      trend: {
+        labels: monthSeries.labels,
+        billed: billedTrend,
+        collected: collectedTrend,
+        gap: billedTrend.map((value, idx) => round(value - (collectedTrend[idx] ?? 0), 0)),
+      },
+      methodMix,
+      riskTable,
+    };
+  });
 }
 
-export async function getAcademicEnterpriseAnalytics() {
+export async function getAcademicEnterpriseAnalytics(range?: DateRange) {
   await connectDB();
   const scope = await resolveScope();
+  const normalizedRange = normalizeRange(range);
+  const rangeKey = `${normalizedRange?.from?.toISOString() ?? 'na'}:${normalizedRange?.to?.toISOString() ?? 'na'}`;
+  const cacheKey = `analytics:academic:${scope.organizationId ?? 'all'}:${scope.coachingCenterId ?? 'all'}:${rangeKey}`;
 
-  const [sessions, attendance, coachingEnrollments, classMasters, sections, studentEnrollments] = await Promise.all([
-    CoachingSessionModel.find(scope)
-      .select('_id batchId facultyId sessionDate status')
-      .lean<Array<{ _id: string; batchId: string; facultyId?: string; sessionDate: Date; status: string }>>(),
-    CoachingAttendanceModel.find(scope)
-      .select('sessionId batchId status markedAt')
-      .lean<Array<{ sessionId: string; batchId: string; status: string; markedAt: Date }>>(),
-    CoachingEnrollmentModel.find(scope)
-      .select('batchId status studentId')
-      .lean<Array<{ batchId: string; status: string; studentId: string }>>(),
-    ClassMasterModel.find(scope).select('_id name').lean<Array<{ _id: string; name: string }>>(),
-    SectionModel.find(scope)
-      .select('_id classMasterId capacity')
-      .lean<Array<{ _id: string; classMasterId: string; capacity?: number }>>(),
-    StudentEnrollmentModel.find(scope)
-      .select('classMasterId sectionId studentId')
-      .lean<Array<{ classMasterId: string; sectionId: string; studentId: string }>>(),
-  ]);
+  return getOrSetCachedValue(cacheKey, ENTERPRISE_ANALYTICS_CACHE_TTL_MS, async () => {
+    const sessionDateQuery = buildDateQuery('sessionDate', normalizedRange);
+    const attendanceDateQuery = buildDateQuery('markedAt', normalizedRange);
+
+    const [sessions, attendance, coachingEnrollments, studentEnrollments] = await Promise.all([
+      CoachingSessionModel.find({ ...scope, ...(sessionDateQuery ?? {}) })
+        .select('_id batchId facultyId sessionDate status topic')
+        .lean<Array<{ _id: string; batchId: string; facultyId?: string; sessionDate: Date; status: string; topic?: string }>>(),
+      CoachingAttendanceModel.find({ ...scope, ...(attendanceDateQuery ?? {}) })
+        .select('sessionId batchId status markedAt')
+        .lean<Array<{ sessionId: string; batchId: string; status: string; markedAt: Date }>>(),
+      CoachingEnrollmentModel.find(scope)
+        .select('batchId status studentId')
+        .lean<Array<{ batchId: string; status: string; studentId: string }>>(),
+      StudentEnrollmentModel.find(scope)
+        .select('programId batchId studentId')
+        .lean<Array<{ programId: string; batchId?: string; studentId: string }>>(),
+    ]);
 
   const totalSessions = sessions.length;
   const completedSessions = sessions.filter((s) => s.status === 'COMPLETED').length;
@@ -411,11 +470,26 @@ export async function getAcademicEnterpriseAnalytics() {
     LATE: 0,
     ABSENT: 0,
   };
+  const attendanceBySession = new Map<
+    string,
+    { marked: number; present: number; late: number; absent: number }
+  >();
   for (const row of attendance) {
     const status = String(row.status).toUpperCase();
     if (status in attendanceCounts) {
       attendanceCounts[status as keyof typeof attendanceCounts] += 1;
     }
+    const entry = attendanceBySession.get(row.sessionId) ?? {
+      marked: 0,
+      present: 0,
+      late: 0,
+      absent: 0,
+    };
+    entry.marked += 1;
+    if (status === 'PRESENT') entry.present += 1;
+    if (status === 'LATE') entry.late += 1;
+    if (status === 'ABSENT') entry.absent += 1;
+    attendanceBySession.set(row.sessionId, entry);
   }
 
   const totalAttendanceMarks = attendance.length;
@@ -444,14 +518,6 @@ export async function getAcademicEnterpriseAnalytics() {
 
   const recordedCompletedAttendance = attendance.filter((row) => completedSessionIds.has(row.sessionId)).length;
 
-  const enrollmentsByClass = new Map<string, number>();
-  const enrollmentsBySection = new Map<string, number>();
-  for (const item of studentEnrollments) {
-    enrollmentsByClass.set(item.classMasterId, (enrollmentsByClass.get(item.classMasterId) ?? 0) + 1);
-    enrollmentsBySection.set(item.sectionId, (enrollmentsBySection.get(item.sectionId) ?? 0) + 1);
-  }
-
-  const totalKnownCapacity = sections.reduce((sum, sec) => sum + Math.max(0, Number(sec.capacity || 0)), 0);
   const totalStudents = studentEnrollments.length;
 
   const batchMetrics = new Map<
@@ -516,7 +582,7 @@ export async function getAcademicEnterpriseAnalytics() {
     .sort((a, b) => b.riskScore - a.riskScore)
     .slice(0, 10);
 
-  const monthSeries = buildMonthSeries(12);
+  const monthSeries = buildMonthSeriesForRange(normalizedRange, 12);
   const completedSessionsByMonth = new Map<string, number>();
   const attendanceQualityByMonth = new Map<string, { weighted: number; total: number }>();
   for (const key of monthSeries.keys) {
@@ -542,180 +608,306 @@ export async function getAcademicEnterpriseAnalytics() {
     attendanceQualityByMonth.set(key, agg);
   }
 
-  const classUtilizationTable = classMasters
-    .map((cls) => {
-      const classSectionIds = sections.filter((s) => s.classMasterId === cls._id).map((s) => s._id);
-      const classCapacity = sections
-        .filter((s) => s.classMasterId === cls._id)
-        .reduce((sum, sec) => sum + Math.max(0, Number(sec.capacity || 0)), 0);
-      const studentsInClass = enrollmentsByClass.get(cls._id) ?? 0;
-      const sectionsInClass = classSectionIds.length;
-
-      return {
-        classId: cls._id,
-        className: cls.name,
-        sections: sectionsInClass,
-        students: studentsInClass,
-        avgStudentsPerSection: safeRatio(studentsInClass, Math.max(sectionsInClass, 1)),
-        knownCapacity: classCapacity,
-        utilizationPct: classCapacity > 0 ? pct(studentsInClass, classCapacity) : 0,
+  const recentSessions = sessions
+    .slice()
+    .sort((a, b) => +new Date(b.sessionDate) - +new Date(a.sessionDate))
+    .slice(0, 10)
+    .map((session) => {
+      const counts = attendanceBySession.get(session._id) ?? {
+        marked: 0,
+        present: 0,
+        late: 0,
+        absent: 0,
       };
-    })
-    .sort((a, b) => b.utilizationPct - a.utilizationPct)
-    .slice(0, 10);
+      return {
+        sessionId: session._id,
+        topic: session.topic,
+        batchId: session.batchId,
+        sessionDate: formatDate(session.sessionDate),
+        status: session.status,
+        marked: counts.marked,
+        present: counts.present,
+        late: counts.late,
+        absent: counts.absent,
+      };
+    });
 
-  return {
-    summary: {
-      totalSessions,
-      completedSessions,
-      cancelledSessions,
-      sessionCompletionRatePct: pct(completedSessions, totalSessions),
-      attendanceMarks: totalAttendanceMarks,
-      presentRatePct: pct(attendanceCounts.PRESENT, totalAttendanceMarks),
-      lateRatePct: pct(attendanceCounts.LATE, totalAttendanceMarks),
-      absentRatePct: pct(attendanceCounts.ABSENT, totalAttendanceMarks),
-      attendanceQualityPct: attendanceQuality,
-      attendanceCoveragePct: pct(recordedCompletedAttendance, expectedAttendance),
-      totalStudents,
-      sectionSeatUtilizationPct: totalKnownCapacity > 0 ? pct(totalStudents, totalKnownCapacity) : 0,
-    },
-    trend: {
-      labels: monthSeries.labels,
-      completedSessions: monthSeries.keys.map((key) => completedSessionsByMonth.get(key) ?? 0),
-      attendanceQualityPct: monthSeries.keys.map((key) => {
-        const agg = attendanceQualityByMonth.get(key) ?? { weighted: 0, total: 0 };
-        return pct(agg.weighted, agg.total);
-      }),
-    },
-    classUtilizationTable,
-    batchRiskTable,
-  };
+    return {
+      summary: {
+        totalSessions,
+        completedSessions,
+        cancelledSessions,
+        sessionCompletionRatePct: pct(completedSessions, totalSessions),
+        attendanceMarks: totalAttendanceMarks,
+        presentRatePct: pct(attendanceCounts.PRESENT, totalAttendanceMarks),
+        lateRatePct: pct(attendanceCounts.LATE, totalAttendanceMarks),
+        absentRatePct: pct(attendanceCounts.ABSENT, totalAttendanceMarks),
+        attendanceQualityPct: attendanceQuality,
+        attendanceCoveragePct: pct(recordedCompletedAttendance, expectedAttendance),
+        totalStudents,
+      },
+      trend: {
+        labels: monthSeries.labels,
+        completedSessions: monthSeries.keys.map((key) => completedSessionsByMonth.get(key) ?? 0),
+        attendanceQualityPct: monthSeries.keys.map((key) => {
+          const agg = attendanceQualityByMonth.get(key) ?? { weighted: 0, total: 0 };
+          return pct(agg.weighted, agg.total);
+        }),
+      },
+      recentSessions,
+      batchRiskTable,
+    };
+  });
 }
 
-export async function getClassesEnterpriseAnalytics() {
+export async function getProgramsBatchesEnterpriseAnalytics(range?: DateRange) {
   await connectDB();
   const scope = await resolveScope();
+  const normalizedRange = normalizeRange(range);
+  const rangeKey = `${normalizedRange?.from?.toISOString() ?? 'na'}:${normalizedRange?.to?.toISOString() ?? 'na'}`;
+  const cacheKey = `analytics:programs-batches:${scope.organizationId ?? 'all'}:${scope.coachingCenterId ?? 'all'}:${rangeKey}`;
 
-  const [classes, sections, enrollments, teachers] = await Promise.all([
-    ClassMasterModel.find(scope)
-      .select('_id name level')
-      .lean<Array<{ _id: string; name: string; level?: string }>>(),
-    SectionModel.find(scope)
-      .select('_id classMasterId name capacity classTeacherId')
-      .lean<
-        Array<{
-          _id: string;
-          classMasterId: string;
-          name: string;
-          capacity?: number;
-          classTeacherId?: string;
-        }>
-      >(),
-    StudentEnrollmentModel.find(scope)
-      .select('classMasterId sectionId studentId')
-      .lean<Array<{ classMasterId: string; sectionId: string; studentId: string }>>(),
-    UserModel.find({ ...scope, role: UserRole.TEACHER })
-      .select('_id')
-      .lean<Array<{ _id: string }>>(),
-  ]);
+  return getOrSetCachedValue(cacheKey, ENTERPRISE_ANALYTICS_CACHE_TTL_MS, async () => {
+    const programDateQuery = buildDateQuery('createdAt', normalizedRange);
+    const batchDateQuery = buildDateQuery('createdAt', normalizedRange);
+    const enrollmentDateQuery = buildDateQuery('enrolledOn', normalizedRange);
+    const sessionDateQuery = buildDateQuery('sessionDate', normalizedRange);
+    const attendanceDateQuery = buildDateQuery('markedAt', normalizedRange);
 
-  const sectionCountByClass = new Map<string, number>();
-  const teacherSectionCountByClass = new Map<string, number>();
-  const capacityByClass = new Map<string, number>();
-  for (const section of sections) {
-    sectionCountByClass.set(section.classMasterId, (sectionCountByClass.get(section.classMasterId) ?? 0) + 1);
-    if (section.classTeacherId) {
-      teacherSectionCountByClass.set(
-        section.classMasterId,
-        (teacherSectionCountByClass.get(section.classMasterId) ?? 0) + 1
-      );
+    const [programs, batches, enrollments, sessions, attendance, users] = await Promise.all([
+      CoachingProgramModel.find({ ...scope, ...(programDateQuery ?? {}) })
+        .select('_id name code classLevel board status')
+        .lean<Array<{ _id: string; name: string; code?: string; classLevel?: string; board?: string; status: string }>>(),
+      CoachingBatchModel.find({ ...scope, ...(batchDateQuery ?? {}) })
+        .select('_id programId name facultyId capacity isActive startsOn endsOn')
+        .lean<Array<{ _id: string; programId: string; name: string; facultyId?: string; capacity: number; isActive: boolean; startsOn?: Date; endsOn?: Date }>>(),
+      CoachingEnrollmentModel.find({ ...scope, ...(enrollmentDateQuery ?? {}) })
+        .select('programId batchId studentId status enrolledOn')
+        .lean<Array<{ programId: string; batchId: string; studentId: string; status: string; enrolledOn: Date }>>(),
+      CoachingSessionModel.find({ ...scope, ...(sessionDateQuery ?? {}) })
+        .select('programId batchId status sessionDate')
+        .lean<Array<{ programId: string; batchId: string; status: string; sessionDate: Date }>>(),
+      CoachingAttendanceModel.find({ ...scope, ...(attendanceDateQuery ?? {}) })
+        .select('programId batchId sessionId status markedAt')
+        .lean<Array<{ programId: string; batchId: string; sessionId: string; status: string; markedAt: Date }>>(),
+      UserModel.find({ ...scope, role: UserRole.TEACHER })
+        .select('_id firstName lastName email')
+        .lean<Array<{ _id: string; firstName?: string; lastName?: string; email: string }>>(),
+    ]);
+
+    const teacherNameMap = new Map<string, string>();
+    for (const teacher of users) {
+      const name = `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim() || teacher.email;
+      teacherNameMap.set(teacher._id, name);
     }
-    capacityByClass.set(
-      section.classMasterId,
-      (capacityByClass.get(section.classMasterId) ?? 0) + Math.max(0, Number(section.capacity || 0))
-    );
-  }
 
-  const enrollmentCountByClass = new Map<string, number>();
-  const enrollmentCountBySection = new Map<string, number>();
-  for (const enrollment of enrollments) {
-    enrollmentCountByClass.set(
-      enrollment.classMasterId,
-      (enrollmentCountByClass.get(enrollment.classMasterId) ?? 0) + 1
-    );
-    enrollmentCountBySection.set(
-      enrollment.sectionId,
-      (enrollmentCountBySection.get(enrollment.sectionId) ?? 0) + 1
-    );
-  }
+    // Program-level aggregations
+    const programStats = new Map<string, {
+      programId: string;
+      name: string;
+      code?: string;
+      classLevel?: string;
+      board?: string;
+      status: string;
+      batches: number;
+      activeEnrollments: number;
+      totalEnrollments: number;
+      completedSessions: number;
+      totalSessions: number;
+    }>();
 
-  const sectionHotspots = sections
-    .map((section) => {
-      const students = enrollmentCountBySection.get(section._id) ?? 0;
-      const cap = Math.max(0, Number(section.capacity || 0));
-      const utilization = cap > 0 ? pct(students, cap) : 0;
-      return {
-        sectionId: section._id,
-        classMasterId: section.classMasterId,
-        sectionName: section.name,
-        students,
-        capacity: cap,
-        utilizationPct: utilization,
-      };
-    })
-    .sort((a, b) => b.utilizationPct - a.utilizationPct)
-    .slice(0, 10);
+    for (const program of programs) {
+      programStats.set(program._id, {
+        programId: program._id,
+        name: program.name,
+        code: program.code,
+        classLevel: program.classLevel,
+        board: program.board,
+        status: program.status,
+        batches: 0,
+        activeEnrollments: 0,
+        totalEnrollments: 0,
+        completedSessions: 0,
+        totalSessions: 0,
+      });
+    }
 
-  const classRows = classes
-    .map((cls) => {
-      const sectionsInClass = sectionCountByClass.get(cls._id) ?? 0;
-      const teacherMappedSections = teacherSectionCountByClass.get(cls._id) ?? 0;
-      const students = enrollmentCountByClass.get(cls._id) ?? 0;
-      const knownCapacity = capacityByClass.get(cls._id) ?? 0;
-      const avgStudentsPerSection = safeRatio(students, Math.max(sectionsInClass, 1));
+    for (const batch of batches) {
+      const stats = programStats.get(batch.programId);
+      if (stats) stats.batches += 1;
+    }
 
-      return {
-        id: cls._id,
-        className: cls.name,
-        level: cls.level || '-',
-        sections: sectionsInClass,
-        students,
-        teacherCoveragePct: pct(teacherMappedSections, Math.max(sectionsInClass, 1)),
-        knownCapacity,
-        seatUtilizationPct: knownCapacity > 0 ? pct(students, knownCapacity) : 0,
-        avgStudentsPerSection,
-      };
-    })
-    .sort((a, b) => b.students - a.students);
+    for (const enrollment of enrollments) {
+      const stats = programStats.get(enrollment.programId);
+      if (stats) {
+        stats.totalEnrollments += 1;
+        if (enrollment.status === 'ACTIVE') stats.activeEnrollments += 1;
+      }
+    }
 
-  const totalClasses = classes.length;
-  const totalSections = sections.length;
-  const totalEnrollments = enrollments.length;
-  const totalTeacherCount = teachers.length;
-  const sectionlessClasses = classRows.filter((row) => row.sections === 0).length;
-  const overloadedSections = sectionHotspots.filter((row) => row.capacity > 0 && row.utilizationPct > 100).length;
+    for (const session of sessions) {
+      const stats = programStats.get(session.programId);
+      if (stats) {
+        stats.totalSessions += 1;
+        if (session.status === 'COMPLETED') stats.completedSessions += 1;
+      }
+    }
 
-  const sortedEnrollments = classRows.map((row) => row.students).sort((a, b) => b - a);
-  const top20Count = Math.max(1, Math.ceil(sortedEnrollments.length * 0.2));
-  const top20Share = pct(
-    sortedEnrollments.slice(0, top20Count).reduce((sum, value) => sum + value, 0),
-    totalEnrollments
-  );
+    // Batch-level aggregations
+    const batchStats = new Map<string, {
+      batchId: string;
+      programId: string;
+      name: string;
+      facultyId?: string;
+      capacity: number;
+      isActive: boolean;
+      activeEnrollments: number;
+      totalEnrollments: number;
+      completedSessions: number;
+      totalSessions: number;
+      attendanceMarks: number;
+      presentMarks: number;
+      lateMarks: number;
+      absentMarks: number;
+    }>();
 
-  return {
-    summary: {
-      totalClasses,
-      totalSections,
-      totalEnrollments,
-      totalTeacherCount,
-      studentsPerSection: safeRatio(totalEnrollments, Math.max(totalSections, 1)),
-      studentsPerTeacher: safeRatio(totalEnrollments, Math.max(totalTeacherCount, 1)),
-      sectionlessClasses,
-      overloadedSections,
-      enrollmentConcentrationTop20Pct: top20Share,
-      enrollmentDistributionGini: gini(classRows.map((row) => row.students)),
-    },
-    classRows: classRows.slice(0, 20),
-    sectionHotspots,
-  };
+    for (const batch of batches) {
+      batchStats.set(batch._id, {
+        batchId: batch._id,
+        programId: batch.programId,
+        name: batch.name,
+        facultyId: batch.facultyId,
+        capacity: batch.capacity,
+        isActive: batch.isActive,
+        activeEnrollments: 0,
+        totalEnrollments: 0,
+        completedSessions: 0,
+        totalSessions: 0,
+        attendanceMarks: 0,
+        presentMarks: 0,
+        lateMarks: 0,
+        absentMarks: 0,
+      });
+    }
+
+    for (const enrollment of enrollments) {
+      const stats = batchStats.get(enrollment.batchId);
+      if (stats) {
+        stats.totalEnrollments += 1;
+        if (enrollment.status === 'ACTIVE') stats.activeEnrollments += 1;
+      }
+    }
+
+    for (const session of sessions) {
+      const stats = batchStats.get(session.batchId);
+      if (stats) {
+        stats.totalSessions += 1;
+        if (session.status === 'COMPLETED') stats.completedSessions += 1;
+      }
+    }
+
+    for (const att of attendance) {
+      const stats = batchStats.get(att.batchId);
+      if (stats) {
+        stats.attendanceMarks += 1;
+        const status = String(att.status).toUpperCase();
+        if (status === 'PRESENT') stats.presentMarks += 1;
+        else if (status === 'LATE') stats.lateMarks += 1;
+        else if (status === 'ABSENT') stats.absentMarks += 1;
+      }
+    }
+
+    // Monthly trend
+    const monthSeries = buildMonthSeriesForRange(normalizedRange, 12);
+    const enrollmentsByMonth = new Map<string, number>();
+    const sessionsByMonth = new Map<string, number>();
+    for (const key of monthSeries.keys) {
+      enrollmentsByMonth.set(key, 0);
+      sessionsByMonth.set(key, 0);
+    }
+
+    for (const enrollment of enrollments) {
+      const key = monthKey(new Date(enrollment.enrolledOn));
+      if (!enrollmentsByMonth.has(key)) continue;
+      enrollmentsByMonth.set(key, (enrollmentsByMonth.get(key) ?? 0) + 1);
+    }
+
+    for (const session of sessions) {
+      const key = monthKey(new Date(session.sessionDate));
+      if (!sessionsByMonth.has(key)) continue;
+      sessionsByMonth.set(key, (sessionsByMonth.get(key) ?? 0) + 1);
+    }
+
+    // Program rows for table
+    const programRows = Array.from(programStats.values())
+      .map((row) => ({
+        ...row,
+        sessionCompletionRatePct: pct(row.completedSessions, row.totalSessions),
+        enrollmentUtilizationPct: row.batches > 0 ? pct(row.activeEnrollments, row.batches * 30) : 0,
+      }))
+      .sort((a, b) => b.activeEnrollments - a.activeEnrollments);
+
+    // Batch rows for table
+    const batchRows = Array.from(batchStats.values())
+      .map((row) => {
+        const expected = row.activeEnrollments * row.completedSessions;
+        const coverage = pct(row.attendanceMarks, expected);
+        const quality = pct(row.presentMarks + row.lateMarks * 0.5, row.attendanceMarks);
+        const utilization = row.capacity > 0 ? pct(row.activeEnrollments, row.capacity) : 0;
+        const riskScore = round(
+          (100 - quality) * 0.4 + (100 - coverage) * 0.3 + Math.max(0, utilization - 100) * 0.3,
+          2
+        );
+        return {
+          ...row,
+          facultyName: row.facultyId ? teacherNameMap.get(row.facultyId) ?? '-' : '-',
+          attendanceCoveragePct: coverage,
+          attendanceQualityPct: quality,
+          seatUtilizationPct: utilization,
+          riskScore,
+        };
+      })
+      .sort((a, b) => b.riskScore - a.riskScore);
+
+    // Summary calculations
+    const totalPrograms = programs.length;
+    const totalBatches = batches.length;
+    const activePrograms = programs.filter((p) => p.status === 'ACTIVE').length;
+    const activeBatches = batches.filter((b) => b.isActive).length;
+    const totalEnrollments = enrollments.length;
+    const activeEnrollments = enrollments.filter((e) => e.status === 'ACTIVE').length;
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter((s) => s.status === 'COMPLETED').length;
+    const totalAttendanceMarks = attendance.length;
+    const presentMarks = attendance.filter((a) => String(a.status).toUpperCase() === 'PRESENT').length;
+    const totalCapacity = batches.reduce((sum, b) => sum + b.capacity, 0);
+
+    const overloadedBatches = batchRows.filter((r) => r.capacity > 0 && r.seatUtilizationPct > 100).length;
+    const facultyLessBatches = batches.filter((b) => !b.facultyId).length;
+
+    return {
+      summary: {
+        totalPrograms,
+        activePrograms,
+        totalBatches,
+        activeBatches,
+        totalEnrollments,
+        activeEnrollments,
+        totalSessions,
+        completedSessions,
+        sessionCompletionRatePct: pct(completedSessions, totalSessions),
+        attendanceQualityPct: pct(presentMarks, totalAttendanceMarks),
+        seatUtilizationPct: pct(activeEnrollments, totalCapacity),
+        overloadedBatches,
+        facultyLessBatches,
+      },
+      trend: {
+        labels: monthSeries.labels,
+        enrollments: monthSeries.keys.map((key) => enrollmentsByMonth.get(key) ?? 0),
+        sessions: monthSeries.keys.map((key) => sessionsByMonth.get(key) ?? 0),
+      },
+      programRows: programRows.slice(0, 20),
+      batchRows: batchRows.slice(0, 20),
+    };
+  });
 }

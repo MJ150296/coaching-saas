@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission, hasPermission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { CreateCoachingSessionUseCase } from '@/domains/coaching-management/application/use-cases';
-import { MongoCoachingSessionRepository } from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
@@ -43,9 +40,7 @@ export async function GET(request: NextRequest) {
       assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
-    const repo = await initializeAppAndGetService<MongoCoachingSessionRepository>(
-      ServiceKeys.COACHING_SESSION_REPOSITORY
-    );
+    const { coachingSessionRepository: repo } = await getCoachingServices();
 
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
@@ -112,9 +107,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid sessionDate is required' }, { status: 400 });
     }
 
-    const useCase = await initializeAppAndGetService<CreateCoachingSessionUseCase>(
-      ServiceKeys.CREATE_COACHING_SESSION_USE_CASE
-    );
+    const { createCoachingSessionUseCase: useCase } = await getCoachingServices();
 
     const result = await useCase.execute({
       ...body,

@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
+import { MultiSelect } from '@/components/multi-select';
 
 export default function Register() {
   const { data: session } = useSession();
@@ -30,7 +30,6 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [roleSearch, setRoleSearch] = useState('');
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -183,20 +182,18 @@ export default function Register() {
               />
             </div>
 
-            <SearchableDropdown
+            <MultiSelect
               options={Object.values(UserRole).map((role) => ({ value: role, label: role }))}
-              value={formData.role}
-              onChange={(value) =>
+              value={formData.role ? [formData.role] : []}
+              onValueChange={(values) =>
                 setFormData((prev) => ({
                   ...prev,
-                  role: value as UserRole,
+                  role: (values[0] || UserRole.STUDENT) as UserRole,
                 }))
               }
-              search={roleSearch}
-              onSearchChange={setRoleSearch}
               placeholder="Select role"
-              searchPlaceholder="Search role"
               disabled={isLoading || !canRegister}
+              singleSelect
             />
 
             <div className="flex gap-4">

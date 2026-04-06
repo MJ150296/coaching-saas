@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
+async function main() {
+const { spawnSync } = await import("node:child_process");
+const fs = await import("node:fs");
+const os = await import("node:os");
+const path = await import("node:path");
 
 const root = process.cwd();
 const adminRoot = path.join(root, "src", "app", "admin-roles");
@@ -87,3 +88,9 @@ for (const page of failures) {
   console.error(`- ${page}`);
 }
 process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

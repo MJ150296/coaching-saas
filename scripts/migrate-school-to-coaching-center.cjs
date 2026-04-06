@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-const mongoose = require("mongoose");
 
 const uri = process.env.MONGODB_URI;
 if (!uri) {
@@ -60,6 +58,7 @@ async function backfillCenterNames(db, name) {
 }
 
 async function main() {
+  const mongoose = await import("mongoose");
   await mongoose.connect(uri);
   const db = mongoose.connection.db;
 
@@ -87,9 +86,10 @@ async function main() {
 }
 
 main().catch(async (err) => {
+  const mongoose = await import("mongoose");
   console.error(err);
   try {
     await mongoose.disconnect();
-  } catch (_) {}
+  } catch {}
   process.exit(1);
 });

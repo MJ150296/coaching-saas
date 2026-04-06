@@ -73,6 +73,19 @@ export async function connectDB() {
     const opts = {
       bufferCommands: false,
       monitorCommands: enableCommandMonitoring,
+      // MongoDB Atlas SSL/TLS configuration
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      tlsAllowInvalidHostnames: false,
+      // Connection timeout and retry settings
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 30000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      retryWrites: true,
+      retryReads: true,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts);
@@ -80,8 +93,12 @@ export async function connectDB() {
 
   try {
     cached.conn = await cached.promise;
+    const logger = getLogger();
+    logger.info('MongoDB connected successfully');
   } catch (e) {
     cached.promise = null;
+    const logger = getLogger();
+    logger.error('MongoDB connection failed', e as Error);
     throw e;
   }
 

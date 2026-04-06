@@ -34,14 +34,13 @@ export function resolveTenantScope(
   actor: User,
   organizationId?: string,
   coachingCenterId?: string
-): { organizationId?: string; coachingCenterId?: string; coachingCenterId?: string } {
+): { organizationId?: string; coachingCenterId?: string } {
   const normalizedOrganizationId = normalizeTenantId(organizationId);
   const normalizedCoachingCenterId = normalizeTenantId(coachingCenterId);
 
   if (actor.getRole() === UserRole.SUPER_ADMIN) {
     return {
       organizationId: normalizedOrganizationId,
-      coachingCenterId: normalizedCoachingCenterId,
       coachingCenterId: normalizedCoachingCenterId,
     };
   }
@@ -50,7 +49,6 @@ export function resolveTenantScope(
   const resolvedTenantId = normalizedCoachingCenterId ?? actorTenantId;
   return {
     organizationId: normalizedOrganizationId ?? actor.getOrganizationId(),
-    coachingCenterId: resolvedTenantId,
     coachingCenterId: resolvedTenantId,
   };
 }

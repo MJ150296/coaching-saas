@@ -6,22 +6,22 @@ export type JsonRecord = Record<string, unknown>;
 export type OrgOption = { id: string; name: string };
 export type CoachingCenterOption = { id: string; name: string; organizationId: string };
 export type AcademicYearOption = { id: string; name: string; startDate?: string; endDate?: string; organizationId: string; coachingCenterId: string };
-export type ClassOption = { id: string; name: string; level?: string; organizationId: string; coachingCenterId: string };
+export type ProgramOption = { id: string; name: string; code?: string; classLevel?: string; level?: string; organizationId: string; coachingCenterId: string };
+export type BatchOption = { id: string; name: string; programId: string; capacity: number; organizationId: string; coachingCenterId: string };
 export type TeacherOption = { id: string; name: string; email: string; organizationId?: string; coachingCenterId?: string };
 export type StudentOption = { id: string; name: string; email: string; organizationId?: string; coachingCenterId?: string };
 export type FeeTypeOption = { id: string; name: string; amount: number; frequency: string; organizationId: string; coachingCenterId: string };
 export type FeePlanOption = { id: string; name: string; academicYearId: string; organizationId: string; coachingCenterId: string };
-export type ClassLevelOption = { value: string; label: string };
 
 export const STEP_META: StepMeta[] = [
   { title: 'Bootstrap Check', description: 'Verify superadmin is ready before onboarding.' },
   { title: 'Create Organization', description: 'Create tenant root organization.' },
   { title: 'Create Coaching Center', description: 'Create coaching center under organization.' },
   { title: 'Create Admin Accounts', description: 'Create org/coaching/admin operators.' },
-  { title: 'Academic Setup', description: 'Create academic year and class master.' },
-  { title: 'Teacher + Class Teacher', description: 'Create teacher and assign section class teacher.' },
-  { title: 'Fees Setup', description: 'Create fee type/plan and assign plan to class.' },
-  { title: 'Create Student + Parent', description: 'Create student and auto-link parent.' },
+  { title: 'Academic Setup', description: 'Create academic year.' },
+  { title: 'Teacher Setup', description: 'Create teacher.' },
+  { title: 'Fees Setup', description: 'Create fee type/plan and assign plan to program.' },
+  { title: 'Create Student + Parent', description: 'Create student with school grade and auto-link parent.' },
   { title: 'Student Ledger', description: 'Create student fee ledger entry.' },
   { title: 'Parent Handover', description: 'Share credentials and login instructions.' },
 ];
@@ -39,23 +39,6 @@ export const STEP_ALLOWED_ROLES: UserRole[][] = [
   [UserRole.SUPER_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.COACHING_ADMIN, UserRole.ADMIN],
 ];
 
-export const CLASS_LEVEL_OPTIONS: ClassLevelOption[] = [
-  { value: 'LOWER_PRIMARY', label: 'Lower Primary (Classes 1-5)' },
-  { value: 'UPPER_PRIMARY', label: 'Upper Primary (Classes 6-8)' },
-  { value: 'SECONDARY', label: 'Secondary (Classes 9-10)' },
-  { value: 'HIGHER_SECONDARY', label: 'Higher Secondary (Classes 11-12)' },
-];
-
-export function inferClassLevelFromName(className: string): string | undefined {
-  const match = className.match(/\d+/);
-  if (!match) return undefined;
-  const classNumber = Number(match[0]);
-  if (classNumber >= 1 && classNumber <= 5) return 'LOWER_PRIMARY';
-  if (classNumber >= 6 && classNumber <= 8) return 'UPPER_PRIMARY';
-  if (classNumber >= 9 && classNumber <= 10) return 'SECONDARY';
-  if (classNumber >= 11 && classNumber <= 12) return 'HIGHER_SECONDARY';
-  return undefined;
-}
 
 export function extractId(data: JsonRecord): string {
   if (typeof data.id === 'string') return data.id;
@@ -65,7 +48,7 @@ export function extractId(data: JsonRecord): string {
   if (typeof data.feeTypeId === 'string') return data.feeTypeId;
   if (typeof data.feePlanId === 'string') return data.feePlanId;
   if (typeof data.studentId === 'string') return data.studentId;
-  if (typeof data.classMasterId === 'string') return data.classMasterId;
+  if (typeof data.programId === 'string') return data.programId;
   if (typeof data.academicYearId === 'string') return data.academicYearId;
   const user = data.user as { id?: string } | undefined;
   if (typeof user?.id === 'string') return user.id;
@@ -131,17 +114,18 @@ export async function fetchAcademicYears(orgId?: string, schId?: string): Promis
   }
 }
 
-export async function fetchClassMasters(orgId?: string, schId?: string): Promise<ClassOption[]> {
+export async function fetchPrograms(orgId?: string, schId?: string): Promise<ProgramOption[]> {
   try {
     const params = new URLSearchParams();
     if (orgId) params.set('organizationId', orgId);
     if (schId) params.set('coachingCenterId', schId);
     const query = params.toString();
-    const response = await fetch(`/api/admin/class-masters${query ? `?${query}` : ''}`);
+    const response = await fetch(`/api/admin/coaching-programs${query ? `?${query}` : ''}`);
     const data = (await response.json()) as Array<{
       id?: string;
       name?: string;
-      level?: string;
+      code?: string;
+      classLevel?: string;
       organizationId?: string;
       coachingCenterId?: string;
     }>;
@@ -157,7 +141,47 @@ export async function fetchClassMasters(orgId?: string, schId?: string): Promise
       .map((row) => ({
         id: row.id as string,
         name: row.name as string,
-        level: typeof row.level === 'string' ? row.level : undefined,
+        code: typeof row.code === 'string' ? row.code : undefined,
+        classLevel: typeof row.classLevel === 'string' ? row.classLevel : undefined,
+        organizationId: row.organizationId as string,
+        coachingCenterId: row.coachingCenterId as string,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchBatches(orgId?: string, schId?: string, programId?: string): Promise<BatchOption[]> {
+  try {
+    const params = new URLSearchParams();
+    if (orgId) params.set('organizationId', orgId);
+    if (schId) params.set('coachingCenterId', schId);
+    if (programId) params.set('programId', programId);
+    const query = params.toString();
+    const response = await fetch(`/api/admin/coaching-batches${query ? `?${query}` : ''}`);
+    const data = (await response.json()) as Array<{
+      id?: string;
+      name?: string;
+      programId?: string;
+      capacity?: number;
+      organizationId?: string;
+      coachingCenterId?: string;
+    }>;
+    if (!response.ok || !Array.isArray(data)) return [];
+    return data
+      .filter(
+        (row) =>
+          typeof row.id === 'string' &&
+          typeof row.name === 'string' &&
+          typeof row.programId === 'string' &&
+          typeof row.organizationId === 'string' &&
+          typeof row.coachingCenterId === 'string'
+      )
+      .map((row) => ({
+        id: row.id as string,
+        name: row.name as string,
+        programId: row.programId as string,
+        capacity: typeof row.capacity === 'number' ? row.capacity : 0,
         organizationId: row.organizationId as string,
         coachingCenterId: row.coachingCenterId as string,
       }));

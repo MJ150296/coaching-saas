@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission, hasPermission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { MarkCoachingAttendanceUseCase } from '@/domains/coaching-management/application/use-cases';
-import { MongoCoachingAttendanceRepository } from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import {
   CoachingAttendanceStatus,
 } from '@/domains/coaching-management/domain/entities/CoachingAttendance';
@@ -46,9 +43,7 @@ export async function GET(request: NextRequest) {
       assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
-    const repo = await initializeAppAndGetService<MongoCoachingAttendanceRepository>(
-      ServiceKeys.COACHING_ATTENDANCE_REPOSITORY
-    );
+    const { coachingAttendanceRepository: repo } = await getCoachingServices();
 
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
@@ -110,9 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid attendance status is required' }, { status: 400 });
     }
 
-    const useCase = await initializeAppAndGetService<MarkCoachingAttendanceUseCase>(
-      ServiceKeys.MARK_COACHING_ATTENDANCE_USE_CASE
-    );
+    const { markCoachingAttendanceUseCase: useCase } = await getCoachingServices();
 
     const result = await useCase.execute({
       ...body,

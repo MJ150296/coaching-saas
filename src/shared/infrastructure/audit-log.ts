@@ -39,7 +39,6 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
 auditLogSchema.index({ actorId: 1, action: 1, createdAt: -1 });
 
 auditLogSchema.index({ organizationId: 1, coachingCenterId: 1, createdAt: -1 });
-auditLogSchema.index({ organizationId: 1, coachingCenterId: 1, createdAt: -1 });
 
 const getOrCreateAuditLogModel = (): Model<IAuditLogDocument> => {
   if (models.AuditLog) return models.AuditLog as Model<IAuditLogDocument>;

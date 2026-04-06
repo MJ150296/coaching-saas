@@ -1,8 +1,7 @@
 // Server-side analytics helpers with optional MongoDB wiring and mock fallback.
 // Avoid requiring `chart.js` types on the server helper to keep the
 // helper usable when chart deps are not installed. Use a local alias.
-// Make it generic so callers can use `ChartData<'pie'>` etc. without errors.
-type ChartData<T = any> = any;
+type ChartData = Record<string, unknown>;
 import { getCache, setCache } from './simpleCache';
 
 type Series = { label: string; data: number[]; backgroundColor?: string | string[]; borderColor?: string };
@@ -37,24 +36,23 @@ async function getDb() {
   if (!uri) return null;
 
   // cache client on global to avoid multiple connections during hot reload
-  const g = globalThis as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const g = globalThis as { __analyticsMongoClient?: any };
   if (g.__analyticsMongoClient && g.__analyticsMongoClient.isConnected) {
     return g.__analyticsMongoClient.db();
   }
 
   try {
-    // require dynamically so devs without the dependency won't break until they opt-in
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { MongoClient } = require('mongodb');
+    // Use dynamic import for mongodb to avoid requiring the dependency for devs who don't use MongoDB
+    const { MongoClient } = await import('mongodb');
     const client = new MongoClient(uri, { maxPoolSize: 10 });
     await client.connect();
     g.__analyticsMongoClient = client;
     return client.db(process.env.MONGODB_DB || undefined);
-  } catch (err) {
-    // If driver not installed or connection fails, fall back to null (mock)
-    // Do not throw here — caller will use mock data.
-    // eslint-disable-next-line no-console
-    console.warn('analytics.server: MongoDB not available, using mock data.', err);
+      } catch (err) {
+        // If driver not installed or connection fails, fall back to null (mock)
+        // Do not throw here — caller will use mock data.
+        console.warn('analytics.server: MongoDB not available, using mock data.', err);
     return null;
   }
 }
@@ -68,14 +66,14 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
   if (cached) return cached;
   if (!db) {
     // fallback mock
-    const datasets: Series[] = [
-      { label: 'Average Grade', data: randomSeries(months, 70), borderColor: '#2563eb' },
-      { label: 'Pass Rate (%)', data: randomSeries(months, 100), borderColor: '#10b981' },
-    ];
-    const chartData: ChartData<'line'> = {
-      labels,
-      datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })),
-    } as any;
+        const datasets: Series[] = [
+          { label: 'Average Grade', data: randomSeries(months, 70), borderColor: '#2563eb' },
+          { label: 'Pass Rate (%)', data: randomSeries(months, 100), borderColor: '#10b981' },
+        ];
+        const chartData: ChartData = {
+          labels,
+          datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })),
+        };
     const out = { labels, datasets, chartData };
     setCache(cacheKey, out, 30);
     return out;
@@ -103,6 +101,7 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
 
         const rows = await grades.aggregate(pipeline).toArray();
     
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const map = new Map<string, { avgScore?: number; passRate?: number }>(rows.map((r: any) => [String(r.month), r]));
         const avgSeries: number[] = [];
         const passSeries: number[] = [];
@@ -118,18 +117,17 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
           { label: 'Average Grade', data: avgSeries, borderColor: '#2563eb' },
           { label: 'Pass Rate (%)', data: passSeries, borderColor: '#10b981' },
         ];
-        const chartData: ChartData<'line'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })) } as any;
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 30);
         return out;
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.warn('analytics.server.getAcademicOverview failed, using mock', err?.message ?? err);
+      } catch (err) {
+        console.warn('analytics.server.getAcademicOverview failed, using mock', (err as Error)?.message ?? err);
         const datasets: Series[] = [
           { label: 'Average Grade', data: randomSeries(months, 70), borderColor: '#2563eb' },
           { label: 'Pass Rate (%)', data: randomSeries(months, 100), borderColor: '#10b981' },
         ];
-        const chartData: ChartData<'line'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })) } as any;
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, borderColor: s.borderColor, fill: false })) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 30);
         return out;
@@ -148,7 +146,7 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
           { label: 'Collected', data: randomSeries(months, 50000), backgroundColor: '#2563eb' },
           { label: 'Pending', data: randomSeries(months, 20000), backgroundColor: '#f59e0b' },
         ];
-        const chartData: ChartData<'bar'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) } as any;
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 30);
         return out;
@@ -168,6 +166,7 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
         ];
     
         const rows = await payments.aggregate(pipeline).toArray();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const map = new Map<string, Array<{ status?: string; total?: number }>>(rows.map((r: any) => [String(r.month), (r.totals as any[]) ?? []]));
     
         const collected: number[] = [];
@@ -188,18 +187,17 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
           { label: 'Collected', data: collected, backgroundColor: '#2563eb' },
           { label: 'Pending', data: pending, backgroundColor: '#f59e0b' },
         ];
-        const chartData: ChartData<'bar'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) } as any;
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 30);
         return out;
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.warn('analytics.server.getFeesOverview failed, using mock', err?.message ?? err);
+      } catch (err) {
+        console.warn('analytics.server.getFeesOverview failed, using mock', (err as Error)?.message ?? err);
         const datasets: Series[] = [
           { label: 'Collected', data: randomSeries(months, 50000), backgroundColor: '#2563eb' },
           { label: 'Pending', data: randomSeries(months, 20000), backgroundColor: '#f59e0b' },
         ];
-        const chartData: ChartData<'bar'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) } as any;
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor })) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 30);
         return out;
@@ -216,7 +214,8 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
         const datasets: Series[] = [
           { label: 'Users', data: [1200, 120, 800, 60, 12], backgroundColor: ['#2563eb', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'] },
         ];
-        const chartData: ChartData<'pie'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) } as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 60);
         return out;
@@ -227,6 +226,7 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
         const pipeline = [{ $group: { _id: '$role', count: { $sum: 1 } } }];
         const rows = await users.aggregate(pipeline).toArray();
         const roleOrder = ['STUDENT', 'TEACHER', 'PARENT', 'STAFF', 'ADMIN'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const map = new Map<string, number>(rows.map((r: any) => [String(r._id).toUpperCase(), Number(r.count) ?? 0]));
         const labels: string[] = [];
         const data: number[] = [];
@@ -236,26 +236,29 @@ export async function getAcademicOverview(opts?: { months?: number; start?: stri
         }
     
         const datasets: Series[] = [{ label: 'Users', data, backgroundColor: ['#2563eb', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'] }];
-        const chartData: ChartData<'pie'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) } as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 60);
         return out;
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.warn('analytics.server.getUsersOverview failed, using mock', err?.message ?? err);
+      } catch (err) {
+        console.warn('analytics.server.getUsersOverview failed, using mock', (err as Error)?.message ?? err);
         const labels = ['Students', 'Teachers', 'Parents', 'Staff', 'Admins'];
         const datasets: Series[] = [
           { label: 'Users', data: [1200, 120, 800, 60, 12], backgroundColor: ['#2563eb', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6'] },
         ];
-        const chartData: ChartData<'pie'> = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) } as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const chartData: ChartData = { labels, datasets: datasets.map((s) => ({ label: s.label, data: s.data, backgroundColor: s.backgroundColor } as any)) };
         const out = { labels, datasets, chartData };
         setCache(cacheKey, out, 60);
         return out;
       }
     }
     
-    export default {
-      getAcademicOverview,
-      getFeesOverview,
-      getUsersOverview,
-    };
+const analytics = {
+  getAcademicOverview,
+  getFeesOverview,
+  getUsersOverview,
+};
+
+export default analytics;

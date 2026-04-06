@@ -1,17 +1,9 @@
-import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { RoleBasedAppShell } from '@/shared/components/navigation/RoleBasedAppShell';
-import { requireRole } from '@/shared/lib/requireRole';
-
 export default async function CoachingCenterAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireRole([UserRole.COACHING_ADMIN, UserRole.SUPER_ADMIN]);
-
-  return (
-    <RoleBasedAppShell role={(session.user as { role: UserRole }).role}>
-      {children}
-    </RoleBasedAppShell>
-  );
+  // Note: RoleBasedAppShell is already provided by the parent admin-roles/layout.tsx
+  // Adding it here would cause double nesting of sidebar shells
+  return <>{children}</>;
 }

@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission, hasPermission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import { CreateCoachingEnrollmentUseCase } from '@/domains/coaching-management/application/use-cases';
-import { MongoCoachingEnrollmentRepository } from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
+import { getFeeServices } from '@/domains/fee-management/bootstrap/getFeeServices';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
@@ -36,9 +35,7 @@ export async function GET(request: NextRequest) {
       assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
     }
 
-    const repo = await initializeAppAndGetService<MongoCoachingEnrollmentRepository>(
-      ServiceKeys.COACHING_ENROLLMENT_REPOSITORY
-    );
+    const { coachingEnrollmentRepository: repo } = await getCoachingServices();
 
     const filtered = await repo.findByFilters({
       organizationId: tenant.organizationId,
@@ -95,9 +92,23 @@ export async function POST(request: NextRequest) {
 
     assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
-    const useCase = await initializeAppAndGetService<CreateCoachingEnrollmentUseCase>(
-      ServiceKeys.CREATE_COACHING_ENROLLMENT_USE_CASE
-    );
+    // Initialize all required repositories
+    const { coachingEnrollmentRepository: enrollmentRepo } = await getCoachingServices();
+    const {
+      feePlanAssignmentRepository: feePlanAssignmentRepo,
+      feePlanRepository: feePlanRepo,
+      feeTypeRepository: feeTypeRepo,
+      studentFeeLedgerRepository: ledgerRepo,
+    } = await getFeeServices();
+
+    // Create use case with dependencies
+    const useCase = new CreateCoachingEnrollmentUseCase({
+      enrollmentRepo,
+      feePlanAssignmentRepo,
+      feePlanRepo,
+      feeTypeRepo,
+      ledgerRepo,
+    });
 
     const result = await useCase.execute({
       ...body,

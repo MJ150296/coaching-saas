@@ -3,9 +3,11 @@ import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
 import {
   AcademicYearModel,
-  ClassMasterModel,
-  SectionModel,
 } from '@/domains/academic-management/infrastructure/persistence/AcademicSchema';
+import {
+  CoachingProgramModel,
+  CoachingBatchModel,
+} from '@/domains/coaching-management/infrastructure/persistence/CoachingSchema';
 import { FeePlanModel, FeeTypeModel } from '@/domains/fee-management/infrastructure/persistence/FeeSchema';
 import { getActorUser } from '@/shared/infrastructure/actor';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const queryStart = Date.now();
 
-    const [academicYearsRaw, classMastersRaw, sectionsRaw, teachersRaw, studentsRaw, feeTypesRaw, feePlansRaw] =
+    const [academicYearsRaw, programsRaw, batchesRaw, teachersRaw, studentsRaw, feeTypesRaw, feePlansRaw] =
       await Promise.all([
       AcademicYearModel.find({
         organizationId: tenant.organizationId,
@@ -84,21 +86,21 @@ export async function GET(request: NextRequest) {
         .lean<
           Array<{ _id: string; name: string }>
         >(),
-      ClassMasterModel.find({
+      CoachingProgramModel.find({
         organizationId: tenant.organizationId,
         coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ createdAt: -1 })
         .lean<
-          Array<{ _id: string; name: string; level?: string }>
+          Array<{ _id: string; name: string; code?: string; classLevel?: string }>
         >(),
-      SectionModel.find({
+      CoachingBatchModel.find({
         organizationId: tenant.organizationId,
         coachingCenterId: tenant.coachingCenterId,
       })
         .sort({ createdAt: -1 })
         .lean<
-          Array<{ _id: string; name: string; classMasterId: string }>
+          Array<{ _id: string; name: string; programId: string; capacity: number }>
         >(),
       UserModel.find({
         role: UserRole.TEACHER,
@@ -143,15 +145,16 @@ export async function GET(request: NextRequest) {
         id: item._id,
         name: item.name,
       })),
-      classMasters: classMastersRaw.map((item) => ({
+      programs: programsRaw.map((item) => ({
         id: item._id,
         name: item.name,
-        level: item.level,
+        code: item.code,
       })),
-      sections: sectionsRaw.map((item) => ({
+      batches: batchesRaw.map((item) => ({
         id: item._id,
         name: item.name,
-        classMasterId: item.classMasterId,
+        programId: item.programId,
+        capacity: item.capacity,
       })),
       teachers: teachersRaw.map((item) => ({
         id: item._id,
@@ -184,8 +187,8 @@ export async function GET(request: NextRequest) {
       coachingCenterId: tenant.coachingCenterId,
       counts: {
         academicYears: payload.academicYears.length,
-        classMasters: payload.classMasters.length,
-        sections: payload.sections.length,
+        programs: payload.programs.length,
+        batches: payload.batches.length,
         teachers: payload.teachers.length,
         students: payload.students.length,
         feeTypes: payload.feeTypes.length,

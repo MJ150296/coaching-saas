@@ -1,6 +1,6 @@
 /**
  * Admin Users Layout
- * SUPER_ADMIN + ORGANIZATION_ADMIN
+ * SUPER_ADMIN + ORGANIZATION_ADMIN + ADMIN + COACHING_ADMIN
  */
 
 import { UserRole } from "@/domains/user-management/domain/entities/User";
@@ -15,6 +15,8 @@ export default async function AdminUsersLayout({
   const session = await requireRole([
     UserRole.SUPER_ADMIN,
     UserRole.ORGANIZATION_ADMIN,
+    UserRole.COACHING_ADMIN,
+    UserRole.ADMIN,
   ]);
 
   return (

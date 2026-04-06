@@ -16,12 +16,28 @@ export class CreateAcademicYearUseCase {
 
   async execute(request: CreateAcademicYearRequest): Promise<Result<AcademicYear, string>> {
     try {
+      const normalizedName = request.name.trim();
+      const startDate = new Date(request.startDate);
+      const endDate = new Date(request.endDate);
+
+      const duplicateExists = await this.repo.existsByScopeAndPeriod({
+        organizationId: request.organizationId,
+        coachingCenterId: request.coachingCenterId,
+        name: normalizedName,
+        startDate,
+        endDate,
+      });
+
+      if (duplicateExists) {
+        return Result.fail('Academic year already exists for this coaching center with the same name and dates.');
+      }
+
       const year = AcademicYear.create(generateId(), {
         organizationId: request.organizationId,
         coachingCenterId: request.coachingCenterId,
-        name: request.name,
-        startDate: new Date(request.startDate),
-        endDate: new Date(request.endDate),
+        name: normalizedName,
+        startDate,
+        endDate,
       });
 
       await this.repo.save(year);

@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.ts",
+    "src/app/api/admin/organizations/route.ts",
+    "src/app/api/admin/coaching-centers/route.ts",
+    "src/app/api/admin/users/route.ts",
+    "src/shared/bootstrap/**/*.ts",
+    "src/shared/domain/**/*.ts",
+    "src/shared/infrastructure/**/*.ts",
+    "src/shared/lib/utils.ts",
+    "src/shared/lib/client/adminTenantReferenceData.ts",
+    "src/domains/user-management/**/*.ts",
+    "src/domains/organization-management/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
+}

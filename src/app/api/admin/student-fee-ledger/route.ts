@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { CreateStudentFeeLedgerUseCase } from '@/domains/fee-management/application/use-cases';
+import { getFeeServices } from '@/domains/fee-management/bootstrap/getFeeServices';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
@@ -18,9 +16,7 @@ export async function POST(request: NextRequest) {
     }
     assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
-    const useCase = await initializeAppAndGetService<CreateStudentFeeLedgerUseCase>(
-      ServiceKeys.CREATE_STUDENT_FEE_LEDGER_USE_CASE
-    );
+    const { createStudentFeeLedgerUseCase: useCase } = await getFeeServices();
     const result = await useCase.execute({ ...body, ...tenant });
 
     if (result.getIsFailure()) {

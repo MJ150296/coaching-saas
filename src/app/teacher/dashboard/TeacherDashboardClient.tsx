@@ -1,0 +1,176 @@
+'use client';
+
+import { useCallback, useMemo, useState } from 'react';
+import { Badge } from '@/shared/components/ui/Badge';
+import { useToast } from '@/shared/components/ui/ToastProvider';
+import { DashboardControls, isWithinDateRange } from '@/shared/components/dashboard/DashboardControls';
+import type { TeacherDashboardPayload, TeacherDashboardTaskItem } from '@/shared/lib/teacher-dashboard.server';
+
+type TeacherDashboardClientProps = {
+  initialData: TeacherDashboardPayload;
+  firstName: string;
+};
+
+function taskVariant(status: TeacherDashboardTaskItem['status']): 'yellow' | 'blue' | 'green' {
+  if (status === 'completed') return 'green';
+  if (status === 'in-review') return 'blue';
+  return 'yellow';
+}
+
+export default function TeacherDashboardClient({ initialData, firstName }: TeacherDashboardClientProps) {
+  const { toastMessage } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [data, setData] = useState<TeacherDashboardPayload>(initialData);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/teacher/dashboard');
+      const body = await response.json();
+      if (!response.ok) {
+        toastMessage(body?.error || 'Failed to load teacher dashboard');
+        return;
+      }
+
+      setData({
+        summary: {
+          totalPrograms: Number(body?.summary?.totalPrograms ?? 0),
+          totalStudents: Number(body?.summary?.totalStudents ?? 0),
+          pendingTasks: Number(body?.summary?.pendingTasks ?? 0),
+          completedTasks: Number(body?.summary?.completedTasks ?? 0),
+        },
+        todayClasses: Array.isArray(body?.todayClasses) ? body.todayClasses : [],
+        tasks: Array.isArray(body?.tasks) ? body.tasks : [],
+      });
+    } catch (error) {
+      toastMessage(`Error: ${String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [toastMessage]);
+
+  const filteredTodayClasses = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return data.todayClasses.filter((item) =>
+      !q || [item.programLabel, item.subject, item.slot, item.room].join(' ').toLowerCase().includes(q)
+    );
+  }, [data.todayClasses, query]);
+
+  const filteredTasks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return data.tasks.filter((item) => {
+      const matchesQuery = !q || [item.title, item.programLabel, item.status].join(' ').toLowerCase().includes(q);
+      const matchesDate = isWithinDateRange(item.dueDate, dateFrom, dateTo);
+      return matchesQuery && matchesDate;
+    });
+  }, [data.tasks, query, dateFrom, dateTo]);
+
+  const summary = useMemo(() => data.summary, [data.summary]);
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-emerald-50/25 to-teal-50/40 py-8">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+        <section className="rounded-2xl border border-emerald-100 bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 shadow-lg shadow-emerald-200/70">
+          <h1 className="text-2xl font-bold text-white">Welcome back, {firstName}</h1>
+          <p className="mt-2 text-sm text-emerald-50">
+            Today&#39;s classroom overview, grading queue, and timetable at one place.
+          </p>
+          <div className="mt-4">
+            <DashboardControls
+              query={query}
+              onQueryChange={setQuery}
+              dateFrom={dateFrom}
+              onDateFromChange={setDateFrom}
+              dateTo={dateTo}
+              onDateToChange={setDateTo}
+              onRefresh={loadDashboard}
+              loading={loading}
+              searchPlaceholder="Search programs or tasks"
+            />
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Programs Today" value={summary.totalPrograms} tone="blue" loading={loading} />
+          <StatCard title="Students Today" value={summary.totalStudents} tone="green" loading={loading} />
+          <StatCard title="Pending Tasks" value={summary.pendingTasks} tone="yellow" loading={loading} />
+          <StatCard title="Completed" value={summary.completedTasks} tone="gray" loading={loading} />
+        </section>
+
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Today&#39;s Programs</h2>
+              <Badge variant="green">{filteredTodayClasses.length} sessions</Badge>
+            </div>
+            <div className="mt-4 space-y-3">
+              {filteredTodayClasses.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{item.subject} · {item.programLabel}</p>
+                    <p className="text-sm font-medium text-slate-600">{item.slot}</p>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">Room: {item.room} · Students: {item.studentCount}</p>
+                </div>
+              ))}
+              {filteredTodayClasses.length === 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                  {loading ? 'Loading programs...' : 'No programs found for today.'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/70 lg:col-span-2">
+            <h2 className="text-lg font-semibold text-slate-900">Task Queue</h2>
+            <div className="mt-4 space-y-3">
+              {filteredTasks.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-slate-900">{item.title}</p>
+                    <Badge variant={taskVariant(item.status)}>{item.status.replace('-', ' ')}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">{item.programLabel} · Due {new Date(item.dueDate).toLocaleDateString()}</p>
+                </div>
+              ))}
+              {filteredTasks.length === 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-600">
+                  {loading ? 'Loading tasks...' : 'No tasks available.'}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  tone,
+  loading,
+}: {
+  title: string;
+  value: number;
+  tone: 'gray' | 'blue' | 'green' | 'yellow';
+  loading: boolean;
+}) {
+  const toneClass: Record<typeof tone, string> = {
+    gray: 'border-slate-200 bg-slate-50/80',
+    blue: 'border-blue-200 bg-blue-50/80',
+    green: 'border-emerald-200 bg-emerald-50/80',
+    yellow: 'border-amber-200 bg-amber-50/80',
+  };
+
+  return (
+    <div className={`rounded-2xl border p-5 shadow-sm ${toneClass[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="mt-2 text-3xl font-bold text-slate-900">{loading ? '...' : value.toLocaleString()}</p>
+    </div>
+  );
+}

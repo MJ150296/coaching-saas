@@ -2,13 +2,11 @@
  * NextAuth Configuration
  */
 
+import { getUserServices } from '@/domains/user-management/bootstrap/getUserServices';
+import { authConfig } from './auth-config';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
 import { PasswordEncryption } from '@/domains/user-management/infrastructure/external-services/PasswordEncryption';
-import { normalizeUserRole } from '@/domains/user-management/domain/entities/User';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -24,9 +22,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const userRepository = await initializeAppAndGetService<MongoUserRepository>(
-            ServiceKeys.USER_REPOSITORY
-          );
+          const { userRepository } = await getUserServices();
 
           const user = await userRepository.findByEmail(credentials.email);
 
@@ -63,43 +59,5 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = normalizeUserRole(user.role) ?? undefined;
-        token.organizationId = user.organizationId;
-        token.coachingCenterId = user.coachingCenterId ?? user.coachingCenterId;
-        token.coachingCenterId = user.coachingCenterId ?? user.coachingCenterId;
-      } else if (token.role) {
-        token.role = normalizeUserRole(token.role) ?? undefined;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        if (token.role) {
-          session.user.role = token.role;
-        }
-        session.user.organizationId = token.organizationId;
-        session.user.coachingCenterId = token.coachingCenterId ?? token.coachingCenterId;
-        session.user.coachingCenterId = token.coachingCenterId ?? token.coachingCenterId;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  jwt: {
-    secret: process.env.NEXTAUTH_SECRET,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  secret: process.env.NEXTAUTH_SECRET,
+  ...authConfig,
 };

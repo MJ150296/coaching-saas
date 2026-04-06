@@ -30,8 +30,8 @@ export interface IFeePlanAssignmentDocument {
   coachingCenterId: string;
   academicYearId: string;
   feePlanId: string;
-  classMasterId: string;
-  sectionId?: string;
+  programId: string;
+  batchId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,8 +119,8 @@ const feePlanAssignmentSchema = new Schema(
     coachingCenterId: { type: String, index: true },
     academicYearId: { type: String, required: true, index: true },
     feePlanId: { type: String, required: true },
-    classMasterId: { type: String, required: true },
-    sectionId: { type: String },
+    programId: { type: String, required: true },
+    batchId: { type: String },
   },
   { timestamps: true }
 );
@@ -195,7 +195,7 @@ feePlanSchema.index(
 );
 
 feePlanAssignmentSchema.index(
-  { organizationId: 1, coachingCenterId: 1, academicYearId: 1, feePlanId: 1, classMasterId: 1, sectionId: 1 },
+  { organizationId: 1, coachingCenterId: 1, academicYearId: 1, feePlanId: 1, programId: 1, batchId: 1 },
   { unique: true }
 );
 

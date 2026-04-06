@@ -1,5 +1,5 @@
 import { Badge } from '@/shared/components/ui/Badge';
-import { SearchableDropdown } from '@/shared/components/ui/SearchableDropdown';
+import { MultiSelect } from '@/components/multi-select';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 
 type Option = { value: string; label: string };
@@ -36,7 +36,9 @@ export function TenantSelectorsCard({
   canSelectCoachingCenter,
   organizationId,
   coachingCenterId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   organizationSearch,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   coachingCenterSearch,
   tenantOrganizationOptions,
   tenantCoachingCenterOptions,
@@ -44,7 +46,9 @@ export function TenantSelectorsCard({
   recentCoachingCenterId,
   onOrganizationChange,
   onCoachingCenterChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onOrganizationSearchChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCoachingCenterSearchChange,
   onRefreshOrganizations,
   onRefreshCoachingCenters,
@@ -76,17 +80,17 @@ export function TenantSelectorsCard({
             <div className="h-10 w-full animate-pulse rounded-lg bg-gray-100" />
           </div>
         ) : (
-          <SearchableDropdown
-            options={tenantOrganizationOptions}
-            value={organizationId}
-            onChange={onOrganizationChange}
-            search={organizationSearch}
-            onSearchChange={onOrganizationSearchChange}
-            placeholder={canSelectOrganization ? 'Select organization' : 'Organization prefilled'}
-            searchPlaceholder="Search organization by name or ID"
-            disabled={!canSelectOrganization}
-            label="Organization"
-          />
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700">Organization</label>
+            <MultiSelect
+              options={tenantOrganizationOptions}
+              value={organizationId ? [organizationId] : []}
+              onValueChange={(values) => onOrganizationChange(values[0] || '')}
+              placeholder={canSelectOrganization ? 'Select organization' : 'Organization prefilled'}
+              disabled={!canSelectOrganization}
+              singleSelect
+            />
+          </div>
         )}
 
         {showCoachingCenterSkeleton ? (
@@ -96,23 +100,23 @@ export function TenantSelectorsCard({
             <div className="h-10 w-full animate-pulse rounded-lg bg-gray-100" />
           </div>
         ) : (
-          <SearchableDropdown
-            options={tenantCoachingCenterOptions}
-            value={coachingCenterId}
-            onChange={onCoachingCenterChange}
-            search={coachingCenterSearch}
-            onSearchChange={onCoachingCenterSearchChange}
-            placeholder={
-              !organizationId
-                ? 'Select organization first'
-                : canSelectCoachingCenter
-                  ? 'Select coaching center'
-                  : 'Coaching center prefilled'
-            }
-            searchPlaceholder="Search coaching center by name or ID"
-            disabled={!organizationId || !canSelectCoachingCenter}
-            label="Coaching Center"
-          />
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700">Coaching Center</label>
+            <MultiSelect
+              options={tenantCoachingCenterOptions}
+              value={coachingCenterId ? [coachingCenterId] : []}
+              onValueChange={(values) => onCoachingCenterChange(values[0] || '')}
+              placeholder={
+                !organizationId
+                  ? 'Select organization first'
+                  : canSelectCoachingCenter
+                    ? 'Select coaching center'
+                    : 'Coaching center prefilled'
+              }
+              disabled={!organizationId || !canSelectCoachingCenter}
+              singleSelect
+            />
+          </div>
         )}
       </div>
 

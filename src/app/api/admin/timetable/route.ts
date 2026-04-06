@@ -6,34 +6,22 @@ import { getActorUser } from '@/shared/infrastructure/actor';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { initializeApp } from '@/shared/bootstrap/init';
 import {
-  ISubjectAllocationDocument,
-  SubjectAllocationModel,
   TimetableEntryModel,
 } from '@/domains/academic-management/infrastructure/persistence/AcademicSchema';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
 
-const DEFAULT_WORKING_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
 
-interface TimetableGenerationPayload {
+interface TimetableEntryPayload {
   organizationId?: string;
   coachingCenterId?: string;
   academicYearId?: string;
-  classMasterId?: string;
-  sectionId?: string;
-  periodsPerDay?: number;
-  workingDays?: string[];
-}
-
-interface AllocationSlot {
-  sourceAllocationId: string;
-  subjectName: string;
+  programId?: string;
+  batchId?: string;
+  dayOfWeek?: string;
+  periodNumber?: number;
+  subjectName?: string;
   teacherId?: string;
-}
-
-interface TimetableSlot extends AllocationSlot {
-  dayOfWeek: string;
-  periodNumber: number;
 }
 
 function normalizeId(value?: string): string | undefined {
@@ -42,126 +30,7 @@ function normalizeId(value?: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function normalizeWorkingDays(workingDays?: string[]): string[] {
-  if (!Array.isArray(workingDays) || workingDays.length === 0) {
-    return DEFAULT_WORKING_DAYS;
-  }
 
-  const normalized = workingDays
-    .map((day) => String(day).trim().toUpperCase())
-    .filter((day) => day.length > 0);
-
-  if (normalized.length === 0) {
-    return DEFAULT_WORKING_DAYS;
-  }
-
-  const uniqueDays = Array.from(new Set(normalized));
-  return uniqueDays;
-}
-
-function expandAllocations(allocations: ISubjectAllocationDocument[]): AllocationSlot[] {
-  const slots: AllocationSlot[] = [];
-  for (const allocation of allocations) {
-    const periods = Number(allocation.weeklyPeriods ?? 1);
-    const safePeriods = Number.isFinite(periods) && periods > 0 ? Math.floor(periods) : 1;
-
-    for (let index = 0; index < safePeriods; index += 1) {
-      slots.push({
-        sourceAllocationId: allocation._id,
-        subjectName: allocation.subjectName,
-        teacherId: allocation.teacherId,
-      });
-    }
-  }
-  return slots;
-}
-
-function buildTimetable(
-  allocations: ISubjectAllocationDocument[],
-  workingDays: string[],
-  periodsPerDay: number
-): TimetableSlot[] {
-  const expanded = expandAllocations(allocations);
-  const capacity = workingDays.length * periodsPerDay;
-
-  if (expanded.length > capacity) {
-    throw new Error(
-      `Timetable capacity exceeded: ${expanded.length} requested slots for ${capacity} available slots.`
-    );
-  }
-
-  const remainingByAllocation = new Map<string, number>();
-  const slotByAllocation = new Map<string, AllocationSlot>();
-  for (const slot of expanded) {
-    remainingByAllocation.set(
-      slot.sourceAllocationId,
-      (remainingByAllocation.get(slot.sourceAllocationId) ?? 0) + 1
-    );
-    slotByAllocation.set(slot.sourceAllocationId, slot);
-  }
-
-  const keys = Array.from(remainingByAllocation.keys()).sort((left, right) => {
-    const leftCount = remainingByAllocation.get(left) ?? 0;
-    const rightCount = remainingByAllocation.get(right) ?? 0;
-    if (rightCount !== leftCount) return rightCount - leftCount;
-    return left.localeCompare(right);
-  });
-
-  const daySubjectUsage = new Map<string, Set<string>>();
-  const output: TimetableSlot[] = [];
-  let pointer = 0;
-
-  for (const dayOfWeek of workingDays) {
-    daySubjectUsage.set(dayOfWeek, new Set<string>());
-
-    for (let periodNumber = 1; periodNumber <= periodsPerDay; periodNumber += 1) {
-      const dayUsage = daySubjectUsage.get(dayOfWeek);
-      if (!dayUsage) break;
-
-      let selectedKey: string | undefined;
-
-      for (let step = 0; step < keys.length; step += 1) {
-        const key = keys[(pointer + step) % keys.length];
-        const remaining = remainingByAllocation.get(key) ?? 0;
-        if (remaining <= 0) continue;
-        if (dayUsage.has(key)) continue;
-        selectedKey = key;
-        pointer = (pointer + step + 1) % keys.length;
-        break;
-      }
-
-      if (!selectedKey) {
-        for (let step = 0; step < keys.length; step += 1) {
-          const key = keys[(pointer + step) % keys.length];
-          const remaining = remainingByAllocation.get(key) ?? 0;
-          if (remaining <= 0) continue;
-          selectedKey = key;
-          pointer = (pointer + step + 1) % keys.length;
-          break;
-        }
-      }
-
-      if (!selectedKey) {
-        continue;
-      }
-
-      const remaining = (remainingByAllocation.get(selectedKey) ?? 0) - 1;
-      remainingByAllocation.set(selectedKey, remaining);
-      dayUsage.add(selectedKey);
-
-      const allocation = slotByAllocation.get(selectedKey);
-      if (!allocation) continue;
-
-      output.push({
-        ...allocation,
-        dayOfWeek,
-        periodNumber,
-      });
-    }
-  }
-
-  return output;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -182,14 +51,14 @@ export async function GET(request: NextRequest) {
     }
 
     const academicYearId = normalizeId(request.nextUrl.searchParams.get('academicYearId') || undefined);
-    const classMasterId = normalizeId(request.nextUrl.searchParams.get('classMasterId') || undefined);
-    const sectionId = normalizeId(request.nextUrl.searchParams.get('sectionId') || undefined);
+    const programId = normalizeId(request.nextUrl.searchParams.get('programId') || undefined);
+    const batchId = normalizeId(request.nextUrl.searchParams.get('batchId') || undefined);
     const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'));
     const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'));
 
-    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !classMasterId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !programId) {
       return NextResponse.json(
-        { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId and programId are required' },
         { status: 400 }
       );
     }
@@ -200,12 +69,12 @@ export async function GET(request: NextRequest) {
       organizationId: tenant.organizationId,
       coachingCenterId: tenant.coachingCenterId,
       academicYearId,
-      classMasterId,
+      programId,
     };
 
-    const query = sectionId
-      ? { ...baseQuery, sectionId }
-      : { ...baseQuery, sectionId: { $exists: false } };
+    const query = batchId
+      ? { ...baseQuery, batchId }
+      : { ...baseQuery, batchId: { $exists: false } };
 
     let findQuery = TimetableEntryModel.find(query).sort({ dayOfWeek: 1, periodNumber: 1 });
     if (typeof offset === 'number' && offset > 0) {
@@ -227,7 +96,8 @@ export async function GET(request: NextRequest) {
         periodNumber: entry.periodNumber,
         subjectName: entry.subjectName,
         teacherId: entry.teacherId,
-        sourceAllocationId: entry.sourceAllocationId,
+        programId: entry.programId,
+        batchId: entry.batchId,
       })),
       total,
       limit: limit ?? null,
@@ -243,7 +113,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const actor = await requireActorWithPermission(Permission.CREATE_SUBJECT_ALLOCATION);
-    const body = (await request.json()) as TimetableGenerationPayload;
+    const body = (await request.json()) as TimetableEntryPayload;
 
     const tenant = resolveTenantScope(actor, body.organizationId, body.coachingCenterId);
     if (actor.getRole() === UserRole.SUPER_ADMIN && (!tenant.organizationId || !tenant.coachingCenterId)) {
@@ -252,84 +122,67 @@ export async function POST(request: NextRequest) {
     assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
     const academicYearId = normalizeId(body.academicYearId);
-    const classMasterId = normalizeId(body.classMasterId);
-    const sectionId = normalizeId(body.sectionId);
-    const periodsPerDay =
-      Number.isFinite(Number(body.periodsPerDay)) && Number(body.periodsPerDay) > 0
-        ? Math.floor(Number(body.periodsPerDay))
-        : 8;
-    const workingDays = normalizeWorkingDays(body.workingDays);
+    const programId = normalizeId(body.programId);
+    const batchId = normalizeId(body.batchId);
+    const dayOfWeek = typeof body.dayOfWeek === 'string' ? body.dayOfWeek.trim().toUpperCase() : undefined;
+    const periodNumber = Number(body.periodNumber);
+    const subjectName = typeof body.subjectName === 'string' ? body.subjectName.trim() : undefined;
+    const teacherId = normalizeId(body.teacherId);
 
-    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !classMasterId) {
+    if (!tenant.organizationId || !tenant.coachingCenterId || !academicYearId || !programId || !dayOfWeek || !periodNumber || !subjectName) {
       return NextResponse.json(
-        { error: 'organizationId, coachingCenterId, academicYearId and classMasterId are required' },
+        { error: 'organizationId, coachingCenterId, academicYearId, programId, dayOfWeek, periodNumber and subjectName are required' },
         { status: 400 }
       );
+    }
+
+    if (!Number.isFinite(periodNumber) || periodNumber < 1) {
+      return NextResponse.json({ error: 'periodNumber must be a positive integer' }, { status: 400 });
+    }
+
+    const validDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    if (!validDays.includes(dayOfWeek)) {
+      return NextResponse.json({ error: 'dayOfWeek must be a valid day' }, { status: 400 });
     }
 
     await initializeApp();
 
-    const baseAllocationQuery = {
+    const existingEntry = await TimetableEntryModel.findOne({
       organizationId: tenant.organizationId,
       coachingCenterId: tenant.coachingCenterId,
       academicYearId,
-      classMasterId,
-    };
+      programId,
+      batchId: batchId || { $exists: false },
+      dayOfWeek,
+      periodNumber,
+    });
 
-    const allocations = sectionId
-      ? await SubjectAllocationModel.find({
-          ...baseAllocationQuery,
-          $or: [{ sectionId }, { sectionId: { $exists: false } }],
-        })
-      : await SubjectAllocationModel.find({ ...baseAllocationQuery, sectionId: { $exists: false } });
-
-    if (allocations.length === 0) {
+    if (existingEntry) {
       return NextResponse.json(
-        { error: 'No subject allocations found for the selected scope' },
-        { status: 400 }
+        { error: 'Timetable entry already exists for this slot' },
+        { status: 409 }
       );
     }
 
-    const timetable = buildTimetable(allocations, workingDays, periodsPerDay);
-
-    if (sectionId) {
-      await TimetableEntryModel.deleteMany({
-        organizationId: tenant.organizationId,
-        coachingCenterId: tenant.coachingCenterId,
-        academicYearId,
-        classMasterId,
-        sectionId,
-      });
-    } else {
-      await TimetableEntryModel.deleteMany({
-        organizationId: tenant.organizationId,
-        coachingCenterId: tenant.coachingCenterId,
-        academicYearId,
-        classMasterId,
-        sectionId: { $exists: false },
-      });
-    }
-
-    await TimetableEntryModel.insertMany(
-      timetable.map((slot) => ({
-        _id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-        organizationId: tenant.organizationId,
-        coachingCenterId: tenant.coachingCenterId,
-        academicYearId,
-        classMasterId,
-        sectionId,
-        dayOfWeek: slot.dayOfWeek,
-        periodNumber: slot.periodNumber,
-        subjectName: slot.subjectName,
-        teacherId: slot.teacherId,
-        sourceAllocationId: slot.sourceAllocationId,
-      }))
-    );
+    const entryId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const saved = await TimetableEntryModel.create({
+      _id: entryId,
+      organizationId: tenant.organizationId,
+      coachingCenterId: tenant.coachingCenterId,
+      academicYearId,
+      programId,
+      batchId: batchId || undefined,
+      dayOfWeek,
+      periodNumber,
+      subjectName,
+      teacherId: teacherId || undefined,
+    });
 
     await logAuditEvent({
       actorId: actor.getId(),
       actorRole: actor.getRole(),
-      action: 'GENERATE_TIMETABLE',
+      action: 'CREATE_TIMETABLE_ENTRY',
+      targetId: entryId,
       organizationId: tenant.organizationId,
       coachingCenterId: tenant.coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
@@ -337,10 +190,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      generatedSlots: timetable.length,
-      workingDays,
-      periodsPerDay,
-    });
+      entry: {
+        id: saved._id,
+        dayOfWeek: saved.dayOfWeek,
+        periodNumber: saved.periodNumber,
+        subjectName: saved.subjectName,
+        teacherId: saved.teacherId,
+        programId: saved.programId,
+        batchId: saved.batchId,
+      },
+    }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;

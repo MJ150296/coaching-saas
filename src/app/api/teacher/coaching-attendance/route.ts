@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCoachingServices } from '@/domains/coaching-management/bootstrap/getCoachingServices';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
 import { getActorUser } from '@/shared/infrastructure/actor';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
 import { parsePositiveIntParam } from '@/shared/lib/utils';
 import {
   CoachingAttendanceStatus,
 } from '@/domains/coaching-management/domain/entities/CoachingAttendance';
-import {
-  MarkCoachingAttendanceUseCase,
-} from '@/domains/coaching-management/application/use-cases';
-import {
-  MongoCoachingAttendanceRepository,
-  MongoCoachingSessionRepository,
-} from '@/domains/coaching-management/infrastructure/persistence/MongoCoachingRepository';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 
 function parseAttendanceStatus(value: unknown): CoachingAttendanceStatus | undefined {
@@ -56,9 +48,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const sessionRepo = await initializeAppAndGetService<MongoCoachingSessionRepository>(
-      ServiceKeys.COACHING_SESSION_REPOSITORY
-    );
+    const { coachingSessionRepository: sessionRepo } = await getCoachingServices();
     const session = await sessionRepo.findById(requestedSessionId);
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -72,9 +62,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const attendanceRepo = await initializeAppAndGetService<MongoCoachingAttendanceRepository>(
-      ServiceKeys.COACHING_ATTENDANCE_REPOSITORY
-    );
+    const { coachingAttendanceRepository: attendanceRepo } = await getCoachingServices();
 
     const filtered = await attendanceRepo.findByFilters({
       organizationId,
@@ -150,9 +138,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'studentId is required' }, { status: 400 });
     }
 
-    const sessionRepo = await initializeAppAndGetService<MongoCoachingSessionRepository>(
-      ServiceKeys.COACHING_SESSION_REPOSITORY
-    );
+    const { coachingSessionRepository: sessionRepo } = await getCoachingServices();
     const session = await sessionRepo.findById(sessionId);
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -166,9 +152,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const useCase = await initializeAppAndGetService<MarkCoachingAttendanceUseCase>(
-      ServiceKeys.MARK_COACHING_ATTENDANCE_USE_CASE
-    );
+    const { markCoachingAttendanceUseCase: useCase } = await getCoachingServices();
 
     const result = await useCase.execute({
       organizationId,

@@ -1,23 +1,36 @@
 import { connectDB } from '@/shared/infrastructure/database';
-import { AcademicYearRepository, ClassMasterRepository, SectionRepository, SubjectAllocationRepository } from '../../domain/repositories';
+import { AcademicYearRepository } from '../../domain/repositories';
 import { AcademicYear } from '../../domain/entities/AcademicYear';
-import { ClassMaster } from '../../domain/entities/ClassMaster';
-import { Section } from '../../domain/entities/Section';
-import { SubjectAllocation } from '../../domain/entities/SubjectAllocation';
 import {
   AcademicYearModel,
-  ClassMasterModel,
-  SectionModel,
-  SubjectAllocationModel,
   IAcademicYearDocument,
-  IClassMasterDocument,
-  ISectionDocument,
-  ISubjectAllocationDocument,
 } from './AcademicSchema';
 
 export class MongoAcademicYearRepository implements AcademicYearRepository {
   private async ensureConnection() {
     await connectDB();
+  }
+
+  async existsByScopeAndPeriod(input: {
+    organizationId: string;
+    coachingCenterId: string;
+    name: string;
+    startDate: Date;
+    endDate: Date;
+    excludeId?: string;
+  }): Promise<boolean> {
+    await this.ensureConnection();
+
+    const duplicate = await AcademicYearModel.findOne({
+      organizationId: input.organizationId,
+      coachingCenterId: input.coachingCenterId,
+      name: input.name.trim(),
+      startDate: input.startDate,
+      endDate: input.endDate,
+      ...(input.excludeId ? { _id: { $ne: input.excludeId } } : {}),
+    });
+
+    return Boolean(duplicate);
   }
 
   async save(entity: AcademicYear): Promise<void> {
@@ -120,297 +133,6 @@ export class MongoAcademicYearRepository implements AcademicYearRepository {
   async exists(id: string): Promise<boolean> {
     await this.ensureConnection();
     const count = await AcademicYearModel.countDocuments({ _id: id });
-    return count > 0;
-  }
-}
-
-export class MongoClassMasterRepository implements ClassMasterRepository {
-  private async ensureConnection() {
-    await connectDB();
-  }
-
-  async save(entity: ClassMaster): Promise<void> {
-    await this.ensureConnection();
-    await ClassMasterModel.findByIdAndUpdate(
-      entity.getId(),
-      {
-        _id: entity.getId(),
-        organizationId: entity.getOrganizationId(),
-        coachingCenterId: entity.getCoachingCenterId(),
-        name: entity.getName(),
-        level: entity.getLevel(),
-      },
-      { upsert: true }
-    );
-  }
-
-  async findById(id: string): Promise<ClassMaster | null> {
-    await this.ensureConnection();
-    const doc = (await ClassMasterModel.findById(id)) as IClassMasterDocument | null;
-    if (!doc) return null;
-    return new ClassMaster(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      name: doc.name,
-      level: doc.level,
-    }, doc.createdAt, doc.updatedAt);
-  }
-
-  async findAll(): Promise<ClassMaster[]> {
-    await this.ensureConnection();
-    const docs = (await ClassMasterModel.find({})) as IClassMasterDocument[];
-    return docs.map((doc) => new ClassMaster(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      name: doc.name,
-      level: doc.level,
-    }, doc.createdAt, doc.updatedAt));
-  }
-
-  async findByFilters(filters: {
-    organizationId?: string;
-    coachingCenterId?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<ClassMaster[]> {
-    await this.ensureConnection();
-    const query: {
-      organizationId?: string;
-      coachingCenterId?: string;
-    } = {};
-
-    if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
-
-    let dbQuery = ClassMasterModel.find(query);
-    if (typeof filters.offset === 'number' && filters.offset > 0) {
-      dbQuery = dbQuery.skip(filters.offset);
-    }
-    if (typeof filters.limit === 'number' && filters.limit > 0) {
-      dbQuery = dbQuery.limit(filters.limit);
-    }
-
-    const docs = (await dbQuery) as IClassMasterDocument[];
-    return docs.map((doc) => new ClassMaster(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      name: doc.name,
-      level: doc.level,
-    }, doc.createdAt, doc.updatedAt));
-  }
-
-  async countByFilters(filters: {
-    organizationId?: string;
-    coachingCenterId?: string;
-  }): Promise<number> {
-    await this.ensureConnection();
-    const query: {
-      organizationId?: string;
-      coachingCenterId?: string;
-    } = {};
-    if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
-    return ClassMasterModel.countDocuments(query);
-  }
-
-  async delete(id: string): Promise<void> {
-    await this.ensureConnection();
-    await ClassMasterModel.findByIdAndDelete(id);
-  }
-
-  async exists(id: string): Promise<boolean> {
-    await this.ensureConnection();
-    const count = await ClassMasterModel.countDocuments({ _id: id });
-    return count > 0;
-  }
-}
-
-export class MongoSectionRepository implements SectionRepository {
-  private async ensureConnection() {
-    await connectDB();
-  }
-
-  async save(entity: Section): Promise<void> {
-    await this.ensureConnection();
-    await SectionModel.findByIdAndUpdate(
-      entity.getId(),
-      {
-        _id: entity.getId(),
-        organizationId: entity.getOrganizationId(),
-        coachingCenterId: entity.getCoachingCenterId(),
-        classMasterId: entity.getClassMasterId(),
-        name: entity.getName(),
-        capacity: entity.getCapacity(),
-        roomNumber: entity.getRoomNumber(),
-        shift: entity.getShift(),
-        classTeacherId: entity.getClassTeacherId(),
-      },
-      { upsert: true }
-    );
-  }
-
-  async findById(id: string): Promise<Section | null> {
-    await this.ensureConnection();
-    const doc = (await SectionModel.findById(id)) as ISectionDocument | null;
-    if (!doc) return null;
-    return new Section(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      classMasterId: doc.classMasterId,
-      name: doc.name,
-      capacity: doc.capacity,
-      roomNumber: doc.roomNumber,
-      shift: doc.shift,
-      classTeacherId: doc.classTeacherId,
-    }, doc.createdAt, doc.updatedAt);
-  }
-
-  async findAll(): Promise<Section[]> {
-    await this.ensureConnection();
-    const docs = (await SectionModel.find({})) as ISectionDocument[];
-    return docs.map((doc) => new Section(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      classMasterId: doc.classMasterId,
-      name: doc.name,
-      capacity: doc.capacity,
-      roomNumber: doc.roomNumber,
-      shift: doc.shift,
-      classTeacherId: doc.classTeacherId,
-    }, doc.createdAt, doc.updatedAt));
-  }
-
-  async findByFilters(filters: {
-    organizationId?: string;
-    coachingCenterId?: string;
-    classMasterId?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<Section[]> {
-    await this.ensureConnection();
-    const query: {
-      organizationId?: string;
-      coachingCenterId?: string;
-      classMasterId?: string;
-    } = {};
-
-    if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
-    if (filters.classMasterId) query.classMasterId = filters.classMasterId;
-
-    let dbQuery = SectionModel.find(query);
-    if (typeof filters.offset === 'number' && filters.offset > 0) {
-      dbQuery = dbQuery.skip(filters.offset);
-    }
-    if (typeof filters.limit === 'number' && filters.limit > 0) {
-      dbQuery = dbQuery.limit(filters.limit);
-    }
-
-    const docs = (await dbQuery) as ISectionDocument[];
-    return docs.map((doc) => new Section(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      classMasterId: doc.classMasterId,
-      name: doc.name,
-      capacity: doc.capacity,
-      roomNumber: doc.roomNumber,
-      shift: doc.shift,
-      classTeacherId: doc.classTeacherId,
-    }, doc.createdAt, doc.updatedAt));
-  }
-
-  async countByFilters(filters: {
-    organizationId?: string;
-    coachingCenterId?: string;
-    classMasterId?: string;
-  }): Promise<number> {
-    await this.ensureConnection();
-    const query: {
-      organizationId?: string;
-      coachingCenterId?: string;
-      classMasterId?: string;
-    } = {};
-    if (filters.organizationId) query.organizationId = filters.organizationId;
-    if (filters.coachingCenterId) query.coachingCenterId = filters.coachingCenterId;
-    if (filters.classMasterId) query.classMasterId = filters.classMasterId;
-    return SectionModel.countDocuments(query);
-  }
-
-  async delete(id: string): Promise<void> {
-    await this.ensureConnection();
-    await SectionModel.findByIdAndDelete(id);
-  }
-
-  async exists(id: string): Promise<boolean> {
-    await this.ensureConnection();
-    const count = await SectionModel.countDocuments({ _id: id });
-    return count > 0;
-  }
-}
-
-export class MongoSubjectAllocationRepository implements SubjectAllocationRepository {
-  private async ensureConnection() {
-    await connectDB();
-  }
-
-  async save(entity: SubjectAllocation): Promise<void> {
-    await this.ensureConnection();
-    await SubjectAllocationModel.findByIdAndUpdate(
-      entity.getId(),
-      {
-        _id: entity.getId(),
-        organizationId: entity.getOrganizationId(),
-        coachingCenterId: entity.getCoachingCenterId(),
-        academicYearId: entity.getAcademicYearId(),
-        classMasterId: entity.getClassMasterId(),
-        sectionId: entity.getSectionId(),
-        subjectName: entity.getSubjectName(),
-        teacherId: entity.getTeacherId(),
-        weeklyPeriods: entity.getWeeklyPeriods(),
-      },
-      { upsert: true }
-    );
-  }
-
-  async findById(id: string): Promise<SubjectAllocation | null> {
-    await this.ensureConnection();
-    const doc = (await SubjectAllocationModel.findById(id)) as ISubjectAllocationDocument | null;
-    if (!doc) return null;
-    return new SubjectAllocation(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      academicYearId: doc.academicYearId,
-      classMasterId: doc.classMasterId,
-      sectionId: doc.sectionId,
-      subjectName: doc.subjectName,
-      teacherId: doc.teacherId,
-      weeklyPeriods: doc.weeklyPeriods,
-    }, doc.createdAt, doc.updatedAt);
-  }
-
-  async findAll(): Promise<SubjectAllocation[]> {
-    await this.ensureConnection();
-    const docs = (await SubjectAllocationModel.find({})) as ISubjectAllocationDocument[];
-    return docs.map((doc) => new SubjectAllocation(doc._id, {
-      organizationId: doc.organizationId,
-      coachingCenterId: doc.coachingCenterId,
-      academicYearId: doc.academicYearId,
-      classMasterId: doc.classMasterId,
-      sectionId: doc.sectionId,
-      subjectName: doc.subjectName,
-      teacherId: doc.teacherId,
-      weeklyPeriods: doc.weeklyPeriods,
-    }, doc.createdAt, doc.updatedAt));
-  }
-
-  async delete(id: string): Promise<void> {
-    await this.ensureConnection();
-    await SubjectAllocationModel.findByIdAndDelete(id);
-  }
-
-  async exists(id: string): Promise<boolean> {
-    await this.ensureConnection();
-    const count = await SubjectAllocationModel.countDocuments({ _id: id });
     return count > 0;
   }
 }

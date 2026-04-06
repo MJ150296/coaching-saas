@@ -15,6 +15,8 @@ export interface IUserDocument {
   role: UserRole;
   organizationId?: string;
   coachingCenterId?: string;
+  schoolGrade?: string;
+  schoolName?: string;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: Date;
@@ -61,6 +63,12 @@ const userSchema = new Schema<IUserDocument>(
     coachingCenterId: {
       type: String,
       index: true,
+    },
+    schoolGrade: {
+      type: String,
+    },
+    schoolName: {
+      type: String,
     },
     isActive: {
       type: Boolean,

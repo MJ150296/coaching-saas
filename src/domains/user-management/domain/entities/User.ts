@@ -35,6 +35,8 @@ export interface UserProps {
   role: UserRole;
   organizationId?: string;
   coachingCenterId?: string;
+  schoolGrade?: string;
+  schoolName?: string;
   isActive: boolean;
   emailVerified?: boolean;
 }
@@ -47,6 +49,8 @@ export class User extends AggregateRoot<string> {
   private role: UserRole;
   private organizationId?: string;
   private coachingCenterId?: string;
+  private schoolGrade?: string;
+  private schoolName?: string;
   private isActive: boolean;
   private emailVerified: boolean;
 
@@ -59,6 +63,8 @@ export class User extends AggregateRoot<string> {
     this.role = props.role;
     this.organizationId = props.organizationId;
     this.coachingCenterId = props.coachingCenterId;
+    this.schoolGrade = props.schoolGrade;
+    this.schoolName = props.schoolName;
     this.isActive = props.isActive;
     this.emailVerified = props.emailVerified || false;
   }
@@ -71,7 +77,9 @@ export class User extends AggregateRoot<string> {
     role: UserRole,
     organizationId?: string,
     coachingCenterId?: string,
-    phone?: UserPhone
+    phone?: UserPhone,
+    schoolGrade?: string,
+    schoolName?: string
   ): User {
     const user = new User(id, {
       email,
@@ -81,6 +89,8 @@ export class User extends AggregateRoot<string> {
       role,
       organizationId,
       coachingCenterId,
+      schoolGrade,
+      schoolName,
       isActive: true,
       emailVerified: false,
     });
@@ -124,6 +134,14 @@ export class User extends AggregateRoot<string> {
 
   getCoachingCenterId(): string | undefined {
     return this.coachingCenterId;
+  }
+
+  getSchoolGrade(): string | undefined {
+    return this.schoolGrade;
+  }
+
+  getSchoolName(): string | undefined {
+    return this.schoolName;
   }
 
   changeRole(newRole: UserRole): void {

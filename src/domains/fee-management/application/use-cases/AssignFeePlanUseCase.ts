@@ -8,7 +8,6 @@ export interface AssignFeePlanRequest {
   coachingCenterId: string;
   academicYearId: string;
   feePlanId: string;
-  classMasterId: string;
   sectionId?: string;
 }
 

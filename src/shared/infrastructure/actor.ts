@@ -1,16 +1,14 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/shared/infrastructure/auth';
-import { ServiceKeys } from '@/shared/bootstrap/ServiceKeys';
-import { initializeAppAndGetService } from '@/shared/bootstrap/init';
-import { MongoUserRepository } from '@/domains/user-management/infrastructure/persistence/MongoUserRepository';
+import { getUserServices } from '@/domains/user-management/bootstrap/getUserServices';
+import { authConfig } from '@/shared/infrastructure/auth-config';
 import { User } from '@/domains/user-management/domain/entities/User';
 
 export async function getActorUser(): Promise<User | null> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authConfig);
   if (!session?.user?.email) {
     return null;
   }
 
-  const repo = await initializeAppAndGetService<MongoUserRepository>(ServiceKeys.USER_REPOSITORY);
+  const { userRepository: repo } = await getUserServices();
   return repo.findByEmail(session.user.email);
 }

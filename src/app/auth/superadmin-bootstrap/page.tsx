@@ -2,10 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 export default function SuperadminBootstrapPage() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -46,7 +44,7 @@ export default function SuperadminBootstrapPage() {
         redirect: false,
       });
 
-      router.push('/admin-roles/superadmin');
+      window.location.assign('/');
     } catch {
       setError('Unexpected error occurred');
     } finally {

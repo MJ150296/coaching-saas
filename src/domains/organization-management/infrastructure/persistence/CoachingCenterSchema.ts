@@ -76,7 +76,7 @@ export interface ICoachingCenterDocument {
     email: string;
     phone: string;
   };
-  principalId?: string;
+  ownerId?: string;
   status: 'active' | 'inactive';
   studentCount: number;
   teacherCount: number;
@@ -102,7 +102,7 @@ const coachingCenterSchema = new Schema(
       email: { type: String, required: true },
       phone: { type: String, required: true },
     },
-    principalId: { type: String, index: true },
+    ownerId: { type: String, index: true },
     status: { type: String, enum: ['active', 'inactive'], default: 'active', index: true },
     studentCount: { type: Number, default: 0 },
     teacherCount: { type: Number, default: 0 },

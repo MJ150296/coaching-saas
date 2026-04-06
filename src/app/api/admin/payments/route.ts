@@ -2,13 +2,81 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActorWithPermission } from '@/shared/infrastructure/admin-guards';
 import { Permission } from '@/shared/infrastructure/rbac';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
+import { getFeeServices } from '@/domains/fee-management/bootstrap/getFeeServices';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
-import { generateId } from '@/shared/lib/utils';
-import { connectDB } from '@/shared/infrastructure/database';
-import { PaymentModel, StudentFeeLedgerModel } from '@/domains/fee-management/infrastructure/persistence/FeeSchema';
-import { UserModel } from '@/domains/user-management/infrastructure/persistence/UserSchema';
-import mongoose from 'mongoose';
+import { getActorUser } from '@/shared/infrastructure/actor';
+import { hasPermission } from '@/shared/infrastructure/rbac';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
+import { invalidateCacheByPrefix } from '@/shared/infrastructure/api-response-cache';
+import { Payment } from '@/domains/fee-management/domain/entities/Payment';
+
+export async function GET(request: NextRequest) {
+  try {
+    const actor = await getActorUser();
+    if (!actor) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (
+      !hasPermission(actor.getRole(), Permission.CREATE_PAYMENT) &&
+      !hasPermission(actor.getRole(), Permission.CREATE_FEE_TYPE)
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const requestedOrganizationId =
+      request.nextUrl.searchParams.get('organizationId') || undefined;
+    const requestedCoachingCenterId = request.nextUrl.searchParams.get('coachingCenterId') || undefined;
+    const withMeta = request.nextUrl.searchParams.get('withMeta') === 'true';
+    const limit = parsePositiveIntParam(request.nextUrl.searchParams.get('limit'), 500) ?? (withMeta ? 100 : 200);
+    const offset = parsePositiveIntParam(request.nextUrl.searchParams.get('offset'), 50000) ?? 0;
+    const academicYearId = request.nextUrl.searchParams.get('academicYearId') || undefined;
+    const method = request.nextUrl.searchParams.get('method') || undefined;
+    const tenant = resolveTenantScope(actor, requestedOrganizationId, requestedCoachingCenterId);
+
+    if (actor.getRole() !== UserRole.SUPER_ADMIN) {
+      assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
+    }
+
+    const { paymentRepository: repo } = await getFeeServices();
+    const filtered = await repo.findByTenant(tenant.organizationId, tenant.coachingCenterId, {
+      academicYearId,
+      method,
+      limit,
+      offset,
+    });
+
+    const items = filtered.map((item) => ({
+      id: item.getId(),
+      studentId: item.getStudentId(),
+      amount: item.getAmount(),
+      method: item.getMethod(),
+      reference: item.getReference(),
+      paidAt: item.getPaidAt(),
+      organizationId: item.getOrganizationId(),
+      coachingCenterId: item.getCoachingCenterId(),
+      academicYearId: item.getAcademicYearId(),
+      createdAt: item.getCreatedAt(),
+    }));
+
+    if (!withMeta) {
+      return NextResponse.json(items);
+    }
+
+    const total = await repo.countByTenant(tenant.organizationId, tenant.coachingCenterId, { academicYearId, method });
+    return NextResponse.json({
+      items,
+      total,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed';
+    const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,122 +88,36 @@ export async function POST(request: NextRequest) {
     }
     assertTenantScope(actor, tenant.organizationId, tenant.coachingCenterId);
 
-    const organizationId = tenant.organizationId as string;
-    const coachingCenterId = tenant.coachingCenterId as string;
-    const academicYearId = typeof body.academicYearId === 'string' ? body.academicYearId.trim() : '';
-    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
-    const amount = Number(body.amount);
-    const paidAt = new Date(typeof body.paidAt === 'string' ? body.paidAt : '');
-    const method = typeof body.method === 'string' ? body.method.trim() : '';
-    const reference = typeof body.reference === 'string' && body.reference.trim().length > 0
-      ? body.reference.trim()
-      : undefined;
+    const { paymentRepository: repo } = await getFeeServices();
 
-    if (!academicYearId || !studentId || !method) {
-      return NextResponse.json(
-        { error: 'academicYearId, studentId and method are required' },
-        { status: 400 }
-      );
-    }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: 'amount must be greater than 0' }, { status: 400 });
-    }
-    if (Number.isNaN(paidAt.getTime())) {
-      return NextResponse.json({ error: 'paidAt must be a valid date' }, { status: 400 });
-    }
+    const id = crypto.randomUUID();
+    const payment = new Payment(id, {
+      organizationId: tenant.organizationId!,
+      coachingCenterId: tenant.coachingCenterId!,
+      academicYearId: body.academicYearId,
+      studentId: body.studentId,
+      amount: body.amount,
+      method: body.method,
+      reference: body.reference,
+      paidAt: new Date(body.paidAt),
+      ledgerEntryId: body.ledgerEntryId,
+    });
 
-    const validMethods = new Set(['CASH', 'ONLINE', 'UPI', 'BANK_TRANSFER']);
-    if (!validMethods.has(method)) {
-      return NextResponse.json({ error: 'Invalid payment method' }, { status: 400 });
-    }
+    await repo.save(payment);
 
-    await connectDB();
-
-    const student = await UserModel.findOne({ _id: studentId }).lean<{
-      role: UserRole;
-      organizationId?: string;
-      coachingCenterId?: string;
-    } | null>();
-
-    if (
-      !student ||
-      student.role !== UserRole.STUDENT ||
-      student.organizationId !== organizationId ||
-      student.coachingCenterId !== coachingCenterId
-    ) {
-      return NextResponse.json({ error: 'Student not found in tenant scope' }, { status: 400 });
-    }
-
-    const dueEntries = await StudentFeeLedgerModel.find({
-      organizationId,
-      coachingCenterId,
-      academicYearId,
-      studentId,
-      status: 'DUE',
-    })
-      .sort({ dueDate: 1, createdAt: 1 })
-      .lean<Array<{ _id: string; amount: number }>>();
-
-    if (dueEntries.length === 0) {
-      return NextResponse.json({ error: 'No due ledger entries found for this student' }, { status: 400 });
-    }
-
-    const totalDue = dueEntries.reduce((sum, entry) => sum + entry.amount, 0);
-    if (amount > totalDue) {
-      return NextResponse.json({ error: `Payment exceeds total due amount (${totalDue})` }, { status: 400 });
-    }
-
-    let remaining = amount;
-    const ledgerEntryIdsToMarkPaid: string[] = [];
-    for (const entry of dueEntries) {
-      if (remaining >= entry.amount) {
-        remaining -= entry.amount;
-        ledgerEntryIdsToMarkPaid.push(entry._id);
+    // If ledgerEntryId is provided, update the ledger entry status to PAID
+    if (body.ledgerEntryId) {
+      try {
+        const { studentFeeLedgerRepository: ledgerRepo } = await getFeeServices();
+        const ledgerEntry = await ledgerRepo.findById(body.ledgerEntryId);
+        if (ledgerEntry && ledgerEntry.getStudentId() === body.studentId) {
+          ledgerEntry.markAsPaid();
+          await ledgerRepo.save(ledgerEntry);
+        }
+      } catch (ledgerError) {
+        // Log but don't fail the payment if ledger update fails
+        console.error('Failed to update ledger entry status:', ledgerError);
       }
-      if (remaining === 0) {
-        break;
-      }
-    }
-
-    if (remaining !== 0) {
-      return NextResponse.json(
-        {
-          error: 'Payment must match full due entries. Partial settlement of a single entry is not supported.',
-        },
-        { status: 400 }
-      );
-    }
-
-    const paymentId = generateId();
-    const session = await mongoose.startSession();
-
-    try {
-      await session.withTransaction(async () => {
-        await PaymentModel.create(
-          [
-            {
-              _id: paymentId,
-              organizationId,
-              coachingCenterId,
-              academicYearId,
-              studentId,
-              amount,
-              method,
-              reference,
-              paidAt,
-            },
-          ],
-          { session }
-        );
-
-        await StudentFeeLedgerModel.updateMany(
-          { _id: { $in: ledgerEntryIdsToMarkPaid } },
-          { $set: { status: 'PAID' } },
-          { session }
-        );
-      });
-    } finally {
-      await session.endSession();
     }
 
     await logAuditEvent({
@@ -147,21 +129,8 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
-    return NextResponse.json(
-      {
-        id: paymentId,
-        organizationId,
-        coachingCenterId,
-        academicYearId,
-        studentId,
-        amount,
-        method,
-        reference,
-        paidAt,
-        settledLedgerEntryCount: ledgerEntryIdsToMarkPaid.length,
-      },
-      { status: 201 }
-    );
+    invalidateCacheByPrefix('api:admin:dashboard:overview:');
+    return NextResponse.json({ id: payment.getId(), ...body }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     const status = message === 'UNAUTHORIZED' ? 401 : message === 'FORBIDDEN' ? 403 : 500;

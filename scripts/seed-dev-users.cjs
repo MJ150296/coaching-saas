@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const { loadEnvConfig } = require("@next/env");
-
-loadEnvConfig(process.cwd());
 
 const USER_ROLES = {
   SUPER_ADMIN: "SUPER_ADMIN",
@@ -51,10 +45,6 @@ if (!uri) {
 if (nodeEnv === "production") {
   console.error("Refusing to seed users in production");
   process.exit(1);
-}
-
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function pad(n) {
@@ -446,6 +436,12 @@ async function countSeedUsersByRole(userColl) {
 }
 
 async function main() {
+  const mongoose = await import("mongoose");
+  const bcrypt = await import("bcryptjs");
+  const { loadEnvConfig } = await import("@next/env");
+
+  loadEnvConfig(process.cwd());
+
   await mongoose.connect(uri);
   const db = mongoose.connection.db;
 
@@ -820,9 +816,10 @@ async function main() {
 }
 
 main().catch(async (err) => {
+  const mongoose = await import("mongoose");
   console.error(err);
   try {
     await mongoose.disconnect();
-  } catch (_) {}
+  } catch {}
   process.exit(1);
 });

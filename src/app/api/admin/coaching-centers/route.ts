@@ -264,7 +264,6 @@ export async function POST(request: NextRequest) {
       targetId: result.getValue().coachingCenterId,
       organizationId,
       coachingCenterId: result.getValue().coachingCenterId,
-      coachingCenterId: result.getValue().coachingCenterId,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
@@ -373,7 +372,6 @@ export async function PUT(request: NextRequest) {
       targetId: id,
       organizationId,
       coachingCenterId: id,
-      coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });
 
@@ -419,7 +417,6 @@ export async function DELETE(request: NextRequest) {
       action: 'DELETE_COACHING_CENTER',
       targetId: id,
       organizationId: existing.getOrganizationId(),
-      coachingCenterId: id,
       coachingCenterId: id,
       ip: request.headers.get('x-forwarded-for') || undefined,
     });

@@ -239,8 +239,8 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
         coachingCenterId: entity.getCoachingCenterId(),
         academicYearId: entity.getAcademicYearId(),
         feePlanId: entity.getFeePlanId(),
-        classMasterId: entity.getClassMasterId(),
-        sectionId: entity.getSectionId(),
+        programId: entity.getProgramId(),
+        batchId: entity.getBatchId(),
       },
       { upsert: true }
     );
@@ -255,8 +255,8 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
       coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       feePlanId: doc.feePlanId,
-      classMasterId: doc.classMasterId,
-      sectionId: doc.sectionId,
+      programId: doc.programId,
+      batchId: doc.batchId,
     }, doc.createdAt, doc.updatedAt);
   }
 
@@ -268,9 +268,51 @@ export class MongoFeePlanAssignmentRepository implements FeePlanAssignmentReposi
       coachingCenterId: doc.coachingCenterId,
       academicYearId: doc.academicYearId,
       feePlanId: doc.feePlanId,
-      classMasterId: doc.classMasterId,
-      sectionId: doc.sectionId,
+      programId: doc.programId,
+      batchId: doc.batchId,
     }, doc.createdAt, doc.updatedAt));
+  }
+
+  async findByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; limit?: number; offset?: number }
+  ): Promise<FeePlanAssignment[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+
+    let dbQuery = FeePlanAssignmentModel.find(query);
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as IFeePlanAssignmentDocument[];
+    return docs.map((doc) => new FeePlanAssignment(doc._id, {
+      organizationId: doc.organizationId,
+      coachingCenterId: doc.coachingCenterId,
+      academicYearId: doc.academicYearId,
+      feePlanId: doc.feePlanId,
+      programId: doc.programId,
+      batchId: doc.batchId,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string }
+  ): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    return FeePlanAssignmentModel.countDocuments(query);
   }
 
   async delete(id: string): Promise<void> {
@@ -365,6 +407,63 @@ export class MongoStudentFeeLedgerRepository implements StudentFeeLedgerReposito
     }, doc.createdAt, doc.updatedAt));
   }
 
+  async findByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; status?: string; limit?: number; offset?: number }
+  ): Promise<StudentFeeLedgerEntry[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string; status?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    if (options?.status) query.status = options.status;
+
+    let dbQuery = StudentFeeLedgerModel.find(query);
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as IStudentFeeLedgerDocument[];
+    return docs.map((doc) => new StudentFeeLedgerEntry(doc._id, {
+      organizationId: doc.organizationId,
+      coachingCenterId: doc.coachingCenterId,
+      academicYearId: doc.academicYearId,
+      studentId: doc.studentId,
+      feePlanId: doc.feePlanId,
+      feeTypeId: doc.feeTypeId,
+      originalAmount: doc.originalAmount ?? doc.amount,
+      amount: doc.amount,
+      discount: doc.discount
+        ? {
+            type: doc.discount.type as DiscountType,
+            mode: doc.discount.mode as DiscountMode,
+            value: Number(doc.discount.value),
+            amount: Number(doc.discount.amount),
+            reason: doc.discount.reason,
+          }
+        : undefined,
+      dueDate: doc.dueDate,
+      status: doc.status as LedgerStatus,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; status?: string }
+  ): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string; status?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    if (options?.status) query.status = options.status;
+    return StudentFeeLedgerModel.countDocuments(query);
+  }
+
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
     await StudentFeeLedgerModel.findByIdAndDelete(id);
@@ -432,6 +531,52 @@ export class MongoPaymentRepository implements PaymentRepository {
     }, doc.createdAt, doc.updatedAt));
   }
 
+  async findByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; method?: string; limit?: number; offset?: number }
+  ): Promise<Payment[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string; method?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    if (options?.method) query.method = options.method;
+
+    let dbQuery = PaymentModel.find(query).sort({ paidAt: -1 });
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as IPaymentDocument[];
+    return docs.map((doc) => new Payment(doc._id, {
+      organizationId: doc.organizationId,
+      coachingCenterId: doc.coachingCenterId,
+      academicYearId: doc.academicYearId,
+      studentId: doc.studentId,
+      amount: doc.amount,
+      method: doc.method as PaymentMethod,
+      reference: doc.reference,
+      paidAt: doc.paidAt,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; method?: string }
+  ): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string; method?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    if (options?.method) query.method = options.method;
+    return PaymentModel.countDocuments(query);
+  }
+
   async delete(id: string): Promise<void> {
     await this.ensureConnection();
     await PaymentModel.findByIdAndDelete(id);
@@ -494,6 +639,49 @@ export class MongoCreditNoteRepository implements CreditNoteRepository {
       reason: doc.reason,
       createdOn: doc.createdOn,
     }, doc.createdAt, doc.updatedAt));
+  }
+
+  async findByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string; limit?: number; offset?: number }
+  ): Promise<CreditNote[]> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+
+    let dbQuery = CreditNoteModel.find(query).sort({ createdOn: -1 });
+    if (typeof options?.offset === 'number' && options.offset > 0) {
+      dbQuery = dbQuery.skip(options.offset);
+    }
+    if (typeof options?.limit === 'number' && options.limit > 0) {
+      dbQuery = dbQuery.limit(options.limit);
+    }
+    const docs = (await dbQuery) as ICreditNoteDocument[];
+    return docs.map((doc) => new CreditNote(doc._id, {
+      organizationId: doc.organizationId,
+      coachingCenterId: doc.coachingCenterId,
+      academicYearId: doc.academicYearId,
+      studentId: doc.studentId,
+      amount: doc.amount,
+      reason: doc.reason,
+      createdOn: doc.createdOn,
+    }, doc.createdAt, doc.updatedAt));
+  }
+
+  async countByTenant(
+    organizationId?: string,
+    coachingCenterId?: string,
+    options?: { academicYearId?: string }
+  ): Promise<number> {
+    await this.ensureConnection();
+    const query: { organizationId?: string; coachingCenterId?: string; academicYearId?: string } = {};
+    if (organizationId) query.organizationId = organizationId;
+    if (coachingCenterId) query.coachingCenterId = coachingCenterId;
+    if (options?.academicYearId) query.academicYearId = options.academicYearId;
+    return CreditNoteModel.countDocuments(query);
   }
 
   async delete(id: string): Promise<void> {

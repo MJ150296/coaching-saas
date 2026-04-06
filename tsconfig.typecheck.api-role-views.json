@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.ts",
+    "src/app/api/analytics/**/*.ts",
+    "src/app/api/teacher/**/*.ts",
+    "src/app/api/student/**/*.ts",
+    "src/app/api/staff/**/*.ts",
+    "src/app/api/parent/**/*.ts",
+    "src/shared/bootstrap/**/*.ts",
+    "src/shared/domain/**/*.ts",
+    "src/shared/infrastructure/**/*.ts",
+    "src/shared/lib/**/*.ts",
+    "src/domains/academic-management/**/*.ts",
+    "src/domains/coaching-management/**/*.ts",
+    "src/domains/fee-management/**/*.ts",
+    "src/domains/user-management/**/*.ts",
+    "src/domains/organization-management/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
+}

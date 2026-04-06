@@ -10,9 +10,28 @@ import { getActorUser } from '@/shared/infrastructure/actor';
 import { assertTenantScope, resolveTenantScope } from '@/shared/infrastructure/tenant';
 import { Permission, hasPermission } from '@/shared/infrastructure/rbac';
 import { logAuditEvent } from '@/shared/infrastructure/audit-log';
+import { checkRateLimit, getClientIp } from '@/shared/infrastructure/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimit({
+      key: `ratelimit:auth:register:${ip}`,
+      limit: 5,
+      windowSec: 60,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Try again soon.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil(rateLimit.resetMs / 1000)),
+          },
+        }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +72,6 @@ export async function POST(request: NextRequest) {
       phone: body.phone,
       role: targetRole,
       organizationId: tenant.organizationId,
-      coachingCenterId: tenant.coachingCenterId,
       coachingCenterId: tenant.coachingCenterId,
     });
 

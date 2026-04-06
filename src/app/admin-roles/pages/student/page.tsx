@@ -1,102 +1,210 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
-import { Badge } from '@/shared/components/ui/Badge';
-import { TableLoader } from '@/shared/components/ui/TableLoader';
+import { redirect } from 'next/navigation';
 import { UserRole } from '@/domains/user-management/domain/entities/User';
+import { getActorUser } from '@/shared/infrastructure/actor';
+import { Badge } from '@/shared/components/ui/Badge';
+import { PdfExportButton } from '@/shared/components/ui/PdfExportButton';
+import { CsvExportButton } from '@/shared/components/ui/CsvExportButton';
+import { parsePositiveIntParam } from '@/shared/lib/utils';
+import { getUserAnalyticsTable } from '@/shared/lib/user-analytics.server';
+import { StatusDistributionChart, VerificationStatusChart } from './StudentCharts';
 
-type StudentRow = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  organizationId?: string;
-  coachingCenterId?: string;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-};
+export const dynamic = 'force-dynamic';
 
-type UserMetaResponse = {
-  items: StudentRow[];
-  total: number;
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function StudentAnalyticsPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [total, setTotal] = useState(0);
+function getParam(params: SearchParams, key: string): string | undefined {
+  const value = params[key];
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
 
-  useEffect(() => {
-    let active = true;
-    async function loadStudents() {
-      setLoading(true);
-      setError('');
-      try {
-        const params = new URLSearchParams({
-          role: UserRole.STUDENT,
-          withMeta: 'true',
-          limit: '500',
-          offset: '0',
-        });
-        const response = await fetch(`/api/admin/users?${params.toString()}`);
-        const data = (await response.json()) as UserMetaResponse & { error?: string };
-        if (!response.ok) throw new Error(data?.error || 'Failed to load students');
-        if (!active) return;
-        setStudents(Array.isArray(data.items) ? data.items : []);
-        setTotal(Number(data.total ?? 0));
-      } catch (err) {
-        if (active) setError(String(err));
-      } finally {
-        if (active) setLoading(false);
-      }
+function buildPageHref(paramsInput: SearchParams, page: number): string {
+  const params = new URLSearchParams();
+  Object.entries(paramsInput).forEach(([key, value]) => {
+    if (value === undefined) return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v));
+      return;
     }
-    loadStudents();
-    return () => {
-      active = false;
-    };
-  }, []);
+    params.set(key, value);
+  });
+  params.set('page', String(page));
+  return `?${params.toString()}`;
+}
 
-  const analytics = useMemo(() => {
-    const activeCount = students.filter((item) => item.isActive).length;
-    const verifiedCount = students.filter((item) => item.emailVerified).length;
-    const coachingCenters = new Set(students.map((item) => item.coachingCenterId).filter(Boolean));
-    return { activeCount, verifiedCount, coachingCentersCount: coachingCenters.size };
-  }, [students]);
+export default async function StudentAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const resolvedSearchParams = { ...(await searchParams) };
+  const actor = await getActorUser();
+  if (!actor) {
+    redirect('/auth/signin');
+  }
+
+  const role = actor.getRole();
+  if (
+    role !== UserRole.SUPER_ADMIN &&
+    role !== UserRole.ORGANIZATION_ADMIN &&
+    role !== UserRole.COACHING_ADMIN &&
+    role !== UserRole.ADMIN
+  ) {
+    redirect('/auth/signin');
+  }
+
+  const page = Math.max(1, parsePositiveIntParam(getParam(resolvedSearchParams, 'page') ?? null, 1000) ?? 1);
+  const limit = parsePositiveIntParam(getParam(resolvedSearchParams, 'limit') ?? null, 200) ?? 50;
+  const query = getParam(resolvedSearchParams, 'q')?.trim();
+  const status = (getParam(resolvedSearchParams, 'status') as 'active' | 'inactive' | 'all' | undefined) ?? 'all';
+  const verified = (getParam(resolvedSearchParams, 'verified') as 'verified' | 'unverified' | 'all' | undefined) ?? 'all';
+
+  const data = await getUserAnalyticsTable({
+    role: UserRole.STUDENT,
+    page,
+    limit,
+    query,
+    status,
+    verified,
+  });
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50/40 to-blue-50/50 p-8">
       <h1 className="text-2xl font-semibold text-slate-900">Student Analytics</h1>
-      <p className="mt-2 text-sm text-slate-600">Student table with scope-aware summary metrics.</p>
+      <p className="mt-2 text-sm text-slate-600">Searchable student register with scope-aware summary metrics.</p>
+
+      <form method="GET" className="mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-5">
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+          <input
+            name="q"
+            defaultValue={query ?? ''}
+            placeholder="Name, email, phone"
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+          <select name="status" defaultValue={status} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verified</label>
+          <select name="verified" defaultValue={verified} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+            <option value="all">All</option>
+            <option value="verified">Verified</option>
+            <option value="unverified">Unverified</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Page Size</label>
+          <select name="limit" defaultValue={String(limit)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+            {[25, 50, 100, 200].map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        </div>
+        <div className="md:col-span-5 flex flex-wrap items-center gap-2">
+          <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+            Apply Filters
+          </button>
+          <span className="text-xs text-slate-500">Showing {data.items.length} of {data.total.toLocaleString()} students</span>
+        </div>
+      </form>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-        <MetricCard title="Total Students" value={total} />
-        <MetricCard title="Loaded Records" value={students.length} />
-        <MetricCard title="Active Students" value={analytics.activeCount} />
-        <MetricCard title="Email Verified" value={analytics.verifiedCount} />
+        <MetricCard title="Total Students" value={data.total} />
+        <MetricCard title="Loaded Records" value={data.items.length} />
+        <MetricCard title="Active Students" value={data.activeCount} />
+        <MetricCard title="Email Verified" value={data.verifiedCount} />
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Coaching Center</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
-            </tr>
-          </thead>
-          {loading ? (
-            <TableLoader columns={6} rows={8} />
-          ) : (
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Status Distribution Chart */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h2 className="text-sm font-semibold text-slate-800">Status Distribution</h2>
+            <CsvExportButton
+              filename="students-status-distribution.csv"
+              rows={[
+                { status: 'Active', count: data.activeCount, percentage: data.total > 0 ? Math.round((data.activeCount / data.total) * 100) : 0 },
+                { status: 'Inactive', count: data.total - data.activeCount, percentage: data.total > 0 ? Math.round(((data.total - data.activeCount) / data.total) * 100) : 0 },
+              ]}
+              columns={[
+                { key: 'status', label: 'Status' },
+                { key: 'count', label: 'Count' },
+                { key: 'percentage', label: 'Percentage %' },
+              ]}
+            />
+          </div>
+          <StatusDistributionChart data={data} />
+        </div>
+
+        {/* Verification Status Chart */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h2 className="text-sm font-semibold text-slate-800">Verification Status</h2>
+            <CsvExportButton
+              filename="students-verification-distribution.csv"
+              rows={[
+                { status: 'Verified', count: data.verifiedCount, percentage: data.total > 0 ? Math.round((data.verifiedCount / data.total) * 100) : 0 },
+                { status: 'Unverified', count: data.total - data.verifiedCount, percentage: data.total > 0 ? Math.round(((data.total - data.verifiedCount) / data.total) * 100) : 0 },
+              ]}
+              columns={[
+                { key: 'status', label: 'Status' },
+                { key: 'count', label: 'Count' },
+                { key: 'percentage', label: 'Percentage %' },
+              ]}
+            />
+          </div>
+          <VerificationStatusChart data={data} />
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-800">Student Roster</h2>
+          <PdfExportButton
+            filename="students-roster.pdf"
+            title="Student Roster"
+            rows={data.items}
+            columns={[
+              { key: 'firstName', label: 'First Name' },
+              { key: 'lastName', label: 'Last Name' },
+              { key: 'email', label: 'Email' },
+              { key: 'phone', label: 'Phone' },
+              { key: 'coachingCenterId', label: 'Center' },
+              { key: 'isActive', label: 'Active' },
+              { key: 'emailVerified', label: 'Verified' },
+            ]}
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Coaching Center</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {students.map((item) => (
+              {data.items.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-3 py-2 text-sm text-slate-700">{item.firstName} {item.lastName}</td>
+                  <td className="px-3 py-2 text-sm text-slate-700">
+                    <a
+                      href={`/profile/users/${encodeURIComponent(item.id)}`}
+                      className="font-medium text-slate-700 hover:text-slate-900 hover:underline"
+                    >
+                      {item.firstName} {item.lastName}
+                    </a>
+                  </td>
                   <td className="px-3 py-2 text-sm text-slate-700">{item.email}</td>
                   <td className="px-3 py-2 text-sm text-slate-700">{item.phone || '-'}</td>
                   <td className="px-3 py-2 text-sm">
@@ -113,19 +221,36 @@ export default function StudentAnalyticsPage() {
                   <td className="px-3 py-2 text-sm text-slate-700">{new Date(item.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
-              {!students.length && (
+              {!data.items.length && (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">
-                    {error || 'No students found in current scope.'}
+                    No students found with current filters.
                   </td>
                 </tr>
               )}
             </tbody>
-          )}
-        </table>
+          </table>
+        </div>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500">Distinct coaching centers in dataset: {analytics.coachingCentersCount}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">Distinct coaching centers: {data.distinctCenters}</p>
+        <div className="flex items-center gap-2 text-sm">
+          <a
+            className={`rounded-lg border px-3 py-1 ${data.page <= 1 ? 'pointer-events-none text-slate-300' : 'text-slate-700'}`}
+            href={buildPageHref(resolvedSearchParams, Math.max(1, data.page - 1))}
+          >
+            Previous
+          </a>
+          <span className="text-slate-600">Page {data.page} of {data.totalPages}</span>
+          <a
+            className={`rounded-lg border px-3 py-1 ${data.page >= data.totalPages ? 'pointer-events-none text-slate-300' : 'text-slate-700'}`}
+            href={buildPageHref(resolvedSearchParams, Math.min(data.totalPages, data.page + 1))}
+          >
+            Next
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
