@@ -1,34 +1,53 @@
 # Documentation Index
 
-This index reflects the current `src` structure and runtime flows.
+This is the central index for all Coaching Management System documentation.
 
-## Core Docs
+## Main Documentation
 
-1. `README.md` - Quick start, routes, and high-level overview
-2. `project-structure.md` - Full file map and navigation
-3. `architecture.md` - DDD architecture guide
-4. `bootstrap.md` - DI/container and initialization
-5. `roles-and-bootstrap.md` - Role hierarchy and DI usage
-6. `superadmin-bootstrap.md` - First-time setup flow
-7. `quick-reference.md` - Commands and endpoint cheat sheet
-8. `troubleshooting.md` - Common issues and fixes
+### 📘 Comprehensive Guide
+- **[COMPREHENSIVE_GUIDE.md](./COMPREHENSIVE_GUIDE.md)** - Complete documentation covering:
+  - Quick Start & Setup
+  - Architecture Overview (DDD)
+  - Project Structure
+  - Domain-Driven Design Patterns
+  - Authentication & Authorization
+  - Bootstrap & Dependency Injection
+  - API Reference
+  - Operations Guide
+  - Troubleshooting
 
-## Supporting Docs
+## Specialized Documentation
 
-- `architecture-diagrams.md` - Visual diagrams
-- `ddd-patterns-visual-guide.md` - DDD concepts
-- `setup.md` - Setup checklist
-- `project-summary.md` - Current implementation summary
-- `docs-roadmap.md` - How to read the docs
+### Operations
+- **[operations/coaching-operations-handbook.md](./operations/coaching-operations-handbook.md)** - Detailed operational procedures for running the coaching SaaS platform
 
-## Operations Docs
+### Architecture & Design
+- **[architecture-diagrams.md](./architecture-diagrams.md)** - Visual system architecture diagrams
+- **[ddd-patterns-visual-guide.md](./ddd-patterns-visual-guide.md)** - DDD concepts and patterns explained visually
 
-- `operations/coaching-operations-handbook.md` - End-to-end operating guide (how app works, onboarding, daily activities)
+### Quick Reference
+- **[quick-reference.md](./quick-reference.md)** - Commands, routes, and API examples cheat sheet
+- **[setup.md](./setup.md)** - Quick setup checklist
+
+## External Documentation
+
+- **[README.md](../README.md)** - Project overview and quick start
+- **[COACHING_REFACTORING_PLAN.md](../COACHING_REFACTORING_PLAN.md)** - Refactoring roadmap
 
 ## Suggested Reading Order
 
-1. `README.md`
-2. `project-structure.md`
-3. `architecture.md`
-4. `bootstrap.md`
-5. `superadmin-bootstrap.md`
+1. **New to the project?** → Start with [README.md](../README.md)
+2. **Need comprehensive info?** → Read [COMPREHENSIVE_GUIDE.md](./COMPREHENSIVE_GUIDE.md)
+3. **Setting up locally?** → Follow [setup.md](./setup.md)
+4. **Understanding architecture?** → Review [architecture-diagrams.md](./architecture-diagrams.md)
+5. **Daily operations?** → Use [operations/coaching-operations-handbook.md](./operations/coaching-operations-handbook.md)
+6. **Quick lookup?** → Check [quick-reference.md](./quick-reference.md)
+
+## Documentation Maintenance
+
+This documentation was last consolidated and updated to reflect the current state of the coaching-management domain implementation, including:
+- Coaching Programs, Batches, Sessions, and Attendance
+- Complete multi-tenant architecture
+- All admin dashboards and role-based access
+- Fee management with ledger, payments, and credit notes
+- Academic management with years, classes, and sections
